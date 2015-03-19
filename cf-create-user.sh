@@ -14,6 +14,28 @@ RETURN_PASS='OK'
 RETURN_FAIL='FAILED'
 RETURN_EXISTS='already exists'
 
+FUGU_URL='https://raw.githubusercontent.com/jgrevich/fugacious/feature/14_fugacious-CLI/bin/fugu'
+
+# Should this go somewhere else? Doesn't seem like a terrible
+# place for now.
+FUGU_PATH="${HOME}/.cf/bin"
+if [[ ! -d ${FUGU_PATH} ]]
+  then
+    echo "Creating:" $FUGU_PATH
+    mkdir -p $FUGU_PATH
+  else
+    echo "Fugu path exists."
+fi
+
+# Grab fugu for password handling.
+if [[ ! -f ${FUGU_PATH}/fugu ]]
+  then
+    curl -s -o ${FUGU_PATH}/fugu $FUGU_URL
+    chmod +x ${FUGU_PATH}/fugu
+  else
+    echo "Found fugu at:" ${FUGU_PATH}/fugu
+fi
+
 # Can't get users with cf and don't want to worry about having
 # current uaac auth so just and try and create.
 echo "Creating user:" $USER_EMAIL
@@ -23,9 +45,11 @@ then
   echo "User already exists"
 elif [[ $RETURN_CREATE =~ $RETURN_PASS ]]
 then
+  echo "Creating fugacious link with pass:" $USER_PASS
+  PASS_LINK=`$FUGU_PATH/fugu $USER_PASS`
   echo "Success!"
   echo "New User:" $USER_EMAIL
-  echo "Password:" $USER_PASS
+  echo "Password Link:" $PASS_LINK
 else
   echo "Something's wrong" + $RETURN_CREATE
 fi

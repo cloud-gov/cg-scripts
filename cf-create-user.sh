@@ -63,7 +63,17 @@ then
 	  echo "Org already exists."
 	fi 
   
-  # Make the user a manager. Should this add permissions to org spaces
-  # as well?
+  # Make the user a manager. 
   cf set-org-role $USER_EMAIL $USER_ORG OrgManager
+
+  # Since the typical expectation is that being OrgManager confers
+  # access to the contained spaces as well, but doesn't we'll go
+  # ahead and add those permissions.
+  cf target -o $USER_ORG
+  cf spaces \
+  | awk 'm;/^name/{m=1}' \
+  | while read SPACE_NAME
+      do cf set-space-role $USER_EMAIL $USER_ORG $SPACE_NAME SpaceDeveloper
+         cf set-space-role $USER_EMAIL $USER_ORG $SPACE_NAME SpaceManager
+    done
 fi

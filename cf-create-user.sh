@@ -54,8 +54,8 @@ else
   echo "Something's wrong" + $RETURN_CREATE
 fi
 
-# Target testing.
-RETURN_TARGET=`cf target -o testing`
+# Target the sandbox org.
+RETURN_TARGET=`cf target -o sandbox`
 if [[ $RETURN_TARGET =~ $RETURN_FAIL ]]
 then
   echo "Something went wrong!"
@@ -72,8 +72,8 @@ else
 fi 
 
 # Set user permissions.
-cf set-space-role $USER_EMAIL testing $USER_NAME SpaceDeveloper
-cf set-space-role $USER_EMAIL testing $USER_NAME SpaceManager
+cf set-space-role $USER_EMAIL sandbox $USER_NAME SpaceDeveloper
+cf set-space-role $USER_EMAIL sandbox $USER_NAME SpaceManager
 
 # Create the org if supplied and give the user perms.
 if [[ ! $USER_ORG == '' ]]

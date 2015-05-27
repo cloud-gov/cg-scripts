@@ -13,10 +13,10 @@ cf orgs \
   | awk 'm;/^name/{m=1}' \
   | while read ORG_NAME
       do cf set-org-role $USER_NAME $ORG_NAME OrgAuditor
-         cf target -o $ORG_NAME
-  	     cf spaces \
-		  | awk 'm;/^name/{m=1}' \
-		  | while read SPACE_NAME
-		      do cf set-space-role $USER_NAME $ORG_NAME $SPACE_NAME SpaceAuditor
-		    done
+      cf target -o $ORG_NAME
+      cf spaces \
+      | awk 'm;/^name/{m=1}' \
+      | while read SPACE_NAME
+          do cf set-space-role $USER_NAME $ORG_NAME $SPACE_NAME SpaceAuditor
+        done
     done

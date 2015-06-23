@@ -1,5 +1,9 @@
 # This script uses the cf cli to do the most basic provisioning of
-# a new Cloud Foundry user.
+# a new Cloud Foundry user. Usage:
+#
+#   $ ./cf-create-user.sh <username> [<org>]
+#
+# Include the <org> to create a new organization and make the user an OrgManager.
 set -e
 
 USER_EMAIL=$1

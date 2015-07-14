@@ -1,5 +1,11 @@
 # This script uses the cf cli to do the most basic provisioning of
-# a new Cloud Foundry user.
+# a new Cloud Foundry user. Usage:
+#
+#   $ ./cf-create-user.sh <username> [<org>]
+#
+# Include the <org> to create a new organization and make the user an OrgManager.
+set -e
+
 USER_EMAIL=$1
 
 # Strip the host portion of the email supplied.
@@ -69,7 +75,7 @@ then
   cf create-space $USER_NAME
 else
   echo "Space already exists."
-fi 
+fi
 
 # Set user permissions.
 cf set-space-role $USER_EMAIL sandbox $USER_NAME SpaceDeveloper
@@ -85,9 +91,9 @@ then
 	  cf create-org $USER_ORG
 	else
 	  echo "Org already exists."
-	fi 
-  
-  # Make the user a manager. 
+	fi
+
+  # Make the user a manager.
   cf set-org-role $USER_EMAIL $USER_ORG OrgManager
 
   # Since the typical expectation is that being OrgManager confers

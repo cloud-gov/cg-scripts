@@ -2,8 +2,10 @@
 # OrgAuditor and SpaceAuditor permissions at each level.
 #
 # Usage:
-# 
+#
 #  set-quota-auditor.sh AUDIT_USER
+set -e
+
 USER_EMAIL=$1
 
 # Strip the host portion of the email supplied.

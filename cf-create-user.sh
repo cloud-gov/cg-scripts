@@ -1,6 +1,7 @@
 # This script uses the cf cli to do the most basic provisioning of
-# a new Cloud Foundry user. Usage:
-#
+# a new Cloud Foundry user. 
+# 
+# Usage:
 #   $ ./cf-create-user.sh <username> [<org>]
 #
 # Include the <org> to create a new organization and make the user an OrgManager.
@@ -107,3 +108,17 @@ then
          cf set-space-role $USER_EMAIL $USER_ORG $SPACE_NAME SpaceManager
     done
 fi
+
+# Ensure the user is aware when the platform is experiencing issues
+echo "Subscribing user to statuspage updates"
+SUBSCRIPTION_URL='https://swcbylb1c30f.statuspage.io/api/v2/subscribers.json'
+CURL_BIN='/usr/bin/curl'
+CURL_RESULT=`$CURL_BIN $SUBSCRIPTION_URL -X POST -s -g --data-urlencode "subscriber[email]=$USER_EMAIL"`
+CURL_ERROR='{"errors":'
+if [[ $CURL_RESULT =~ $CURL_ERROR ]] 
+then
+  echo 'Failed to subscribe the user: ' $CURL_RESULT
+else
+  echo 'User subscribed.'
+fi
+

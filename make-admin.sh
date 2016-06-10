@@ -16,7 +16,10 @@ fi
 
 uaac target $TARGET
 
-uaac member add cloud_controller.admin $USER
-uaac member add uaa.admin $USER
-uaac member add scim.read $USER
-uaac member add scim.write $USER
+# fail quietly if they already have these permissions
+uaac member add cloud_controller.admin $USER || true
+uaac member add uaa.admin $USER || true
+uaac member add scim.read $USER || true
+uaac member add scim.write $USER || true
+
+echo "DONE"

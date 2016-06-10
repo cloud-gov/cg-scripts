@@ -21,5 +21,6 @@ uaac member add cloud_controller.admin $USER || true
 uaac member add uaa.admin $USER || true
 uaac member add scim.read $USER || true
 uaac member add scim.write $USER || true
+uaac member add admin_ui.admin $USER || true
 
 echo "DONE"

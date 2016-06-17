@@ -7,7 +7,7 @@ set -e
 # Output is stored in the active directory
 
 git checkout master
-./update
+scripts/update
 
 FROM_REV=$1
 TO_REV=$2

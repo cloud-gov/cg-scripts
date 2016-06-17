@@ -17,6 +17,7 @@ fi
 uaac target $TARGET
 
 uaac member add cloud_controller.admin $USER
+uaac member add admin_ui.admin $USER
 uaac member add uaa.admin $USER
 uaac member add scim.read $USER
 uaac member add scim.write $USER

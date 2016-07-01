@@ -1,0 +1,14 @@
+credentials.yml
+secrets.yml
+.blobs
+.dev_builds
+.vagrant
+.idea
+.DS_Store
+*.swp
+*~
+*#
+#*
+tmp
+my*.yml
+*-auth

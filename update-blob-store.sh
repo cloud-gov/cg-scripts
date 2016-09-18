@@ -1,3 +1,7 @@
+# This will convert a blobstore type 'local' to S3 and update the database
+# to change old entries to point to the new S3 source
+# There is no officially supported method - as a prerequisite copy the
+# local blobstore to S3 using the AWS CLI with the same structure as on disk
 require 'pg'
 require 'json'
 conn = PGconn.open(:dbname => '', :host => '', :user => '', :password=> '')

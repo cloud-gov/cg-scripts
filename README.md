@@ -39,8 +39,7 @@ These steps correspond to the [steps for creating admins](http://docs.cloudfound
     ```
 
 ## Creating deployer users
-1. ```uaac target <CF_UAA_FQDN>```
-1. ```uaac token client get admin -s <CF_UAA_ADMINCLIENT_PASSPHRASE>```
+1. Ensure the user running this is a CF admin (see [Creating admins](#creating-admins))
 1. Run
 
     ```bash

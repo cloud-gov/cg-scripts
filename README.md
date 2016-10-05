@@ -38,3 +38,10 @@ These steps correspond to the [steps for creating admins](http://docs.cloudfound
     ./make-ops-admin.sh -r <EMAIL_ADDRESS>
     ```
 
+## Creating deployer users
+1. ```uaac target <CF_UAA_FQDN>```
+1. ```uaac token client get admin -s <CF_UAA_ADMINCLIENT_PASSPHRASE>```
+1. Run
+
+    ```bash
+    ./cf-create-deployer-user.sh <ORG>

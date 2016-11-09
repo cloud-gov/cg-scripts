@@ -3,7 +3,7 @@
 set -e
 
 if [ "$#" -lt 5 ]; then
-  printf "Usage:\n\n\t./cf-create-org.sh <AGENCY_NAME> <BIZ_ID> <SYSTEM_NAME> <NOTE> <MANAGER> <MEMORY>\n\n"
+  printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <BIZ_ID> <SYSTEM_NAME> <NOTE> <MANAGER> <MEMORY>\n\n"
   exit 1
 fi
 
@@ -77,3 +77,5 @@ do
 
   cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper
 done
+
+printf "Org created successfully. Target with\n\n\t\$ cf target -o $ORG_NAME\n\n"

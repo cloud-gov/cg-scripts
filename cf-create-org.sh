@@ -3,12 +3,12 @@
 set -e
 
 if [ "$#" -lt 5 ]; then
-  printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <BIZ_ID> <SYSTEM_NAME> <NOTE> <MANAGER> <MEMORY>\n\n"
+  printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <IAA_NUMBER> <SYSTEM_NAME> <NOTE> <MANAGER> <MEMORY>\n\n"
   exit 1
 fi
 
 AGENCY_NAME=$1
-BIZ_ID=$2
+IAA_NUMBER=$2
 SYSTEM_NAME=$3
 NOTE=$4
 MANAGER=$5
@@ -20,8 +20,8 @@ if ! [[ $AGENCY_NAME =~ ^[a-zA-Z0-9]+$ ]]; then
   exit 1
 fi
 
-if ! [[ $BIZ_ID =~ ^[a-zA-Z0-9_-]+$ ]]; then
-  echo "BIZ_ID must contain only letters, numbers, underscores, and hyphens."
+if ! [[ $IAA_NUMBER =~ ^[a-zA-Z0-9_-]+$ ]]; then
+  echo "IAA_NUMBER must contain only letters, numbers, underscores, and hyphens."
   exit 1
 fi
 
@@ -35,7 +35,7 @@ if ! [[ $NOTE =~ ^[a-zA-Z0-9_-]+$ ]]; then
   exit 1
 fi
 
-QUOTA_NAME="${AGENCY_NAME}_${BIZ_ID}_${NOTE}"
+QUOTA_NAME="${AGENCY_NAME}_${IAA_NUMBER}_${NOTE}"
 # uppercase
 QUOTA_NAME=$(echo $QUOTA_NAME | awk '{print toupper($0)}')
 ORG_NAME="${AGENCY_NAME}-${SYSTEM_NAME}"

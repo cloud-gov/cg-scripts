@@ -2,8 +2,8 @@
 
 set -e
 
-if [ "$#" -ne 4 ]; then
-    printf "Usage:\n\n\t./cf-create-org.sh <AGENCY_NAME> <BIZ_ID> <SYSTEM_NAME> <NOTE>\n\n"
+if [ "$#" -lt 4 ]; then
+    printf "Usage:\n\n\t./cf-create-org.sh <AGENCY_NAME> <BIZ_ID> <SYSTEM_NAME> <NOTE> <MEMORY>\n\n"
     exit 1
 fi
 
@@ -12,9 +12,10 @@ BIZ_ID=$2
 SYSTEM_NAME=$3
 NOTE=$4
 
+MEMORY="${5:-4G}"
+
 QUOTA_NAME="${AGENCY_NAME}_${BIZ_ID}_${NOTE}"
 ORG_NAME="${AGENCY_NAME}-${SYSTEM_NAME}"
-MEMORY="4G"
 NUMBER_OF_ROUTES=10
 NUMBER_OF_SERVICES=10
 

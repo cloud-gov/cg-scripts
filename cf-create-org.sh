@@ -19,6 +19,16 @@ ORG_NAME="${AGENCY_NAME}-${SYSTEM_NAME}"
 NUMBER_OF_ROUTES=10
 NUMBER_OF_SERVICES=10
 
+# Step 0: Confirm the inputs.
+# http://stackoverflow.com/a/226724/358804
+printf "Create the following?\n\nQuota: $QUOTA_NAME\nOrg: $ORG_NAME\n\n"
+select yn in "Yes" "No"; do
+  case $yn in
+    Yes ) break;;
+    No ) exit 1;;
+  esac
+done
+
 # Step 1: Create the quota
 cf create-quota "$QUOTA_NAME" -m "$MEMORY" -r "$NUMBER_OF_ROUTES" -s "$NUMBER_OF_SERVICES" --allow-paid-service-plans
 

@@ -1,12 +1,10 @@
 #!/usr/bin/env ruby
 # 2016 Dan Shick for 18F/GSA
 #
-# cf-orgsinfo -- outputs a CSV of Cloud Foundry organizations, GUIDs,
-# associated services and all org managers.
-# You must be authenticated to a CF API for this to work, as it uses
-# "cf curl".
+# cf-orgsinfo -- outputs a CSV of Cloud Foundry organizations, GUIDs, associated services and all org managers. You must be authenticated to a CF API for this to work, as it uses `cf curl`. Execute with `bundle exec ruby cf-orgsinfo.rb`.
 
 require 'csv'
+require 'parallel'
 require 'set'
 require_relative 'helpers'
 
@@ -24,48 +22,52 @@ def bound_services(app_guid)
   results
 end
 
+def write_data(orgs_results)
+  stamp = Time.now.to_i
+  filename = "cf-orgs-services-managers-#{stamp}.csv"
+  puts "-----------\nWriting to #{filename}."
 
-stamp = Time.now.to_i
-filename = "cf-orgs-services-managers-#{stamp}.csv"
-puts "Writing to #{filename}.\n-----------"
-
-CSV.open(filename, "wb") do |csv|
-  csv << ["Name","Org ID","Managers"]
-
-  #Helpers.cfmunge('/v2/organizations?q=name:18f-acq').each do |r|
-  # for testing, filter out just one org
-
-  # get all orgs
-  Helpers.cfmunge('/v2/organizations').each do |r|
-    org_name = r["entity"]["name"]
-    org = r["metadata"]["guid"]
-    plans = []
-
-    puts org_name
-
-    # get all apps for the org
-    Helpers.cfmunge("/v2/apps?q=organization_guid:#{org}").each do |app|
-      app_name = app['entity']['name']
-      puts "  #{app_name}"
-
-      boundservices = bound_services(app["metadata"]["guid"])
-
-      # provide a total of all service instances and service plan info
-      boundservices.each do |serv|
-        # TODO look through all
-        plan = Helpers.cfmunge("/v2/service_plans?q=service_instance_guid:#{serv}").first["entity"]["name"]
-        plans.push(plan)
-     end
+  CSV.open(filename, "wb") do |csv|
+    csv << ["Name","Org ID","Managers"]
+    orgs_results.each do |orgs_results|
+      csv << orgs_results
     end
-
-    managers = []
-    Helpers.cfmunge("/v2/organizations/#{org}/managers").each do |m|
-      managers.push(m["entity"]["username"])
-    end
-
-    csv << ["#{org_name}","#{org}","#{managers.join(",")}"]
   end
 end
+
+
+# get all orgs
+orgs_data = Helpers.cfmunge('/v2/organizations')
+# for testing, filter out just one org
+# orgs_data = Helpers.cfmunge('/v2/organizations?q=name:18f-acq')
+
+orgs_results = Parallel.map(orgs_data, in_threads: 8) do |r|
+  org_name = r["entity"]["name"]
+  org = r["metadata"]["guid"]
+  plans = []
+
+  puts org_name
+
+  # get all apps for the org
+  Helpers.cfmunge("/v2/apps?q=organization_guid:#{org}").each do |app|
+    boundservices = bound_services(app["metadata"]["guid"])
+
+    # provide a total of all service instances and service plan info
+    boundservices.each do |serv|
+      # TODO look through all
+      plan = Helpers.cfmunge("/v2/service_plans?q=service_instance_guid:#{serv}").first["entity"]["name"]
+      plans.push(plan)
+   end
+  end
+
+  managers = Helpers.cfmunge("/v2/organizations/#{org}/managers").map do |m|
+    m["entity"]["username"]
+  end
+
+  ["#{org_name}","#{org}","#{managers.join(",")}"]
+end
+
+write_data(orgs_results)
 
 # in its current state the script stores all bound services in "boundservices" and all service plans in "plans"
 # awaiting comment on what other data we want from service plans off this comment:

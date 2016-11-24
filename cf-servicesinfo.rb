@@ -10,16 +10,7 @@ require_relative 'helpers'
 
 
 def exempt_space(space_name)
-  if space_name.include?('stag') ||
-    space_name.include?('dev') ||
-    space_name.include?('test') ||
-    space_name.include?('sandbox') ||
-    space_name == 'alan' ||
-    space_name == 'yoz'
-    return true
-  end
-
-  return false
+  space_name =~ /stag|dev|test|sandbox|\A(alan|yoz)\z/
 end
 
 
@@ -124,35 +115,26 @@ def get_space_developers(space_guid)
 end
 
 def get_service_plan_headers(service_plans)
-  headers = []
-  service_plans.each do |k, v|
-    headers.push(v['expanded_name'])
+  service_plans.values.map do |plan|
+    plan['expanded_name']
   end
-
-  headers
 end
 
 def get_space_service_instances(space_guid, service_plans)
-  service_instances = {}
+  service_instances = Hash.new(0)
 
   Helpers.cfmunge("/v2/spaces/#{space_guid}/service_instances").each do |service_instance|
-    if service_instances.key?(service_instance['entity']['service_plan_guid'])
-      service_instances[service_instance['entity']['service_plan_guid']] += 1
-    else
-      service_instances[service_instance['entity']['service_plan_guid']] = 1
-    end
+    plan_guid = service_instance['entity']['service_plan_guid']
+    service_instances[plan_guid] += 1
   end
 
-  instances = []
-  service_plans.each do |k, v|
+  service_plans.map do |k, v|
     if service_instances.key?(k)
-      instances.push("#{service_instances[k]}")
+      "#{service_instances[k]}"
     else
-      instances.push("0")
+      "0"
     end
   end
-
-  instances
 end
 
 

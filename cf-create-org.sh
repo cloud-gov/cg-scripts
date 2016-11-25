@@ -21,8 +21,8 @@ if ! [[ $AGENCY_NAME =~ ^[a-zA-Z0-9]+$ ]]; then
   exit 1
 fi
 
-if ! [[ $IAA_NUMBER =~ ^[a-zA-Z0-9_-]+$ ]]; then
-  echo "IAA_NUMBER must contain only letters, numbers, underscores, and hyphens."
+if ! [[ $IAA_NUMBER =~ ^[a-zA-Z0-9_\.-]+$ ]]; then
+  echo "IAA_NUMBER must contain only letters, numbers, underscores, periods, and hyphens."
   exit 1
 fi
 

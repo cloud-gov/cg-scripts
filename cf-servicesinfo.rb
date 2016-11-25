@@ -136,7 +136,7 @@ end
 stamp = Time.now.to_i
 
 CSV.open("cf-orgs-services-managers-#{stamp}.csv", "wb") do |csv|
-  csv << ["Org","Org Managers","Space", "Space Developers", "Space Developers", "Space GUID"] + get_service_plan_headers(@service_plans)
+  csv << ["Org","Org Managers","Space", "Space Developers", "Space Developers"] + get_service_plan_headers(@service_plans)
 
   Helpers.cf_api_paginated('/v2/organizations?order-by=name').each do |org|
     next if org['entity']['name'].include? "sandbox"
@@ -153,7 +153,7 @@ CSV.open("cf-orgs-services-managers-#{stamp}.csv", "wb") do |csv|
       space_managers = get_space_managers(space_guid)
       space_developers = get_space_developers(space_guid)
 
-      row = [org_name, org_managers, space_name, space_managers, space_developers, space_guid]
+      row = [org_name, org_managers, space_name, space_managers, space_developers]
       row += get_space_service_instances(space_guid, @service_plans)
       csv << row
     end

@@ -1,58 +1,73 @@
 #!/usr/bin/env ruby
 # 2016 Dan Shick for 18F/GSA
 #
-# cf-orgsinfo -- outputs a CSV of Cloud Foundry organizations, GUIDs,
-# associated services and all org managers.
-# You must be authenticated to a CF API for this to work, as it uses
-# "cf curl".
+# cf-orgsinfo -- outputs a CSV of Cloud Foundry organizations, GUIDs, associated services and all org managers. You must be authenticated to a CF API for this to work, as it uses `cf curl`. Execute with `bundle exec ruby cf-orgsinfo.rb`.
 
 require 'csv'
-require 'pp'
+require 'parallel'
+require 'set'
 require_relative 'helpers'
 
 
-stamp = Time.now.to_i
-
-CSV.open("cf-orgs-services-managers-#{stamp}.csv", "wb") do |csv|
-  csv << ["Name","Org ID","Managers"]
+def user_provided_service_instance?(bind)
+  bind['entity']['service_instance_url'].match('user_provided_service_instances')
 end
 
-#Helpers.cfmunge('/v2/organizations?q=name:18f-acq').each do |r|
-# for testing, filter out just one org
+# for each app, get its service bindings and use them to create a list of bound services not user-provided
+def bound_services(app_guid)
+  results = Set.new
+  Helpers.cfmunge("/v2/service_bindings?q=app_guid:#{app_guid}").each do |bind|
+    results << bind["entity"]["service_instance_guid"] unless user_provided_service_instance?(bind)
+  end
+  results
+end
 
-# loop 1: get all orgs
-Helpers.cfmunge('/v2/organizations?q=name:18f-acq').each do |r|
-  name = r["entity"]["name"]
-  org = r["metadata"]["guid"]
-  boundservicesall = Array.new
-  plans = Array.new
+def write_data(orgs_results)
+  stamp = Time.now.to_i
+  filename = "cf-orgs-services-managers-#{stamp}.csv"
+  puts "-----------\nWriting to #{filename}."
 
-# loop 2: get all apps for the org
-  Helpers.cfmunge("/v2/apps?q=organization_guid:#{org}").each do |app|
-
-# loop 3: for each app, get its service bindings and use them to create a list of bound services
-# not user-provided
-    Helpers.cfmunge("/v2/service_bindings?q=app_guid:#{app["metadata"]["guid"]}").each do |bind|
-      boundservicesall.push(bind["entity"]["service_instance_guid"]) unless bind["entity"]["service_instance_url"].match('user_provided_service_instances')
-
+  CSV.open(filename, "wb") do |csv|
+    csv << ["Name","Org ID","Managers"]
+    orgs_results.each do |orgs_results|
+      csv << orgs_results
     end
+  end
+end
 
-# after that we will provide a total of all service instances
-# and service plan info
 
-    boundservices = boundservicesall.uniq
+# get all orgs
+orgs_data = Helpers.cfmunge('/v2/organizations')
+# for testing, filter out just one org
+# orgs_data = Helpers.cfmunge('/v2/organizations?q=name:18f-acq')
+
+orgs_results = Parallel.map(orgs_data, in_threads: 8) do |r|
+  org_name = r["entity"]["name"]
+  org = r["metadata"]["guid"]
+  plans = []
+
+  puts org_name
+
+  # get all apps for the org
+  Helpers.cfmunge("/v2/apps?q=organization_guid:#{org}").each do |app|
+    boundservices = bound_services(app["metadata"]["guid"])
+
+    # provide a total of all service instances and service plan info
     boundservices.each do |serv|
-      plans.push(Helpers.cfmunge("/v2/service_plans?q=service_instance_guid:#{serv}").first["entity"]["name"])
+      # TODO look through all
+      plan = Helpers.cfmunge("/v2/service_plans?q=service_instance_guid:#{serv}").first["entity"]["name"]
+      plans.push(plan)
    end
   end
-  managers = Array.new
-  Helpers.cfmunge("/v2/organizations/#{org}/managers").each do |m|
-    managers.push(m["entity"]["username"])
+
+  managers = Helpers.cfmunge("/v2/organizations/#{org}/managers").map do |m|
+    m["entity"]["username"]
   end
-  CSV.open("cf-orgs-services-managers-#{stamp}.csv", "ab") do |csv|
-    csv << ["#{name}","#{org}","#{managers.join(",")}"]
-  end
+
+  ["#{org_name}","#{org}","#{managers.join(",")}"]
 end
+
+write_data(orgs_results)
 
 # in its current state the script stores all bound services in "boundservices" and all service plans in "plans"
 # awaiting comment on what other data we want from service plans off this comment:

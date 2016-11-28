@@ -12,3 +12,4 @@ secrets.yml
 tmp
 my*.yml
 *-auth
+*.csv

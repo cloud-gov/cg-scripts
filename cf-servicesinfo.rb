@@ -9,7 +9,7 @@ require 'pp'
 require_relative 'helpers'
 
 
-def exempt_space(space_name)
+def exempt_space?(space_name)
   space_name =~ /stag|dev|test|sandbox|\A(alan|yoz)\z/
 end
 
@@ -23,7 +23,7 @@ def get_non_sandbox_spaces
     org_guid = org['metadata']['guid']
     Helpers.cf_api_paginated("/v2/organizations/#{org_guid}/spaces").each do |space|
       space_name = space['entity']['name']
-      next if exempt_space(space_name)
+      next if exempt_space?(space_name)
       space_guid = space['metadata']['guid']
       all_spaces[space_guid] = space_name
     end
@@ -146,7 +146,7 @@ CSV.open("cf-orgs-services-managers-#{stamp}.csv", "wb") do |csv|
     org_managers = get_org_managers(org_guid)
 
     Helpers.cf_api_paginated("/v2/organizations/#{org_guid}/spaces").each do |space|
-      next if exempt_space(space['entity']['name'])
+      next if exempt_space?(space['entity']['name'])
 
       space_name = space['entity']['name']
       space_guid = space['metadata']['guid']

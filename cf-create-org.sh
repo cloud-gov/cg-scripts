@@ -3,25 +3,26 @@
 set -e
 
 if [ "$#" -lt 5 ]; then
-  printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <IAA_NUMBER> <SYSTEM_NAME> <NOTE> <MANAGER> <MEMORY>\n\n"
+  printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <IAA_NUMBER> <SYSTEM_NAME> <POP_START> <POP_END> <MANAGER> <MEMORY>\n\n"
   exit 1
 fi
 
 AGENCY_NAME=$1
 IAA_NUMBER=$2
 SYSTEM_NAME=$3
-NOTE=$4
-MANAGER=$5
+POP_START=$4
+POP_END=$5
+MANAGER=$6
 
-MEMORY="${6:-4G}"
+MEMORY="${7:-4G}"
 
 if ! [[ $AGENCY_NAME =~ ^[a-zA-Z0-9]+$ ]]; then
   echo "AGENCY_NAME must contain only letters and numbers."
   exit 1
 fi
 
-if ! [[ $IAA_NUMBER =~ ^[a-zA-Z0-9_-]+$ ]]; then
-  echo "IAA_NUMBER must contain only letters, numbers, underscores, and hyphens."
+if ! [[ $IAA_NUMBER =~ ^[a-zA-Z0-9_\.-]+$ ]]; then
+  echo "IAA_NUMBER must contain only letters, numbers, underscores, periods, and hyphens."
   exit 1
 fi
 
@@ -30,17 +31,22 @@ if ! [[ $SYSTEM_NAME =~ ^[a-zA-Z0-9-]+$ ]]; then
   exit 1
 fi
 
-if ! [[ $NOTE =~ ^[a-zA-Z0-9_-]+$ ]]; then
-  echo "NOTE must contain only letters, numbers, underscores, and hyphens."
+if ! [[ $POP_START =~ ^[0-9]{8}$ ]]; then
+  echo "POP_START should be of the format YYYYMMDD."
   exit 1
 fi
 
-QUOTA_NAME="${AGENCY_NAME}_${IAA_NUMBER}_${NOTE}"
+if ! [[ $POP_END =~ ^[0-9]{8}$ ]]; then
+  echo "POP_END should be of the format YYYYMMDD."
+  exit 1
+fi
+
+QUOTA_NAME="${AGENCY_NAME}_${IAA_NUMBER}_${POP_START}-${POP_END}-01"
 # uppercase
-QUOTA_NAME=$(echo $QUOTA_NAME | awk '{print toupper($0)}')
+QUOTA_NAME=$(echo "$QUOTA_NAME" | awk '{print toupper($0)}')
 ORG_NAME="${AGENCY_NAME}-${SYSTEM_NAME}"
 # lowercase
-ORG_NAME=$(echo $ORG_NAME | awk '{print tolower($0)}')
+ORG_NAME=$(echo "$ORG_NAME" | awk '{print tolower($0)}')
 NUMBER_OF_ROUTES=10
 NUMBER_OF_SERVICES=10
 

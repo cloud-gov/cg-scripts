@@ -41,14 +41,29 @@ if ! [[ $POP_END =~ ^[0-9]{8}$ ]]; then
   exit 1
 fi
 
-QUOTA_NAME="${AGENCY_NAME}_${IAA_NUMBER}_${POP_START}-${POP_END}-01"
+QUOTA_NAME_BASE="${AGENCY_NAME}_${IAA_NUMBER}_${POP_START}-${POP_END}"
 # uppercase
-QUOTA_NAME=$(echo "$QUOTA_NAME" | awk '{print toupper($0)}')
+QUOTA_NAME_BASE=$(echo "$QUOTA_NAME_BASE" | awk '{print toupper($0)}')
 ORG_NAME="${AGENCY_NAME}-${SYSTEM_NAME}"
 # lowercase
 ORG_NAME=$(echo "$ORG_NAME" | awk '{print tolower($0)}')
 NUMBER_OF_ROUTES=10
 NUMBER_OF_SERVICES=10
+
+COUNTER=1
+while true
+do
+    QUOTA_NAME="${QUOTA_NAME_BASE}-$(printf "%02d" "${COUNTER}")"
+    cf quota "$QUOTA_NAME" &> /dev/null
+
+    if [ $? -eq 0 ]; then
+        echo "Quota name ${QUOTA_NAME} already exists."
+        echo "Auto-incrementing quota name."
+        ((COUNTER++))
+    else
+        break
+    fi
+done
 
 # Step 0: Confirm the inputs.
 # http://stackoverflow.com/a/226724/358804

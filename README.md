@@ -12,7 +12,7 @@ Scripts to assist with the configuration and operation of Cloud Foundry.
     ./make-concourse-navigator.sh <EMAIL_ADDRESS>
     ```
 
-### Removing Concourse "navigtator" team members
+### Removing Concourse "navigator" team members
 
 1. ```uaac target <OPS_UAA_FQDN>```
 1. ```uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>```

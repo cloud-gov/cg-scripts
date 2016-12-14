@@ -15,6 +15,8 @@ fi
 EMAIL=$BASH_ARGV
 REMOVE=false
 
+SCOPE=concourse.apps
+
 while getopts ":r" opt; do
   case $opt in
     r)
@@ -31,14 +33,24 @@ if ! hash uaac 2>/dev/null; then
   gem install cf-uaac
 fi
 
+if ! uaac group get ${SCOPE} &>/dev/null; then
+  echo "Scope ${SCOPE} does not exist. Did you target the correct UAA?"
+  exit 1;
+fi
+
+
 if $REMOVE; then
   echo -n "Removing user ${EMAIL}... "
-  uaac member delete concourse.apps "${EMAIL}" || true
+  uaac member delete ${SCOPE} "${EMAIL}" || true
   uaac user delete "${EMAIL}"
 else
-  echo -n "Adding user ${EMAIL}... "
-  uaac curl -XPOST /Users -H"If-Match:*" -H"Accept:application/json" -H"Content-Type:application/json" -d\{\"userName\":\""${EMAIL}"\",\"emails\":[\{\"value\":\""${EMAIL}"\"\}],\"active\":true,\"verified\":true,\"origin\":\"gsa\"\}
-  uaac member add concourse.apps "${EMAIL}" || true
+  # create user if not exist
+  if ! uaac user get ${EMAIL} &>/dev/null; then
+    echo -n "Adding user ${EMAIL}... "
+    uaac curl -XPOST /Users -H"If-Match:*" -H"Accept:application/json" -H"Content-Type:application/json" -d\{\"userName\":\""${EMAIL}"\",\"emails\":[\{\"value\":\""${EMAIL}"\"\}],\"active\":true,\"verified\":true,\"origin\":\"gsa\"\}
+  fi
+
+  uaac member add ${SCOPE} "${EMAIL}" || true
 fi
 
 echo "DONE"

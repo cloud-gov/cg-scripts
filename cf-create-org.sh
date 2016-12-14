@@ -54,9 +54,8 @@ COUNTER=1
 while true
 do
     QUOTA_NAME="${QUOTA_NAME_BASE}-$(printf "%02d" "${COUNTER}")"
-    cf quota "$QUOTA_NAME" &> /dev/null
 
-    if [ $? -eq 0 ]; then
+    if cf quota "$QUOTA_NAME" &> /dev/null; then
         echo "Quota name ${QUOTA_NAME} already exists."
         echo "Auto-incrementing quota name."
         ((COUNTER++))

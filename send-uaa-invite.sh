@@ -14,6 +14,13 @@ resp=$(uaac curl -X POST "/invite_users?redirect_uri=${redirect_uri}" \
   -H 'Content-Type: application/json' \
   -d "$(jq -n --arg email $1 '{emails: [$email]}')")
 
+error=$(echo ${resp#*RESPONSE BODY:} | jq -r '.error // ""')
+
+if [[ -n ${error} ]]; then
+  echo "error: $error"
+  exit 1
+fi
+
 link=$(echo ${resp#*RESPONSE BODY:} | jq -r '.new_invites[0].inviteLink')
 
 fug=$(curl -i ${fugacious_uri}/m \

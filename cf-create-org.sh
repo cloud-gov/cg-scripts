@@ -47,8 +47,8 @@ QUOTA_NAME_BASE=$(echo "$QUOTA_NAME_BASE" | awk '{print toupper($0)}')
 ORG_NAME="${AGENCY_NAME}-${SYSTEM_NAME}"
 # lowercase
 ORG_NAME=$(echo "$ORG_NAME" | awk '{print tolower($0)}')
-NUMBER_OF_ROUTES=10
-NUMBER_OF_SERVICES=10
+NUMBER_OF_ROUTES=20
+NUMBER_OF_SERVICES=20
 
 COUNTER=1
 while true

@@ -16,6 +16,14 @@ MANAGER=$6
 
 MEMORY="${7:-4G}"
 
+CI_URL="${CI_URL:-"https://ci.fr.cloud.gov"}"
+FLY_TARGET=$(fly targets | grep "${CI_URL}" | head -n 1 | awk '{print $1}')
+
+if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
+  echo "Not logged in to concourse"
+  exit 1
+fi
+
 if ! [[ $AGENCY_NAME =~ ^[a-zA-Z0-9]+$ ]]; then
   echo "AGENCY_NAME must contain only letters and numbers."
   exit 1
@@ -97,5 +105,8 @@ do
 
   cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper
 done
+
+# Hack: Trigger deployer account broker deploy to update organization whitelist
+fly --target "${FLY_TARGET}" trigger-job --watch --job deploy-deployer-account-broker/push-broker-production
 
 printf "Org created successfully. Target with\n\n\t\$ cf target -o $ORG_NAME\n\n"

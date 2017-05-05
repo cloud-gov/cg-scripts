@@ -9,6 +9,19 @@ YELLOW='\033[0;33m'
 PURPLE='\033[0;35m'
 NC='\033[0m'
 
+if [[ -n $1 && $1 =~ (-h|--help)$ ]]
+then
+   echo -e "
+   ./$( basename "$0" ) [--help, -h]
+ 
+   Get all unique GitHub respositories referenced by pipelines on a Concourse server.
+   
+   Requires an environment variable ${YELLOW}\$ci_env${NC} set matching ${YELLOW}\`fly targets\`${NC}
+   eg, ${PURPLE}ci_env=fr ./$( basename "$0" ) --verbose${NC}
+   "
+   exit
+ fi
+
 if [[ -z $ci_env ]]
 then
   echo -e "Please set a ${YELLOW}\$ci_env${NC} variable to continue from \

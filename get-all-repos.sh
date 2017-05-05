@@ -2,6 +2,9 @@
 
 set -e
 
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 PURPLE='\033[0;35m'
 NC='\033[0m'
@@ -10,34 +13,48 @@ if [[ -z $ci_env ]]
 then
   echo -e "Please set a ${YELLOW}\$ci_env${NC} variable to continue from \
 ${YELLOW}fly targets${NC}"
-  echo -e "eg, ${PURPLE}ci_env=fr ./generate-all-certificates.sh \
+  echo -e "eg, ${PURPLE}ci_env=fr ./$( basename "$0" ) \
 --grab-cert${NC}"
   exit 99
 fi
 
-pipelines=$(
+echo -e "${CYAN}Targeting${NC} Concourse CI ${PURPLE}fly -t ${ci_env}${NC}"
+echo -n
+
+declare -a pipelines=($(
 fly -t "$ci_env" pipelines | \
 grep -Eo '^[a-z0-9\-]+'
-)
+))
 
-repositories=$(
-for pipeline in $pipelines
+num_pipelines="${#pipelines[@]}"
+echo -e "${GREEN}Found${NC} ${num_pipelines} pipelines"
+
+declare -a repositories=()
+for pipeline in "${pipelines[@]}"
 do
-  fly -t "$ci_env" gp -p "$pipeline" | \
-  grep -E 'uri.*github' | \
-  grep -oE '\/[0-9a-zA-Z\-]+\/[A-Z0-9a-z\-]+(\.git)?' | \
-  uniq | \
-  awk '{ print tolower($0) }' | \
-  sed -e "s/\.git//" | \
-  sed -e "s/\n//"
+  # Needs extra whitespace in order to override the previous line completely.
+  echo -ne "Processing ${YELLOW}$((num_pipelines--))${NC} ${pipeline}                                                        \r"
+  repositories+=($(
+    fly -t "$ci_env" gp -p "$pipeline" | \
+    grep -E 'uri.*github' | \
+    grep -oE '\/[0-9a-zA-Z\-]+\/[A-Z0-9a-z\-]+(\.git)?' | \
+    uniq | \
+    awk '{ print tolower($0) }' | \
+    sed -e "s/\.git//" | \
+    sed -e "s/\n//"
+  ))
 done
-)
 
-repositories=$(echo "${repositories}" | tr " " "\n" | sort | uniq)
+repositories=($(echo "${repositories[@]}" | tr " " "\n" | sort | uniq))
 our_repo=''
 not_repo=''
 
-for repo in $repositories
+# Backspacing over the previous output to clear the progress line.
+echo -ne "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b                      "
+echo
+echo -e "${GREEN}Found${NC} ${#repositories[@]} repositories"
+
+for repo in "${repositories[@]}"
 do
   if [[ $repo =~ ^\/18f\/ ]] ; then
     our_repo="${our_repo}${repo} "
@@ -52,8 +69,8 @@ not_repo="${not_repo%"${not_repo##*[![:space:]]}"}"
 echo "-----------------------------"
 echo "GitHub Repositories Under 18F"
 echo "-----------------------------"
-echo "${our_repo}" | tr " " "\n"
+echo -e "${GREEN}${our_repo}${NC}" | tr " " "\n"
 echo "---------------------------------"
-echo "GitHub Repositories NOT Under 18F"
+echo -e "GitHub Repositories ${RED}NOT${NC} Under 18F"
 echo "---------------------------------"
-echo "${not_repo}" | tr " " "\n"
+echo -e "${YELLOW}${not_repo}${NC}" | tr " " "\n"

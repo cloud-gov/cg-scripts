@@ -1,4 +1,4 @@
-#!ENV/bin/python
+#!/usr/bin/env python3
 
 import glob
 import yaml
@@ -200,6 +200,9 @@ if __name__ == "__main__":
 
     print(json.dumps(final))
 
+    print("Repo,Branch,Lang(s),18F\n")
     for source in final:
-        print("{0}\t{1}\t{2}".format(source[0], source[1],
-                                     ", ".join(source[2])))
+        owner = source[0].lower().split('/')[-2]
+        owner = "Internal" if owner == "18f" else "External"
+        print("{0},{1},\"{2}\",{3}\n".format(source[0], source[1],
+                                             ", ".join(source[2]), owner))

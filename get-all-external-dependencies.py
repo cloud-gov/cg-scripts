@@ -204,5 +204,5 @@ if __name__ == "__main__":
     for source in final:
         owner = source[0].lower().split('/')[-2]
         owner = "Internal" if owner == "18f" else "External"
-        print("{0},{1},\"{2}\",{3}\n".format(source[0], source[1],
+        print("{0},{1},\"{2}\",{3}".format(source[0], source[1],
                                              ", ".join(source[2]), owner))

@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument('concourse_url', help="The URL to a concourse instance")
     parser.add_argument('github_username', help="The github username to authenticate as")
     parser.add_argument('github_token', help="The github token for the github user (no scopes are required, this is simply to avoid anon rate limits).  Get a token at: https://github.com/settings/tokens")
-    parser.add_argument('--internal-org', default="18f", help="The github org that")
+    parser.add_argument('--internal-org', default="18F", help="If a repo is owned by this github org, it is considered `Internal`")
     parser.add_argument('--json', default=False, action='store_true', help="Output JSON instead of tab delimited")
 
     args = parser.parse_args()

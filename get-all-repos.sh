@@ -11,31 +11,32 @@ NC='\033[0m'
 
 if [[ -n $1 && $1 =~ (-h|--help)$ ]]
 then
-   echo -e "
-   ./$( basename "$0" ) [--help, -h]
- 
-   Get all unique GitHub respositories referenced by pipelines on a Concourse server.
-   
-   Requires an environment variable ${YELLOW}\$ci_env${NC} set matching ${YELLOW}\`fly targets\`${NC}
-   eg, ${PURPLE}ci_env=fr ./$( basename "$0" ) --verbose${NC}
-   "
-   exit
- fi
+  echo -e "
+  ./$( basename "$0" ) [--help, -h]
 
-if [[ -z $ci_env ]]
-then
-  echo -e "Please set a ${YELLOW}\$ci_env${NC} variable to continue from \
-${YELLOW}fly targets${NC}"
-  echo -e "eg, ${PURPLE}ci_env=fr ./$( basename "$0" ) \
---grab-cert${NC}"
-  exit 99
+  Get all unique GitHub respositories referenced by pipelines on a Concourse server.
+
+  Optional environment variable ${YELLOW}\$CI_URL${NC} matching your Concourse URL.
+  eg, ${PURPLE}CI_URL=https://ci.fr.cloud.gov ./$( basename "$0" ) --verbose${NC}
+
+  \$CI_URL, Defaults to https://ci.fr.cloud.gov
+  "
+  exit
 fi
 
-echo -e "${CYAN}Targeting${NC} Concourse CI ${PURPLE}fly -t ${ci_env}${NC}"
+CI_URL="${CI_URL:-"https://ci.fr.cloud.gov"}"
+FLY_TARGET=$(fly targets | grep "${CI_URL}" | head -n 1 | awk '{print $1}')
+
+if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
+  echo "Not logged in to concourse"
+  exit 1
+fi
+
+echo -e "${CYAN}Targeting${NC} Concourse CI ${PURPLE}fly -t ${FLY_TARGET}${NC}"
 echo -n
 
 declare -a pipelines=($(
-fly -t "$ci_env" pipelines | \
+fly -t "${FLY_TARGET}" pipelines | \
 grep -Eo '^[a-z0-9\-]+'
 ))
 
@@ -48,7 +49,7 @@ do
   # Needs extra whitespace in order to override the previous line completely.
   echo -ne "Processing ${YELLOW}$((num_pipelines--))${NC} ${pipeline}                                                        \r"
   repositories+=($(
-    fly -t "$ci_env" gp -p "$pipeline" | \
+    fly -t "${FLY_TARGET}" gp -p "$pipeline" | \
     grep -E 'uri.*github' | \
     grep -oE '\/[0-9a-zA-Z\-]+\/[A-Z0-9a-z\-]+(\.git)?' | \
     uniq | \

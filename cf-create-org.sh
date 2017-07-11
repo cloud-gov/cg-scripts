@@ -106,6 +106,9 @@ do
   cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper
 done
 
+# https://github.com/cloudfoundry/cli/issues/781
+cf curl -X DELETE "/v2/organizations/$(cf org "${ORG_NAME}" --guid)/users" -d "{\"username\": \"${ADMIN}\"}"
+
 # Hack: Trigger deployer account broker deploy to update organization whitelist
 fly --target "${FLY_TARGET}" trigger-job --watch --job deploy-deployer-account-broker/push-broker-production
 

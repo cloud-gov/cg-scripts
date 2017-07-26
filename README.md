@@ -64,3 +64,14 @@ These steps correspond to the [steps for creating admins](http://docs.cloudfound
 
     ```bash
     ./cf-create-deployer-user.sh <ORG>
+
+
+## Creating CSV for recent users since a given date
+
+1. `pip install pyyaml`
+1. `gem install cf-uaac`
+1. `uaac target uaa.fr.cloud.gov`
+1. `uaac token sso get cf -s '' --scope scim.read`
+  - Once you log in with UAA, make sure you navigate to
+    https://login.fr.cloud.gov/passcode to get your one-time passcode.
+1. `python cf-get-recent-users.py YYYY-MM-DD`

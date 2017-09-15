@@ -1,6 +1,11 @@
 #!/bin/sh
 LENGTH=32
+MATCH='a-zA-Z0-9!@#\$%^&\*\(\)\+=_'
 if [ ! -z "$1" ]; then
   LENGTH=$1
 fi
-cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9!@#\$%^&\*\(\)\+=_' | head -c $LENGTH
+if [[ ! -z "$2" && $2 =~ -a|--alpha ]]; then
+  MATCH='a-zA-Z0-9'
+fi
+
+cat /dev/urandom | LC_ALL=C tr -dc "${MATCH}" | head -c "${LENGTH}"

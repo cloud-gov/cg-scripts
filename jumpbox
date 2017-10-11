@@ -1,9 +1,9 @@
 #!/bin/bash
-#set -e
+set -e
 
 if [ "${#}" -lt 2 ]; then
-    echo "USAGE: jumpbox <fly target> <environment> [command]"
-    return 99;
+  echo "USAGE: jumpbox <fly target> <environment> [command]"
+  return 99;
 fi
 
 target=$1
@@ -11,9 +11,9 @@ environ=$2
 shift 2
 
 # look for existing containers first
-for bid in `fly -t fr containers | grep jumpbox | grep container-bosh-${environ} | awk '{print $5}' | sort -nr`; do
+for bid in $(fly -t "${target}" containers | grep jumpbox | grep "container-bosh-${environ}" | awk '{print $5}' | sort -nr); do
   echo "Attempting to reuse ${environ} jumpbox #${bid}"
-  if fly -t ${target} i -j jumpbox/container-bosh-${environ} -s jumpbox -b ${bid}  -- /bin/true; then
+  if fly -t "${target}" i -j "jumpbox/container-bosh-${environ}" -s jumpbox -b "${bid}" -- /bin/true; then
     break
   else
     bid=""
@@ -22,7 +22,7 @@ done
 
 if [ -z "${bid}" ]; then
   echo "Couldn't find an existing container, making a new one"
-  bid=$(script -q /dev/stderr fly -t ${target} tj -j jumpbox/container-bosh-${environ} -w | grep started | cut -d'#' -f2 | tr -d '\r \n')
+  bid=$(script -q /dev/stderr fly -t "${target}" tj -j "jumpbox/container-bosh-${environ}" -w | grep started | cut -d'#' -f2 | tr -d '\r \n')
 fi
 
-fly -t ${target} i -j jumpbox/container-bosh-${environ} -s jumpbox -b ${bid} -- "${@}"
+fly -t "${target}" i -j "jumpbox/container-bosh-${environ}" -s jumpbox -b "${bid}" -- "${@}"

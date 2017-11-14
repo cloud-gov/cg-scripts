@@ -23,10 +23,4 @@ fi
 
 link=$(echo ${resp#*RESPONSE BODY:} | jq -r '.new_invites[0].inviteLink')
 
-fug=$(curl -i ${fugacious_uri}/m \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
-  -d "$(jq -n --arg body ${link} '{message: {body: $body, hours: 24, max_views: 2}}')" \
-  | grep Location \
-  | awk '{print $2}')
-
-echo "Created ephemeral invite link at: ${fug}"
+echo "Invite link: ${link}"

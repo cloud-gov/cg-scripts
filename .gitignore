@@ -1,3 +1,4 @@
+concourse-environment.yml
 credentials.yml
 secrets.yml
 .blobs

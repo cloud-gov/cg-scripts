@@ -59,11 +59,11 @@ query = {
 today = datetime.date.today()
 first = datetime.date(today.year, today.month, 1)
 indices = [
-    (first - relativedelta.relativedelta(months=idx)).strftime('logs-app-%y.%m.*')
+    (first - relativedelta.relativedelta(months=idx)).strftime('logs-app-%Y.%m.*')
     for idx in reversed(range(3))
 ]
 months = [
-    (first - relativedelta.relativedelta(months=idx)).strftime('%y-%m-%d')
+    (first - relativedelta.relativedelta(months=idx)).strftime('%Y-%m-%d')
     for idx in reversed(range(3))
 ]
 

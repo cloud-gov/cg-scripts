@@ -1,0 +1,30 @@
+{
+  "size": 10000,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "analyze_wildcard": true,
+            "query": "*"
+          }
+        },
+        {
+          "match_phrase": {
+            "@cf.org": {
+              "query": "example-org"
+            }
+          }
+        },
+        {
+          "match_phrase": {
+            "@cf.space": {
+              "query": "example-space"
+            }
+          }
+        }
+      ],
+      "must_not": []
+    }
+  }
+}

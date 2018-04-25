@@ -34,7 +34,7 @@ fi
 echo "bogus_key: bogus" > secrets-combined.yml
 
 # get environment secrets files
-for ENVIRONMENT in $(echo ${ENVIRONMENTS:-"common master tooling development staging production"}); do
+for ENVIRONMENT in $(echo ${ENVIRONMENTS:-"common master tooling staging production"}); do
 
   # download from s3
   aws s3 cp s3://"${SECRETS_BUCKET}"/secrets-"${ENVIRONMENT}".yml secrets-"${ENVIRONMENT}".yml

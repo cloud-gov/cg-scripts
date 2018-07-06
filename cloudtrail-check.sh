@@ -15,9 +15,9 @@
 START=$(date -v -15d +"%Y-%m-%dT%H:%M:%SZ")
 echo "pulling cloudtrail from a bit over 2 weeks ago ($START)"
 
-aws cloudtrail lookup-events --start-time "$START" --lookup-attributes AttributeKey=EventName,AttributeValue=ConsoleLogin > /tmp/consolefoo.$$
+aws cloudtrail lookup-events --no-paginate --start-time "$START" --lookup-attributes AttributeKey=EventName,AttributeValue=ConsoleLogin > /tmp/consolefoo.$$
 
-echo "============ Console users (run 'aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=ConsoleLogin' for details)"
+echo "============ Console users (run 'aws cloudtrail lookup-events --no-paginate --lookup-attributes AttributeKey=EventName,AttributeValue=ConsoleLogin' for details)"
 cat /tmp/consolefoo.$$ | jq -r .Events[].Username | sort | uniq -c
 echo
 
@@ -47,7 +47,7 @@ EVENTNAMES="
 
 for event_name in $EVENTNAMES ; do
 	echo "======================= non-terraform events for $event_name (should be none)"
-	aws cloudtrail lookup-events --start-time "$START" --lookup-attributes AttributeKey=EventName,AttributeValue="$event_name" | \
+	aws cloudtrail lookup-events --no-paginate --start-time "$START" --lookup-attributes AttributeKey=EventName,AttributeValue="$event_name" | \
 		jq -r '.Events[] | .CloudTrailEvent' | \
 		jq -r 'select(if ((.userIdentity.accessKeyId | startswith("ASIA")) and (.sourceIPAddress | startswith("96.127") or startswith("52.222")) and (.userIdentity.principalId | test("[A-Z0-9]{21}:i-[0-9a-z]{17}"))) then false else true end)'
 	echo

@@ -31,7 +31,7 @@ if ! hash uaac 2>/dev/null; then
   gem install cf-uaac
 fi
 
-declare -a admin_groups=("cloud_controller.admin" "uaa.admin" "scim.read" "scim.write" "admin_ui.admin")
+declare -a admin_groups=("cloud_controller.admin" "uaa.admin" "scim.read" "scim.write" "admin_ui.admin" "network.admin")
 if $REMOVE; then
   for group in ${admin_groups[@]}
   do

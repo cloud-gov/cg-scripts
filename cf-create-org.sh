@@ -104,5 +104,6 @@ cf curl -X DELETE "/v2/organizations/$(cf org "${ORG_NAME}" --guid)/users" -d "{
 
 # Hack: Trigger deployer account broker deploy to update organization whitelist
 fly --target "${FLY_TARGET}" trigger-job --watch --job deploy-deployer-account-broker/push-broker-production
+fly --target "${FLY_TARGET}" trigger-job --watch --job deploy-go-s3-broker/push-s3-broker-production
 
 printf "Org created successfully. Target with\n\n\t\$ cf target -o $ORG_NAME\n\n"

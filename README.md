@@ -4,8 +4,8 @@ Scripts to assist with the configuration and operation of Cloud Foundry.
 ## Managing cloud.gov team
 ### Creating Concourse "navigator" team members
 
-1. ```uaac target <OPS_UAA_FQDN>```
-1. ```uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>```
+1. `uaac target <OPS_UAA_FQDN>`
+1. `uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>`
 1. Run
 
     ```bash
@@ -14,8 +14,8 @@ Scripts to assist with the configuration and operation of Cloud Foundry.
 
 ### Removing Concourse "navigator" team members
 
-1. ```uaac target <OPS_UAA_FQDN>```
-1. ```uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>```
+1. `uaac target <OPS_UAA_FQDN>`
+1. `uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>`
 1. Run
 
     ```bash
@@ -27,15 +27,15 @@ Scripts to assist with the configuration and operation of Cloud Foundry.
 These steps correspond to the [steps for creating admins](http://docs.cloudfoundry.org/adminguide/uaa-user-management.html#creating-admin-users).
 
 1. Have the user log in to CF first.
-1. ```uaac target <CF_UAA_FQDN>```
-1. ```uaac token client get admin -s <CF_UAA_ADMINCLIENT_PASSPHRASE>```
+1. `uaac target <CF_UAA_FQDN>`
+1. `uaac token client get admin -s <CF_UAA_ADMINCLIENT_PASSPHRASE>`
 1. Run
 
     ```bash
     ./make-cf-admin.sh <EMAIL_ADDRESS>
     ```
-1. ```uaac target <OPS_UAA_FQDN>```
-1. ```uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>```
+1. `uaac target <OPS_UAA_FQDN>`
+1. `uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>`
 1. Run
 
     ```bash
@@ -43,15 +43,15 @@ These steps correspond to the [steps for creating admins](http://docs.cloudfound
     ```
 
 ### Removing platform admins
-1. ```uaac target <CF_UAA_FQDN>```
-1. ```uaac token client get admin -s <CF_UAA_ADMINCLIENT_PASSPHRASE>```
+1. `uaac target <CF_UAA_FQDN>`
+1. `uaac token client get admin -s <CF_UAA_ADMINCLIENT_PASSPHRASE>`
 1. Run
 
     ```bash
     ./make-cf-admin.sh -r <EMAIL_ADDRESS>
     ```
-1. ```uaac target <OPS_UAA_FQDN>```
-1. ```uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>```
+1. `uaac target <OPS_UAA_FQDN>`
+1. `uaac token client get admin -s <OPS_UAA_ADMINCLIENT_PASSPHRASE>`
 1. Run
 
     ```bash
@@ -64,6 +64,7 @@ These steps correspond to the [steps for creating admins](http://docs.cloudfound
 
     ```bash
     ./cf-create-deployer-user.sh <ORG>
+    ```
 
 
 ## Creating CSV for recent users since a given date
@@ -75,3 +76,13 @@ These steps correspond to the [steps for creating admins](http://docs.cloudfound
   - Once you log in with UAA, make sure you navigate to
     https://login.fr.cloud.gov/passcode to get your one-time passcode.
 1. `python cf-get-recent-users.py YYYY-MM-DD`
+
+## Creating CSV for counting sandboxes logs over the last three months
+
+1. `apt update`
+1. `apt install python3`
+1. `pip install -U requests`
+1. `pip install -U dateutil`
+1. `export ES_HOST="${IP_ADDRESS_LOGSEARCH_MASTER_NODE}"`
+1. `python3 count-sandbox-logs.py`
+1. `ls -l summary.csv`

@@ -57,7 +57,7 @@ def get_os_version_from_stemcell(stemcell):
 
 def get_deployment_to_os_map():
     """Return a dict of deployment name to deployment stemcell name"""
-    response = subprocess.check_output(["bosh", "curl", "/deployments"])
+    response = subprocess.check_output(["bosh", "curl", "/deployments"]).decode()
     deployments = json.loads(response)
     deployment_to_os = {}
     for deployment in deployments:
@@ -79,7 +79,7 @@ def get_inventory(deployment_to_os_version):
     for deployment, version in deployment_to_os_version.items():
         response = subprocess.check_output(
             ["bosh", "curl", "/deployments/{}/vms".format(deployment)]
-        )
+        ).decode()
         vms = json.loads(response)
         for vm in vms:
             inventory.append(

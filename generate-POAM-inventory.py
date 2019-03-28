@@ -31,6 +31,7 @@ NETBIOS_NAME = ""
 MAC_ADDR = ""
 ASSET_WEIGHT = "5"
 AUTH_SCAN = "Agent Based"
+BASELINE_CONFIGURATION = "Ubuntu Stemcell"
 OS_NAME = "Ubuntu"
 ASSET_TYPE = "EC2"
 VIRTUAL = "Yes"
@@ -92,6 +93,7 @@ def get_inventory(deployment_to_os_version):
                     MAC_ADDR,
                     ASSET_WEIGHT,
                     AUTH_SCAN,
+                    BASELINE_CONFIGURATION,
                     OS_NAME,
                     version,
                     bosh_az_to_aws_az[vm["az"]],

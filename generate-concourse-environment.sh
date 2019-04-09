@@ -12,21 +12,21 @@ NC='\033[0m'
 if [[ -z $CG_PIPELINE ]]
 then
   echo -e "${RED}ERROR${NC} Please set a ${YELLOW}\$CG_PIPELINE${NC} variable pointing to a clone of ${YELLOW}https://github.com/18F/cg-pipeline-tasks${NC}"
-  echo -e "eg, ${PURPLE}CG_PIPELINE=~/dev/cg-pipeline-tasks ./generate-k8s-release-certs.sh"
+  echo -e "eg, ${PURPLE}CG_PIPELINE=~/dev/cg-pipeline-tasks ./generate-concourse-environment.sh"
   exit 98
 fi
 
 if [[ -z $SECRETS_BUCKET ]]
 then
   echo -e "${RED}ERROR${NC} Please set a ${YELLOW}\$SECRETS_BUCKET${NC} with the name of the ${YELLOW}s3 bucket where secrets are stored${NC}"
-  echo -e "eg, ${PURPLE}CG_PIPELINE=~/dev/cg-pipeline-tasks ./generate-k8s-release-certs.sh"
+  echo -e "eg, ${PURPLE}SECRETS_BUCKET=my-aws-bucket ./generate-concourse-environment.sh"
   exit 98
 fi
 
 if [[ -z $CI_ENV ]]
 then
   echo -e "${RED}ERROR${NC} Please set a ${YELLOW}\$CI_ENV${NC} with the name of the ${YELLOW}concourse target where the secret-rotationpipeline is stored${NC}"
-  echo -e "eg, ${PURPLE}CG_PIPELINE=~/dev/cg-pipeline-tasks ./generate-k8s-release-certs.sh"
+  echo -e "eg, ${PURPLE}CG_PIPELINE=~/dev/cg-pipeline-tasks ./generate-concourse-environment.sh"
   exit 98
 fi
 

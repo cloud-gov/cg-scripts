@@ -19,5 +19,5 @@ rm "${manifest}"
 
 psql "postgres://cfdb:${password}@${address}:5432/uaadb" -c "delete from totp_seed where username = '${totp_username}'"
 
-echo "successfully reset the topt for ${topt_username}."
+echo "successfully reset the topt for ${totp_username}."
 

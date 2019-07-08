@@ -25,7 +25,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        check = yaml.load(subprocess.check_output(
+        check = yaml.safe_load(subprocess.check_output(
             [
                 'uaac',
                 'users',
@@ -36,7 +36,7 @@ if __name__ == '__main__':
             ]
         ))
         total = check['totalresults']
-        data = yaml.load(subprocess.check_output(
+        data = yaml.safe_load(subprocess.check_output(
             [
                 'uaac',
                 'users',

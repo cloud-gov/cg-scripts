@@ -41,7 +41,9 @@ def main():
 
 def get_args():
     logging.basicConfig(level=logging.INFO)
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Get cloudfoundry events by time and/or user"
+    )
     parser.add_argument('--after', help="find events after this timestamp (timestamp should be ISO8601)")
     parser.add_argument('--before', help="find events before this timestamp (timestamp should be ISO8601)")
     parser.add_argument('--user', help='find events for this user')

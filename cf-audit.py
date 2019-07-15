@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import subprocess
 import urllib
 
@@ -15,14 +16,23 @@ def main():
     if args.before:
         queries.append(f'q=timestamp<{args.before}')
     initial_request = f'/v2/events?{"&".join(queries)}'
+    logging.info('getting %s', initial_request)
     cf_out = subprocess.check_output(['cf', 'curl', initial_request], universal_newlines=True)
     cf_out = json.loads(cf_out)
-    events = cf_out['resources']
+    if args.user:
+        events = [event for event in cf_out['resources'] if event['entity']['actor'] == args.user]
+    else:
+        events = cf_out['resources']
     next_url = cf_out['next_url']
     while next_url is not None:
+        logging.info('getting %s', next_url)
         cf_out = subprocess.check_output(['cf', 'curl', next_url], universal_newlines=True)
         cf_out = json.loads(cf_out)
-        events.extend(cf_out['resources'])
+        if args.user:
+            resources = [event for event in cf_out['resources'] if event['entity']['actor'] == args.user]
+        else:
+            resources = cf_out['resources']
+        events.extend(resources)
         next_url = cf_out['next_url']
     
     if args.user:

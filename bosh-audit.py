@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#/usr/bin/env python3
 
 import argparse
 import json
@@ -17,7 +17,7 @@ def main():
         bosh_call.extend(['--args.user'])
     process_out = subprocess.check_output(bosh_call, universal_newlines=True)
     out = json.loads(process_out)
-    events = out['Tables']['Rows']
+    events = out['Tables'][0]['Rows']
 
     # sometimes the id field looks like 3 -> 1
     # in these cases, we want 3
@@ -30,7 +30,7 @@ def main():
         last_last_id = last_id
         process_out = subprocess.check_output(bosh_call + ['--before-id', last_id], universal_newlines=True)
         out = json.loads(process_out)
-        events.extend(out['Tables']['Rows'])
+        events.extend(out['Tables'][0]['Rows'])
         # sometimes the id field looks like 3 -> 1
         # in these cases, we want 3
         last_id = events[-1]['id'].split(' ')[1]

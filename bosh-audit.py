@@ -44,6 +44,7 @@ def get_args():
     parser.add_argument('--after', help="find events after this timestamp (ex: 2019-12-31 13:55")
     parser.add_argument('--before', help="find events before this timestamp (ex: 2019-12-31 13:55")
     parser.add_argument('--user', help="find events for this user")
+    return parser.parse_args
 
 if __name__ == '__main__':
     main()

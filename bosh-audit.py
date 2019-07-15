@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 
 import argparse
 import json
@@ -33,7 +33,7 @@ def main():
         events.extend(out['Tables'][0]['Rows'])
         # sometimes the id field looks like 3 -> 1
         # in these cases, we want 3
-        last_id = events[-1]['id'].split(' ')[1]
+        last_id = events[-1]['id'].split(' ')[0]
         last_last_id = None
 
     print(json.dumps(out))

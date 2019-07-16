@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+description = """
 Retrieve bosh events from bosh by time and user.
 Useful for auditing following suspected credential leaks or unauthorized access.
 
@@ -48,7 +48,7 @@ def main():
 
 def get_args():
     parser = argparse.ArgumentParser(
-        description='Get bosh events by time and/or user'
+        description=description,
     )
     parser.add_argument('--after', help="find events after this timestamp (ex: 2019-12-31 13:55)")
     parser.add_argument('--before', help="find events before this timestamp (ex: 2019-12-31 13:55)")

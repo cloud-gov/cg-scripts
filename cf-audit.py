@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""
+Retrieve Cloud Foundry events from CF by time and user.
+Useful for auditing following suspected credential leaks or unauthorized access.
+Events retrieved will be all events visible to the user running the script,
+regardless of what org/space they're logged in to.
+
+cf cli does most of the lifting here. This script basically just implements paging
+and user filtering for your convenienve.
+
+Events are returned as JSON to stdout.
+"""
 
 import argparse
 import json

@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
+"""
+Retrieve bosh events from bosh by time and user.
+Useful for auditing following suspected credential leaks or unauthorized access.
 
+Bosh does all the work here. This script really just implements paging around the 
+bosh calls.
+
+Events are returned as JSON to stdout.
+"""
 import argparse
 import json
 import subprocess

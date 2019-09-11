@@ -40,7 +40,6 @@ else
   echo -n "Adding user ${EMAIL}... "
   uaac curl -XPOST /Users -H"If-Match:*" -H"Accept:application/json" -H"Content-Type:application/json" -d\{\"userName\":\""${EMAIL}"\",\"emails\":[\{\"value\":\""${EMAIL}"\"\}],\"active\":true,\"verified\":true,\"origin\":\"gsa\"\}
   uaac member add concourse.admin "${EMAIL}" || true
-  uaac member add concourse.apps "${EMAIL}" || true
 fi
 
 echo "DONE"

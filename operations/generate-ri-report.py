@@ -1,10 +1,6 @@
-import glob
 import json
-import re
 from argparse import Namespace, ArgumentParser
 from logging import Formatter
-from os import path
-from typing import Dict
 import importlib
 import subprocess
 import sys
@@ -36,6 +32,7 @@ class Bootstrap(object):
 def args() -> Namespace:
     args_root = ArgumentParser(usage="Generate a report of deployed VM types for RI purchasing.")
     args_root.add_argument("--debug", help="Enable debug logging.", action="store_true")
+    args_root.add_argument("--install-dependencies", help="Install the needed dependencies to run this script.", action="store_true", default=False)
     args_root.add_argument("--aws-access-key-id", help="AWS access key for the account you want to report on.",
                            type=str)
     args_root.add_argument("--aws-secret-access-key", help="Matching AWS secret account key.",
@@ -48,8 +45,10 @@ def args() -> Namespace:
 
 
 def main():
-    Bootstrap(packages=EXTERNAL_DEPENDENCIES)
     cmd_args = args()
+
+    if cmd_args.install_dependencies:
+        Bootstrap(packages=EXTERNAL_DEPENDENCIES)
 
     from logzero import setup_logger
 

@@ -32,7 +32,7 @@ def main():
     cf_out = subprocess.check_output(['cf', 'curl', initial_request], universal_newlines=True)
     cf_out = json.loads(cf_out)
     if args.user:
-        events = [event for event in cf_out['resources'] if event['entity']['actor'] == args.user]
+        events = [event for event in cf_out['resources'] if event['entity']['actor_username'] == args.user]
     else:
         events = cf_out['resources']
     next_url = cf_out['next_url']
@@ -41,7 +41,7 @@ def main():
         cf_out = subprocess.check_output(['cf', 'curl', next_url], universal_newlines=True)
         cf_out = json.loads(cf_out)
         if args.user:
-            resources = [event for event in cf_out['resources'] if event['entity']['actor'] == args.user]
+            resources = [event for event in cf_out['resources'] if event['entity']['actor_username'] == args.user]
         else:
             resources = cf_out['resources']
         events.extend(resources)

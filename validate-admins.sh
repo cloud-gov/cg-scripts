@@ -1,6 +1,6 @@
 #!/bin/bash
 
-f [ "$#" -ne 2 ]; then
+if [ "$#" -ne 2 ]; then
   echo
   echo "Usage:"
   echo "   ./validate-admins.sh <uaa-target> <uaa-admin-client-secret>"

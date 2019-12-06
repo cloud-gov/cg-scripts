@@ -9,7 +9,8 @@ if [ "$#" -ne 2 ]; then
 fi
 
 deployment=$1
-totp_username=$2
+# Username is case-sensitive - make it lower-case
+totp_username=$(echo $2 | tr '[A-Z]' '[a-z]')
 
 manifest=$(mktemp)
 bosh -d ${deployment} manifest > "${manifest}"

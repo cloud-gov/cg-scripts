@@ -10,7 +10,8 @@ fi
 
 deployment=$1
 # Username is case-sensitive - make it lower-case
-totp_username=$(echo $2 | tr '[A-Z]' '[a-z]')
+#totp_username=$(echo $2 | tr '[A-Z]' '[a-z]')
+totp_username=$2
 
 manifest=$(mktemp)
 bosh -d ${deployment} manifest > "${manifest}"
@@ -20,5 +21,6 @@ rm "${manifest}"
 
 psql "postgres://cfdb:${password}@${address}:5432/uaadb" -c "delete from totp_seed where username = '${totp_username}'"
 
-echo "successfully reset the totp for ${totp_username}."
+echo "Successfully reset the totp for ${totp_username}. Please notify the user."
+echo "NOTE: Username is case-sensitive - if the user is unable to reset, recheck capitalization"
 

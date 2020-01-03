@@ -13,9 +13,10 @@ for site in tree.findall('site'):
     sitename = site.attrib['name']
     if sitename.find('cloud.gov') != -1:
         for alert in site.findall('.//alertitem'):
-            id = '{}, CWE id {}, WASC id {}'.format(alert.find('name').text,
+            id = '{}, CWE id {}, WASC id {}, Risk {}'.format(alert.find('name').text,
                                                     alert.find('cweid').text,
-                                                    alert.find('wascid').text)
+                                                    alert.find('wascid').text,
+                                                    alert.find('riskdesc').text)
             sites = vulnids.get(id, [])
             sites.append(sitename)
             vulnids[id] = sites

@@ -10,7 +10,7 @@ function usage {
     echo
     echo "  Options:"
     echo "      -e     :     Use existing credentials for AWS, rather than service binding credentials"
-    echo "      -p     :     Bucket prefix. Requires -e, and allows getting sizes for all buckets even if they're not bound"
+    echo "      -p     :     Bucket prefix. Allows getting sizes for all buckets even if they're not bound, by using the same logic as the broker to create a bucket name from a service id. (requires -e)"
     echo
 
     exit

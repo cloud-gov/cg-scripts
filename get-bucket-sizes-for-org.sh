@@ -23,18 +23,30 @@ function summarize_bucket {
         summary=$(aws s3 ls --summarize --human-readable --recursive s3://${bucket_prefix}-${service_instance} | grep Total)
     else
         service_bindings=$(cf curl /v3/service_bindings/?service_instance_guids=${service_instance})
-        if [[ $(echo "${service_bindings}" | jq -r '.resources | length') == "0" ]]; then
+        service_keys=$(cf curl /v2/service_keys\?q=service_instance_guid:${service_instance})
+        if [[ $(echo "${service_bindings}" | jq -r '.resources | length') == "0" && $(echo ${service_keys} | jq -r '.resources | length') == 0 ]]; then
             >&2 echo "    ${service_instance_name} is not bound - can't get credentials"
             continue
         fi
-        # get one binding to get the creds. They're redacted if you get a list of bindings
-        binding_guid=$(echo "${service_bindings}" | jq -r .resources[0].guid)
-        binding=$(cf curl /v3/service_bindings/${binding_guid})
-        if [[ -z "${USE_ENV_CREDENTIALS}" ]]; then
+        if [[ $(echo ${service_keys} | jq -r '.resources | length') != 0 ]]; then
+            bucket=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.bucket')
+            key_id=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.access_key_id')
+            secret_key=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.secret_access_key')
+            region=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.region')
+            bucket=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.bucket')
+        else
+            # get one binding to get the creds. They're redacted if you get a list of bindings
+            binding_guid=$(echo "${service_bindings}" | jq -r .resources[0].guid)
+            binding=$(cf curl /v3/service_bindings/${binding_guid})
+
+            bucket=$(echo "${binding}" | jq -r '.data.credentials.bucket')
             key_id=$(echo "${binding}" | jq -r '.data.credentials.access_key_id')
             secret_key=$(echo "${binding}" | jq -r '.data.credentials.secret_access_key')
             region=$(echo "${binding}" | jq -r '.data.credentials.region')
             bucket=$(echo "${binding}" | jq -r '.data.credentials.bucket')
+        fi
+
+        if [[ -z "${USE_ENV_CREDENTIALS}" ]]; then
             summary=$(AWS_DEFAULT_REGION=$region AWS_ACCESS_KEY_ID=$key_id AWS_SECRET_ACCESS_KEY=$secret_key aws s3 ls --summarize --human-readable --recursive s3://${bucket} | grep Total)
         else
             summary=$(aws s3 ls --summarize --human-readable --recursive s3://${bucket} | grep Total)

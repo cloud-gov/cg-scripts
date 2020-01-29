@@ -35,6 +35,10 @@ for report_host in nfr.scan.report_hosts(root):
 
 for key in vulnids:
     if key.find("Risk: None") == -1 :
+        affected_hosts = vulnids[key]
         print(key)
-        for site in vulnids[key]:
-            print('\t{}'.format(site))
+        if len(affected_hosts) > 4:
+            print('\t{} affected hosts found ...'.format(len(affected_hosts)))
+        else:
+            for site in affected_hosts:
+                print('\t{}'.format(site))

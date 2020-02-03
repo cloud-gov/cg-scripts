@@ -15,8 +15,10 @@ nessus_scan_file = sys.argv[1]
 root = nfr.file.nessus_scan_file_root_element(nessus_scan_file)
 file_name = nfr.file.nessus_scan_file_name_with_path(nessus_scan_file)
 file_size = nfr.file.nessus_scan_file_size_human(nessus_scan_file)
+start_date = nfr.scan.scan_time_start(root)
 print(f'File name: {file_name}')
 print(f'File size: {file_size}')
+print(f'Scan start date: {start_date}')
 print('')
 
 

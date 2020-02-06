@@ -35,7 +35,7 @@ for report_host in nfr.scan.report_hosts(root):
         hosts.append(report_host_name)
         vulnids[id] = hosts
 
-for key in vulnids:
+for key in sorted(vulnids):
     if key.find("Risk: None") == -1 :
         affected_hosts = vulnids[key]
         print(key)

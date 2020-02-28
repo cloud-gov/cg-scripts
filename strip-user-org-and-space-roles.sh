@@ -11,9 +11,6 @@ main() {
   local space="$3"
 
   cf unset-org-role "$user" "$org" OrgManager
-
-  cf space-users "$org" "$space"
-
   for space_role in SpaceManager SpaceDeveloper SpaceAuditor; do
     cf unset-space-role "$user" "$org" "$space" "$space_role"
   done

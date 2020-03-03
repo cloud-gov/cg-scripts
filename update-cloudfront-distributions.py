@@ -1,8 +1,61 @@
 import argparse
 import json
 import datetime
+import time
 
 import boto3
+
+RESTRICTIONS = {
+                "GeoRestriction": {
+                    "RestrictionType": "whitelist",
+                    "Quantity": 43,
+                    "Items": [
+                        "SI",
+                        "UM",
+                        "NL",
+                        "MT",
+                        "VI",
+                        "FR",
+                        "ES",
+                        "RO",
+                        "AQ",
+                        "AU",
+                        "AS",
+                        "SE",
+                        "FI",
+                        "BG",
+                        "DE",
+                        "PR",
+                        "SK",
+                        "EE",
+                        "LV",
+                        "LU",
+                        "KR",
+                        "GU",
+                        "LT",
+                        "GB",
+                        "GR",
+                        "NZ",
+                        "AT",
+                        "CX",
+                        "MX",
+                        "JP",
+                        "HU",
+                        "MH",
+                        "IE",
+                        "PL",
+                        "CA",
+                        "PT",
+                        "BE",
+                        "DK",
+                        "CZ",
+                        "IT",
+                        "CH",
+                        "US",
+                        "HR"
+                    ]
+                }
+            }
 
 UPDATED_TAG = {"Key": "GeoRestriction", "Value": "Default"}
 
@@ -17,6 +70,7 @@ def main():
         if args.update:
             client.update_distribution(DistributionConfig=distro['config'], Id=distro['id'], IfMatch=distro['etag'])
             client.tag_resource(Resource=distro['arn'], Tags=dict(Items=[UPDATED_TAG]))
+            time.sleep(3)
 
     
 def get_all_distros(client):

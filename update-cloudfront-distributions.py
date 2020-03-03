@@ -1,3 +1,7 @@
+"""
+Get all the CloudFront distributions within an AWS account, optionally filter them, and add a set of georestrictions to each one.
+
+"""
 import argparse
 import json
 import datetime

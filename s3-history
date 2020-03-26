@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+shopt -s inherit_errexit
+
+main() {
+  [[ $# -ge 1 && $# -le 2 ]] || usage "Expected 2 or 3 arguments, got $#"
+  authed_with_aws || usage "Not authenticated with AWS.  Did you forget aws-vault?"
+
+  me=$(basename "$0")
+  url="$1"
+  bucket=$(echo "$url" | cut -f 3 -d /)
+  object=$(echo "$url" | cut -f 4- -d /)
+
+  version_ids=($(aws s3api list-object-versions --bucket "$bucket" --prefix "$object" --no-paginate --output=text --query "Versions[*].VersionId"))
+
+  (
+    cd "$(mktemp -d "$me.XXX")"
+
+    for newer_index in "${!version_ids[@]}"; do
+      older_index=$((newer_index+1))
+      if [[ -v "version_ids[older_index]" ]]; then
+        newer_id="${version_ids[newer_index]}"
+        older_id="${version_ids[older_index]}"
+
+        newer_date=$(aws s3api get-object --output=text --query='LastModified' --bucket "$bucket" --key "$object" --version-id "$newer_id" newer)
+                 _=$(aws s3api get-object --output=text --query='LastModified' --bucket "$bucket" --key "$object" --version-id "$older_id" older)
+
+        echo "Date: $newer_date"
+
+        diff -y --color=always --suppress-common-lines older newer || true
+        echo
+      fi
+    done
+  )
+}
+
+authed_with_aws() {
+  aws sts get-caller-identity --output text > /dev/null 2>&1
+}
+
+usage() {
+  [[ $# -gt 0 ]] && echo "ERROR: $*"
+  local me=$(basename "$0")
+  cat <<-EOF
+
+  USAGE: $me OBJECT_URL
+
+  Queries S3 version history for an object, showing the date and diff for each version.
+
+  Examples:
+
+    $me s3://bucket/path/to/file
+	EOF
+  exit 1
+}
+
+main "$@"

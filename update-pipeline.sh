@@ -5,17 +5,21 @@ shopt -s inherit_errexit
 
 main() {
   [[ "${BASH_VERSINFO:-0}" -ge 5 ]]     || usage "This script must be run with Bash 5.x"
-  [[ $# -ge 2 && $# -le 4 ]]            || usage "Expected between 2-4 arguments, received $#"
+  [[ $# -ge 1 && $# -le 4 ]]            || usage "Expected between 1 and 4 arguments, received $#"
   [[ -v CONCOURSE_CREDENTIALS_BUCKET ]] || usage "Expected \$CONCOURSE_CREDENTIALS_BUCKET to be set"
 
   FLY_TARGET=$1
-  PIPELINE_FILE=$2
   GIT_ROOT=$(git rev-parse --show-toplevel)
-  PIPELINE=${3:-$(basename "$GIT_ROOT")}
+  PIPELINE_FILE=${2:-$GIT_ROOT/ci/pipeline.yml}
+  if [[ $# -ge 3 ]]; then
+    PIPELINE="$3"
+  else
+    PIPELINE=$(basename "$GIT_ROOT" | sed 's/^cg-//')
+  fi
 
   TS="$(date +"%Y%m%d%H%M%S%3N")"
   SECRETS_DIR="$GIT_ROOT/do-not-commit"
-  SECRETS_FILE_NAME="${4:-$PIPELINE.yml}"
+  SECRETS_FILE_NAME="${4:-$(basename "$GIT_ROOT").yml}"
   SECRETS_PATH="$SECRETS_DIR/$SECRETS_FILE_NAME"
   SECRETS_BACKUP_PATH="${SECRETS_PATH}-$TS"
 
@@ -58,7 +62,7 @@ It requires that the name of the bucket holding the secret credentials is set
 in the \$CONCOURSE_CREDENTIALS_BUCKET environment variable.
 
 If you omit pipeline-name, then the name of the root git directory is used as
-a best guess.
+a best guess (ommitting the cg- prefix).
 
 This script assumes that "do-not-commit" is configured in the project
 .gitignore (or your global excludesfile).  See the documentation on
@@ -69,6 +73,8 @@ This script assumes that "do-not-commit" is configured in the project
 Examples:
 
   export CONCOURSE_CREDENTIALS_BUCKET=s3://mysekrits
+
+  $(basename "$0") concourse
 
   $(basename "$0") concourse ./ci/pipeline.yml
 

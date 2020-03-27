@@ -4,18 +4,23 @@ set -euo pipefail
 shopt -s inherit_errexit
 
 main() {
-  [[ $# -ge 1 && $# -le 2 ]] || usage "Expected 2 or 3 arguments, got $#"
+  parse_args "$@"
+
+  [[ -v obj_url ]] || usage "S3 object url (-b) required"
   authed_with_aws || usage "Not authenticated with AWS.  Did you forget aws-vault?"
 
-  me=$(basename "$0")
-  url="$1"
-  bucket=$(echo "$url" | cut -f 3 -d /)
-  object=$(echo "$url" | cut -f 4- -d /)
+  [[ -v start ]] && echo "Start: $(date -d "@$start")"
+  [[ -v end ]]   && echo "End:   $(date -d "@$end")"
 
-  version_ids=($(aws s3api list-object-versions --bucket "$bucket" --prefix "$object" --no-paginate --output=text --query "Versions[*].VersionId"))
+  me=$(basename "$0")
+  bucket=$(echo "$obj_url" | cut -f 3 -d /)
+  object=$(echo "$obj_url" | cut -f 4- -d /)
+
+  # shellcheck disable=SC2207
+  version_ids=($(aws s3api list-object-versions --bucket "$bucket" --prefix "$object" --no-paginate --output=json | jq -r "$(jq_query)"))
 
   (
-    cd "$(mktemp -d "$me.XXX")"
+    cd "$(mktemp -d "/tmp/$me.XXX")"
 
     for newer_index in "${!version_ids[@]}"; do
       older_index=$((newer_index+1))
@@ -35,6 +40,41 @@ main() {
   )
 }
 
+parse_args() {
+  while getopts ":hs:e:o:" opt; do
+    case ${opt} in
+      s )
+        start=$(date -d "$OPTARG 00:00:00" +'%s')
+        ;;
+      e )
+        end=$(date -d "$OPTARG 23:59:59" +'%s')
+        ;;
+      o )
+        obj_url=$OPTARG
+        ;;
+      h )
+        usage
+        ;;
+      \? )
+        usage "Invalid option: $OPTARG" 1>&2
+        ;;
+      : )
+        usage "Invalid option: $OPTARG requires an argument" 1>&2
+        ;;
+    esac
+  done
+  shift $((OPTIND -1))
+}
+
+jq_query() {
+  local j
+  j=".Versions[]"
+  [[ -v start ]] && j="$j | select(.LastModified | sub(\"\\\\.[0-9]+Z\"; \"Z\") | fromdate > $start)"
+  [[ -v end ]] && j="$j | select(.LastModified | sub(\"\\\\.[0-9]+Z\"; \"Z\") | fromdate < $end)"
+  j="$j | .VersionId"
+  echo "$j"
+}
+
 authed_with_aws() {
   aws sts get-caller-identity --output text > /dev/null 2>&1
 }
@@ -44,13 +84,20 @@ usage() {
   local me=$(basename "$0")
   cat <<-EOF
 
-  USAGE: $me OBJECT_URL
+  USAGE: $me -o OBJECT_URL [-s START_DATE] [-e END_DATE]
 
-  Queries S3 version history for an object, showing the date and diff for each version.
+  Queries S3 version history for an object, showing the date and diff for each
+  version.
+
+  OPTIONS:
+
+    -o       Object URL (ie: s3://bucket/path/to/object)
+    -s       Start date (ie: 2020-01-21)
+    -e       End date (ie: 2020-01-21)
 
   Examples:
 
-    $me s3://bucket/path/to/file
+    $me -b s3://bucket/path/to/file -s 2000-01-20
 	EOF
   exit 1
 }

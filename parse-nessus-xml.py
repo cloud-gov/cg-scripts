@@ -25,10 +25,7 @@ start_date = nfr.scan.scan_time_start(root)
 print(f'File name: {file_name}')
 print(f'File size: {file_size}')
 print(f'Scan start date: {start_date}')
-print('')
 
-
-vulnids = {}
 vuln_report = {}
 for report_host in nfr.scan.report_hosts(root):
     report_host_name = nfr.host.report_host_name(report_host)
@@ -36,37 +33,37 @@ for report_host in nfr.scan.report_hosts(root):
         plugin_id = int(nfr.plugin.report_item_value(report_item, 'pluginID'))
         risk_factor = nfr.plugin.report_item_value(report_item, 'risk_factor')
         plugin_name = nfr.plugin.report_item_value(report_item, 'pluginName')
-        id = '{}, Risk: {}, Plugin Name: {}, https://www.tenable.com/plugins/nessus/{}'.format(
-                                            plugin_id, risk_factor, plugin_name, plugin_id)
+
+        description = f"{plugin_id}, Risk: {risk_factor}, Plugin Name: {plugin_name}, https://www.tenable.com/plugins/nessus/{plugin_id}"
+
+        hosts = vuln_report.get('id', {}).get('hosts', [])
+        hosts.append(report_host_name)
         this_vuln = {
             "id": plugin_id,
             "risk_factor": risk_factor,
             "plugin_name": plugin_name,
-            "full_description": id
+            "full_description": description,
+            "hosts": hosts
         }
-        hosts = vulnids.get(id, [])
-        hosts.append(report_host_name)
-        vulnids[id] = hosts
-        vuln_report[id] = this_vuln
+        vuln_report[plugin_id] = this_vuln
 
-print("------- SUMMARY ------\n")
+print("\n------- SUMMARY ------\n")
 
-for key in sorted(vulnids):
-    if key.find("Risk: None") == -1 :
-        affected_hosts = vulnids[key]
-        print(key)
+for key in sorted(vuln_report):
+    if vuln_report[key]["risk_factor"] != "None":
+        affected_hosts = vuln_report[key]["hosts"]
+        print(vuln_report[key]["full_description"])
         if len(affected_hosts) > 4:
             print('\t{} affected hosts found ...'.format(len(affected_hosts)))
         else:
             for site in affected_hosts:
                 print('\t{}'.format(site))
 
-
-print("-------  CSV  ------\n")
+print("\n-------  CSV  ------\n")
 remediation_plan="We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
-for vuln in sorted(vulnids):
-    if vuln.find("Risk: None") == -1 :
-        affected_hosts = vulnids[vuln]
+for vuln in sorted(vuln_report):
+    if vuln_report[vuln]["risk_factor"] != "None":
+        affected_hosts = vuln_report[vuln]
         risk_factor = vuln_report[vuln]["risk_factor"] 
         if risk_factor == "Medium" :
             risk_factor = "Moderate"

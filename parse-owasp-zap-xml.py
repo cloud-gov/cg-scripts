@@ -24,5 +24,5 @@ for site in tree.findall('site'):
 
 for key in sorted(vulnids):
     print(key)
-    for site in vulnids[key]:
+    for site in sorted(vulnids[key]):
         print('\t{}'.format(site))

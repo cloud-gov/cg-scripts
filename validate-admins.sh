@@ -6,6 +6,10 @@ if [ "$#" -ne 2 ]; then
   echo "   ./validate-admins.sh <uaa-target> <uaa-admin-client-secret>"
   echo
   echo "   EX:  ./validate-admins.sh login.fr.cloud.gov S3c4Et"
+  echo 
+  echo "   Obtain uaa-admin-client-secret by running:"
+  echo 
+  echo "   credhub get -n \"/bosh/cf-{environment-name}/uaa_admin_client_secret\" | grep value | sed -r 's/value: //g'"
   echo
     exit 1
 fi

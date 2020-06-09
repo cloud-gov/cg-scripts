@@ -9,6 +9,8 @@ if [ "$#" -lt 1 ]; then
   echo
   echo "  Options:"
   echo "     -r    :    Remove the user instead of add"
+  echo 
+  echo "  Be sure to run ./cg-scripts/uaa/login.sh prior to executing this script"
   echo
   exit 1;
 fi

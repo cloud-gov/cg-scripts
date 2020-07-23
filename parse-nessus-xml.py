@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import nessus_file_reader as nfr
 import os
 import glob
@@ -33,6 +35,7 @@ for report_host in nfr.scan.report_hosts(root):
         plugin_id = int(nfr.plugin.report_item_value(report_item, 'pluginID'))
         risk_factor = nfr.plugin.report_item_value(report_item, 'risk_factor')
         plugin_name = nfr.plugin.report_item_value(report_item, 'pluginName')
+        plugin_output = nfr.plugin.report_item_value(report_item, 'plugin_output')
 
         description = f"{plugin_id}, Risk: {risk_factor}, Plugin Name: {plugin_name}, https://www.tenable.com/plugins/nessus/{plugin_id}"
 
@@ -43,6 +46,7 @@ for report_host in nfr.scan.report_hosts(root):
             "risk_factor": risk_factor,
             "plugin_name": plugin_name,
             "full_description": description,
+            "plugin_output": plugin_output,
             "hosts": hosts
         }
         vuln_report[plugin_id] = this_vuln
@@ -53,7 +57,8 @@ for key in sorted(vuln_report):
     if vuln_report[key]["risk_factor"] != "None":
         affected_hosts = vuln_report[key]["hosts"]
         print(vuln_report[key]["full_description"])
-        if len(affected_hosts) > 4:
+        print(vuln_report[key]["plugin_output"])
+        if len(affected_hosts) > 6:
             print('\t{} affected hosts found ...'.format(len(affected_hosts)))
         else:
             for site in affected_hosts:

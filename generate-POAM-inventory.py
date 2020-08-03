@@ -4,7 +4,7 @@ import subprocess
 
 #
 # goal: produce a CSV with lines of:
-# `Unique Asset Identifier` - can be any arbirtary name - we use the VM name
+# `Unique Asset Identifier` - can be any arbirtary name - we use the VM name with BOSH ID
 # IPv4 - hopefully obvious what this means
 # IPv6 - we don't currently include this
 # DNS name - not currently included
@@ -85,7 +85,7 @@ def get_inventory(deployment_to_os_version):
         for vm in vms:
             inventory.append(
                 [
-                    vm["job"],
+                    vm["job"]+"/"+vm["id"],
                     vm["ips"][0],
                     IPV6,
                     DNS_NAME,

@@ -64,6 +64,10 @@ EVENTNAMES="
   AuthorizeSecurityGroupIngress
   CreatePolicy
   CreateSecurityGroup
+  CreateReplicationGroup
+  ModifyReplicationGroup
+  CreateElasticsearchDomain
+  UpdateElasticsearchDomainConfig
 "
 
 for event_name in $EVENTNAMES ; do
@@ -73,7 +77,7 @@ for event_name in $EVENTNAMES ; do
   # is normal
   aws cloudtrail lookup-events --no-paginate --start-time "$START" --lookup-attributes AttributeKey=EventName,AttributeValue="$event_name" \
     | jq -r '.Events[] | .CloudTrailEvent' \
-    | jq -r 'select(((.userIdentity.accessKeyId | startswith("ASIA")) and (.sourceIPAddress | startswith("96.127") or startswith("52.222")) and (.userIdentity.principalId | test("[A-Z0-9]{21}:i-[0-9a-z]{17}")))|not)' \
+    | jq -r 'select(((.userIdentity.accessKeyId | startswith("ASIA")) and (.sourceIPAddress | startswith("96.127") or startswith("52.222") or startswith("52.61")) and (.userIdentity.principalId | test("[A-Z0-9]{21}:i-[0-9a-z]{17}")))|not)' \
     | jq -r 'select((.userIdentity.userName == "cg-s3-broker") and (.eventName == "CreatePolicy")|not)' \
     > "$EVENT"
   if [ -s "$EVENT" ] ; then

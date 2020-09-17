@@ -1,5 +1,5 @@
 #!/bin/bash
-
+  
 set -e
 
 pushd () {
@@ -24,15 +24,20 @@ main() {
       local target="uaa.fr-stage.cloud.gov"
     elif [ "$environment_name" == "development" ]; then
       local target="uaa.dev.us-gov-west-1.aws-us-gov.cloud.gov"
+    elif [ "$environment_name" == "tooling" ]; then
+      local target="opslogin.fr.cloud.gov"
     else
       echo "ERROR: Unknown environment ${environment_name}"
       exit 1
     fi
 
-    local admin_pwd=$(credhub get -n "/bosh/cf-${environment_name}/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
+    if [ "$environment_name" == "tooling" ]; then
+        local admin_pwd=$(credhub get -n "/toolingbosh/opsuaa/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
+    else
+        local admin_pwd=$(credhub get -n "/bosh/cf-${environment_name}/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
+    fi
     uaac target $target
-    uaac token client get admin -s $admin_pwd
+    uaac token client get admin -s "$admin_pwd"
   popd
 }
-
 main

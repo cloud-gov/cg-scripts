@@ -33,7 +33,7 @@ if ! hash uaac 2>/dev/null; then
   gem install cf-uaac
 fi
 
-declare -a groups=("cloud_controller.global_auditor" "uaa.user" "scim.read" "admin_ui.user")
+declare -a groups=("cloud_controller.global_auditor" "scim.read" "admin_ui.user")
 if $REMOVE; then
   for group in ${groups[@]}
   do

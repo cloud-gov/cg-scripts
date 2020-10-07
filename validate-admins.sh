@@ -9,7 +9,7 @@ if [ "$#" -ne 2 ]; then
   echo 
   echo "   Obtain uaa-admin-client-secret by running:"
   echo 
-  echo "   credhub get -n \"/bosh/cf-{environment-name}/uaa_admin_client_secret\" | grep value | sed -r 's/value: //g'\"
+  echo "   credhub get -n \"/bosh/cf-{environment-name}/uaa_admin_client_secret\" | grep value | sed -r 's/value: //g'"
   echo
     exit 1
 fi

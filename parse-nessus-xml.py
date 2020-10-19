@@ -8,7 +8,7 @@ import time
 import sys
 
 import csv
-csvwriter = csv.writer(sys.stdout)
+csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
 
 from datetime import date
 today = date.today()
@@ -66,6 +66,7 @@ for key in sorted(vuln_report):
 
 print("\n-------  CSV  ------\n")
 remediation_plan="We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
+owner="Eddie Tejeda"
 for vuln in sorted(vuln_report):
     if vuln_report[vuln]["risk_factor"] != "None":
         number_of_affected_hosts = len(vuln_report[vuln]["hosts"])
@@ -74,5 +75,5 @@ for vuln in sorted(vuln_report):
             risk_factor = "Moderate"
         csvwriter.writerow(["CGXX","RA-5",vuln_report[vuln]["plugin_name"], "", "Nessus Scan Report", 
             vuln_report[vuln]["id"], str(number_of_affected_hosts) + " production hosts", 
-            "Eddie Tejeda", "None", remediation_plan, start_date.date(), "", "Resolve", "", mmddYY, "Yes", mmddYY,
+            owner, "None", remediation_plan, start_date.date(), "", "Resolve", "", mmddYY, "Yes", mmddYY,
             "CloudFoundry stemcell", risk_factor, risk_factor, "No", "No", "No" ])

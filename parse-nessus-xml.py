@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import nessus_file_reader as nfr
 import os
 import glob
@@ -6,7 +8,7 @@ import time
 import sys
 
 import csv
-csvwriter = csv.writer(sys.stdout)
+csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
 
 from datetime import date
 today = date.today()
@@ -33,6 +35,7 @@ for report_host in nfr.scan.report_hosts(root):
         plugin_id = int(nfr.plugin.report_item_value(report_item, 'pluginID'))
         risk_factor = nfr.plugin.report_item_value(report_item, 'risk_factor')
         plugin_name = nfr.plugin.report_item_value(report_item, 'pluginName')
+        plugin_output = nfr.plugin.report_item_value(report_item, 'plugin_output')
 
         description = f"{plugin_id}, Risk: {risk_factor}, Plugin Name: {plugin_name}, https://www.tenable.com/plugins/nessus/{plugin_id}"
 
@@ -43,6 +46,7 @@ for report_host in nfr.scan.report_hosts(root):
             "risk_factor": risk_factor,
             "plugin_name": plugin_name,
             "full_description": description,
+            "plugin_output": plugin_output,
             "hosts": hosts
         }
         vuln_report[plugin_id] = this_vuln
@@ -53,7 +57,8 @@ for key in sorted(vuln_report):
     if vuln_report[key]["risk_factor"] != "None":
         affected_hosts = vuln_report[key]["hosts"]
         print(vuln_report[key]["full_description"])
-        if len(affected_hosts) > 4:
+#        print(vuln_report[key]["plugin_output"])
+        if len(affected_hosts) > 6:
             print('\t{} affected hosts found ...'.format(len(affected_hosts)))
         else:
             for site in affected_hosts:
@@ -61,6 +66,7 @@ for key in sorted(vuln_report):
 
 print("\n-------  CSV  ------\n")
 remediation_plan="We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
+owner="Eddie Tejeda"
 for vuln in sorted(vuln_report):
     if vuln_report[vuln]["risk_factor"] != "None":
         number_of_affected_hosts = len(vuln_report[vuln]["hosts"])
@@ -69,5 +75,5 @@ for vuln in sorted(vuln_report):
             risk_factor = "Moderate"
         csvwriter.writerow(["CGXX","RA-5",vuln_report[vuln]["plugin_name"], "", "Nessus Scan Report", 
             vuln_report[vuln]["id"], str(number_of_affected_hosts) + " production hosts", 
-            "Eddie Tejeda", "None", remediation_plan, start_date.date(), "", "Resolve", "", mmddYY, "Yes", mmddYY,
+            owner, "None", remediation_plan, start_date.date(), "", "Resolve", "", mmddYY, "Yes", mmddYY,
             "CloudFoundry stemcell", risk_factor, risk_factor, "No", "No", "No" ])

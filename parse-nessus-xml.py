@@ -6,6 +6,7 @@ import glob
 import traceback
 import time
 import sys
+import re
 
 import csv
 csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
@@ -31,7 +32,10 @@ print(f'Scan start date: {start_date}')
 vuln_report = {}
 for report_host in nfr.scan.report_hosts(root):
     report_host_name = nfr.host.report_host_name(report_host)
+#    print("===",report_host_name, nfr.host.number_of_compliance_plugins_per_result(report_host,"FAILED"),"===")
     for report_item in nfr.host.report_items(report_host):
+#        if nfr.plugin.compliance_check_item_value(report_item, 'cm:compliance-result') != "PASSED":
+#            print(nfr.plugin.compliance_check_item_value(report_item, 'cm:compliance-check-name'))
         plugin_id = int(nfr.plugin.report_item_value(report_item, 'pluginID'))
         risk_factor = nfr.plugin.report_item_value(report_item, 'risk_factor')
         plugin_name = nfr.plugin.report_item_value(report_item, 'pluginName')
@@ -49,6 +53,34 @@ for report_host in nfr.scan.report_hosts(root):
             "plugin_output": plugin_output,
             "hosts": hosts
         }
+        DAEMONS = "bosh-dns|bosh-dns-health|alertmanager|blackbox_exporter|bosh_exporter|cf_exporter"
+        DAEMONS += "|concourse|doomsday|firehose_exporter|gdn|gnatsd|grafana-server|java|kube-state-metrics|nessusd|nginx"
+        DAEMONS += "|node_exporter|ntpd|oauth2_proxy|prometheus|pushgateway|ruby"
+        DAEMONS += "|auctioneer|bbs|binding-cache|broker|cc-uploader|consul|discovery-registrar|dockerdt"
+        DAEMONS += "|doppler|elasticsearch_exporter|etcd|file-server|flanneld|forwarder-agent|goroutert"
+        DAEMONS += "|kube-apiserver|kube-controller-manager|kube-proxy|kube-scheduler|kubelet|locket"
+        DAEMONS += "|log-cache|log-cache-cf-auth-proxy|log-cache-gateway|log-cache-nozzle|loggregator-agent|metrics-agent"
+        DAEMONS += "|netmon|node|policy-server|policy-server-internal|prom-scraper|redis-server|rep"
+        DAEMONS += "|rlp|rlp-gateway|route-emitter|service-discovery-controller|silk-controller|silk-daemon"
+        DAEMONS += "|ssh-proxy|statsd-injector|syslog-agent|tps-watcher|trafficcontroller|udp-forwarder|vxlan-policy-agent"
+
+
+
+        if plugin_id == 33851:
+            print("===",report_host_name,"===")
+            for line in plugin_output.splitlines():
+                if (len(line) < 2):
+                    continue
+                if "The following running daemons are not managed by dpkg" in line:
+                    continue
+                if line == "/var/vcap/bosh/bin/bosh-agent":
+                    continue
+                if line == "/var/vcap/bosh/bin/monit":
+                    continue
+                #if re.search(rf"/var/vcap/data/packages/{DAEMONS}/[0-f]{40}", line, re.IGNORECASE):
+                if re.search(rf'/var/vcap/data/packages/{DAEMONS}/[0-f]+/bin/{DAEMONS}$', line, re.IGNORECASE):
+                    continue
+                print(line)
         vuln_report[plugin_id] = this_vuln
 
 print("\n------- SUMMARY ------\n")

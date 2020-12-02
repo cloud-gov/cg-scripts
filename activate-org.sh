@@ -12,6 +12,7 @@ if [ "$#" -ne 1 ]; then
   echo "Usage:"
   echo "   ./activate-org.sh <org name>"
   echo
+
   exit 1
 fi
 
@@ -25,6 +26,7 @@ if [ "$cf_version" -lt "$min_cf_version" ]; then
   echo "You must update your cf CLI to at least version 7."
   echo "Please run: brew update && brew upgrade cf-cli@7"
   echo
+
   exit 1
 fi
 

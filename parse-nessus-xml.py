@@ -28,6 +28,17 @@ start_date = nfr.scan.scan_time_start(root)
 print(f'File name: {file_name}')
 print(f'File size: {file_size}')
 print(f'Scan start date: {start_date}')
+DAEMONS = "bosh.dns|bosh.dns.adapter|bosh.dns.health|alertmanager|binding.cache|blackbox.exporter|bosh.exporter|cf.exporter"
+DAEMONS += "|concourse|docker|doomsday|firehose.exporter|gdn|gnatsd|grafana.server|java|kube.state.metrics|nessusd|nginx"
+DAEMONS += "|node.exporter|ntpd|oauth2.proxy|prometheus|pushgateway|ruby"
+DAEMONS += "|auctioneer|bbs|binding.cache|broker|cc.uploader|consul|discovery.registrar|dockerdt"
+DAEMONS += "|doppler|elasticsearch.exporter|etcd|file.server|flanneld|forwarder.agent|gorouter"
+DAEMONS += "|kube.apiserver|kube.controller.manager|kube.proxy|kube.scheduler|kubelet|locket"
+DAEMONS += "|log.cache|log.cache.cf.auth.proxy|log.cache.gateway|log.cache.nozzle|loggregator.agent|metrics.agent"
+DAEMONS += "|netmon|node|policy.server|policy.server.internal|prom.scraper|redis.server|rep"
+DAEMONS += "|reverse.log.proxy|rlp|reverse.log.proxy.gateway|rlp.gateway"
+DAEMONS += "|route.emitter|service.discovery.controller|silk.controller|silk.daemon"
+DAEMONS += "|ssh.proxy|statsd.injector|syslog.agent|tps.watcher|trafficcontroller|udp.forwarder|vxlan.policy.agent"
 
 vuln_report = {}
 for report_host in nfr.scan.report_hosts(root):
@@ -53,18 +64,6 @@ for report_host in nfr.scan.report_hosts(root):
             "plugin_output": plugin_output,
             "hosts": hosts
         }
-        DAEMONS = "bosh-dns|bosh-dns-adapter|bosh-dns-health|alertmanager|blackbox_exporter|bosh_exporter|cf_exporter"
-        DAEMONS += "|concourse|doomsday|firehose_exporter|gdn|gnatsd|grafana-server|java|kube-state-metrics|nessusd|nginx"
-        DAEMONS += "|node_exporter|ntpd|oauth2_proxy|prometheus|pushgateway|ruby"
-        DAEMONS += "|auctioneer|bbs|binding-cache|broker|cc-uploader|consul|discovery-registrar|dockerdt"
-        DAEMONS += "|doppler|elasticsearch_exporter|etcd|file-server|flanneld|forwarder-agent|goroutert"
-        DAEMONS += "|kube-apiserver|kube-controller-manager|kube-proxy|kube-scheduler|kubelet|locket"
-        DAEMONS += "|log-cache|log-cache-cf-auth-proxy|log-cache-gateway|log-cache-nozzle|loggregator-agent|metrics-agent"
-        DAEMONS += "|netmon|node|policy-server|policy-server-internal|prom-scraper|redis-server|rep"
-        DAEMONS += "|rlp|rlp-gateway|route-emitter|service-discovery-controller|silk-controller|silk-daemon"
-        DAEMONS += "|ssh-proxy|statsd-injector|syslog-agent|tps-watcher|trafficcontroller|udp-forwarder|vxlan-policy-agent"
-
-
 
         if plugin_id == 33851:
             for line in plugin_output.splitlines():
@@ -72,12 +71,14 @@ for report_host in nfr.scan.report_hosts(root):
                     continue
                 if "The following running daemons are not managed by dpkg" in line:
                     continue
+                if (line == "/bin/kube2iam"):
+                    continue
                 if re.search(rf'/var/vcap/bosh/bin/(bosh-agent|monit)', line):
                     continue
-                if re.search(rf'^/var/vcap/data/packages/{DAEMONS}/[0-9a-f]+/bin/{DAEMONS}$', line):
+                if re.search(rf'^/var/vcap/data/packages/({DAEMONS})/[0-9a-f]+/bin/{DAEMONS}$', line):
                     continue
-                print("===",report_host_name,"===")
-                print(line)
+                print("== Unknown daemon found: ",report_host_name,": ", line)
+
         vuln_report[plugin_id] = this_vuln
 
 print("\n------- SUMMARY ------\n")

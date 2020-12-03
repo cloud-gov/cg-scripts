@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# Activates an organization by setting its suspended status to true and starts
-# all stopped applications in all spaces of the organization.
+# Deactivates an organization by setting its suspended status to true and stops
+# all running applications in all spaces of the organization.
 
-# Requires cf CLI version 7+ to work.
+# Requires cf CLI version 7+ and jq to work.
 
 set -e -x
 
@@ -30,23 +30,25 @@ if [ "$cf_version" -lt "$min_cf_version" ]; then
   exit 1
 fi
 
+# Check to see if jq is available; if not, let them know to install it and exit.
+if ! command -v jq &> /dev/null; then
+  echo "jq could not be found; please make sure it is installed by running:"
+  echo "brew install jq"
+
+  exit 1
+fi
+
 org_name=$1
-GUID=$(cf org "${org_name}" --guid)
+org_guid=$(cf org "${org_name}" --guid)
 
 # Set the organization to suspended.
-cf curl "/v3/organizations/${GUID}" -X PATCH -d '{"suspended": true}'
+cf curl "/v3/organizations/${org_guid}" -X PATCH -d '{"suspended": true}'
 
-cf target -o "${org_name}"
+# Get all of the application GUIDs in the organization.  This will retrieve all
+# apps in all spaces within the org.
+app_guids=$(cf curl /v3/apps?organization_guids=${org_guid} | jq -r '.resources[].guid')
 
-# Space names can contain spaces, so a for loop won't work as it'll break to
-# the next line upon the first whitespace character it reaches, not just a
-# newline character.  A while loop processes a whole line.
-cf spaces | tail -n +4 | while read -r space; do
-  cf t -s "${space}" > /dev/null
-
-  # The output of running `cf apps` includes more information than just the
-  # application name, which is the only thing we need.
-  for application in $(cf apps | tail -n +4 | awk '{ print $1 }'); do
-    cf stop "${application}"
-  done
+# Stop each application in the organization.
+for app_guid in $app_guids; do
+  cf curl "v3/apps/${app_guid}/actions/stop" -X POST
 done

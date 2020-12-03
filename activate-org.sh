@@ -31,22 +31,15 @@ if [ "$cf_version" -lt "$min_cf_version" ]; then
 fi
 
 org_name=$1
-GUID=$(cf org "${org_name}" --guid)
+org_guid=$(cf org "${org_name}" --guid)
 
 # Set the organization to not be suspended.
-cf curl "/v3/organizations/${GUID}" -X PATCH -d '{"suspended": false}'
+cf curl "/v3/organizations/${org_guid}" -X PATCH -d '{"suspended": false}'
 
-cf target -o "${org_name}"
-
-# Space names can contain spaces, so a for loop won't work as it'll break to
-# the next line upon the first whitespace character it reaches, not just a
-# newline character.  A while loop processes a whole line.
-cf spaces | tail -n +4 | while read -r space; do
-  cf t -s "${space}" > /dev/null
-
-  # The output of running `cf apps` includes more information than just the
-  # application name, which is the only thing we need.
-  for application in $(cf apps | tail -n +4 | awk '{ print $1 }'); do
-    cf start "${application}"
-  done
-done
+# Display a note reminding the platform operator to inform the business unit or
+# customer directly to restart their own apps, as we don't keep track of what
+# was running prior to suspending an organization.
+echo
+echo "Organization ${org_name} has been reactivated."
+echo "Please notify the customer that they must restart their applications."
+echo

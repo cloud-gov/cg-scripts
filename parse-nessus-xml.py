@@ -53,7 +53,7 @@ for report_host in nfr.scan.report_hosts(root):
             "plugin_output": plugin_output,
             "hosts": hosts
         }
-        DAEMONS = "bosh-dns|bosh-dns-health|alertmanager|blackbox_exporter|bosh_exporter|cf_exporter"
+        DAEMONS = "bosh-dns|bosh-dns-adapter|bosh-dns-health|alertmanager|blackbox_exporter|bosh_exporter|cf_exporter"
         DAEMONS += "|concourse|doomsday|firehose_exporter|gdn|gnatsd|grafana-server|java|kube-state-metrics|nessusd|nginx"
         DAEMONS += "|node_exporter|ntpd|oauth2_proxy|prometheus|pushgateway|ruby"
         DAEMONS += "|auctioneer|bbs|binding-cache|broker|cc-uploader|consul|discovery-registrar|dockerdt"
@@ -67,19 +67,16 @@ for report_host in nfr.scan.report_hosts(root):
 
 
         if plugin_id == 33851:
-            print("===",report_host_name,"===")
             for line in plugin_output.splitlines():
-                if (len(line) < 2):
+                if (len(line) < 1):
                     continue
                 if "The following running daemons are not managed by dpkg" in line:
                     continue
-                if line == "/var/vcap/bosh/bin/bosh-agent":
+                if re.search(rf'/var/vcap/bosh/bin/(bosh-agent|monit)', line):
                     continue
-                if line == "/var/vcap/bosh/bin/monit":
+                if re.search(rf'^/var/vcap/data/packages/{DAEMONS}/[0-9a-f]+/bin/{DAEMONS}$', line):
                     continue
-                #if re.search(rf"/var/vcap/data/packages/{DAEMONS}/[0-f]{40}", line, re.IGNORECASE):
-                if re.search(rf'/var/vcap/data/packages/{DAEMONS}/[0-f]+/bin/{DAEMONS}$', line, re.IGNORECASE):
-                    continue
+                print("===",report_host_name,"===")
                 print(line)
         vuln_report[plugin_id] = this_vuln
 

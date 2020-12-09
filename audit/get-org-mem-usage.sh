@@ -28,10 +28,10 @@ fi
 org=$(cf curl v3/organizations/?names=$1)
 
 # Get the guid for the organization
-guid=$(echo $org | jq '.resources[] | .guid' | sed 's/\"//g')
+guid=$(echo $org | jq -j '.resources[] | .guid')
 
 # Get the quota for the organization.
-quota=$(echo $org | jq '.resources[] | .relationships | .quota | .data | .guid' | sed 's/\"//g')
+quota=$(echo $org | jq -j '.resources[] | .relationships | .quota | .data | .guid')
 
 # Get the memory portion of the quota.
 total_memory=$(cf curl v3/organization_quotas/$quota | jq '.apps | .total_memory_in_mb')

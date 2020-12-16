@@ -33,7 +33,7 @@ export BUCKET_NAME=$(echo $S3_CREDENTIALS | jq -r '.bucket')
 export AWS_DEFAULT_REGION=$(echo $S3_CREDENTIALS | jq -r '.region')
 
 # Empty the bucket.
-aws s3 rm -r * s3://$BUCKET_NAME
+aws s3 rm s3://$BUCKET_NAME --recursive
 
 # Remove the service key.
 cf delete-service-key $SERVICE_INSTANCE_NAME $KEY_NAME -f

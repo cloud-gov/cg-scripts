@@ -5,6 +5,14 @@
 # Recursively empties the contents of an S3 bucket.  You must be in the org and
 # space of the bucket you would like to empty.
 
+# This operation may take some time depending on how many objects are in the
+# bucket.  If there are a large number of objects it be better to do the
+# following:
+
+# 1. Create a service key to get the bucket credentials
+# 2. Find the bucket in the AWS console
+# 3. Create a lifecycle policy to clear the bucket contents
+
 # Requires the cf CLI, awscli, and jq.
 
 set -e -x
@@ -33,7 +41,7 @@ export BUCKET_NAME=$(echo $S3_CREDENTIALS | jq -r '.bucket')
 export AWS_DEFAULT_REGION=$(echo $S3_CREDENTIALS | jq -r '.region')
 
 # Empty the bucket.
-aws s3 rm -r * s3://$BUCKET_NAME
+aws s3 rm s3://$BUCKET_NAME --recursive
 
 # Remove the service key.
 cf delete-service-key $SERVICE_INSTANCE_NAME $KEY_NAME -f

@@ -20,7 +20,7 @@ fi
 
 # Create a service key and retrieve the credentials from it to use with awscli.
 SERVICE_INSTANCE_NAME="$1"
-KEY_NAME="$SERVICE_INSTANCE_NAME-key"
+KEY_NAME="cg-operator-empty-s3-bucket-key"
 
 # If the service key already exists, the cf CLI will ignore it and carry on
 # without an error.

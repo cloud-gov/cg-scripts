@@ -5,6 +5,14 @@
 # Recursively empties the contents of an S3 bucket.  You must be in the org and
 # space of the bucket you would like to empty.
 
+# This operation may take some time depending on how many objects are in the
+# bucket.  If there are a large number of objects it be better to do the
+# following:
+
+# 1. Create a service key to get the bucket credentials
+# 2. Find the bucket in the AWS console
+# 3. Create a lifecycle policy to clear the bucket contents
+
 # Requires the cf CLI, awscli, and jq.
 
 set -e -x

@@ -21,6 +21,9 @@ fi
 # Create a service key and retrieve the credentials from it to use with awscli.
 SERVICE_INSTANCE_NAME="$1"
 KEY_NAME="$SERVICE_INSTANCE_NAME-key"
+
+# If the service key already exists, the cf CLI will ignore it and carry on
+# without an error.
 cf create-service-key $SERVICE_INSTANCE_NAME $KEY_NAME
 S3_CREDENTIALS=$(cf service-key $SERVICE_INSTANCE_NAME $KEY_NAME | tail -n +2)
 
@@ -31,3 +34,6 @@ export AWS_DEFAULT_REGION=$(echo $S3_CREDENTIALS | jq -r '.region')
 
 # Empty the bucket.
 aws s3 rm -r * s3://$BUCKET_NAME
+
+# Remove the service key.
+cf delete-service-key $SERVICE_INSTANCE_NAME $KEY_NAME -f

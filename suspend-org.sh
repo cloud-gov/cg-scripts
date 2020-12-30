@@ -46,9 +46,9 @@ cf curl "/v3/organizations/${org_guid}" -X PATCH -d '{"suspended": true}'
 
 # Get all of the application GUIDs in the organization.  This will retrieve all
 # apps in all spaces within the org.
-app_guids=$(cf curl /v3/apps?organization_guids=${org_guid} | jq -r '.resources[].guid')
+app_guids=$(cf curl "/v3/apps?organization_guids=${org_guid}" | jq -r '.resources[].guid')
 
 # Stop each application in the organization.
 for app_guid in $app_guids; do
-  cf curl "v3/apps/${app_guid}/actions/stop" -X POST
+  cf curl "/v3/apps/${app_guid}/actions/stop" -X POST
 done

@@ -50,5 +50,5 @@ app_guids=$(cf curl "/v3/apps?organization_guids=${org_guid}" | jq -r '.resource
 
 # Stop each application in the organization.
 for app_guid in $app_guids; do
-  cf curl "v3/apps/${app_guid}/actions/stop" -X POST
+  cf curl "/v3/apps/${app_guid}/actions/stop" -X POST
 done

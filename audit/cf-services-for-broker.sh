@@ -7,15 +7,15 @@
 #
 # The script returns a table like the following example for the aws-broker
 #
-# Service                      #  Bound Application(s)            Plan              Organization         Space
-# -------                      -  --------------------            ------------      ------------         -----
-# org-db-shared                0                                  shared-psql       org-a                development
-# org-db-psql                  0                                  shared-psql       org-b                staging
-# production-db                2  app-a                           medium-psql       org-a                production
-#                                 app-b                           medium-psql       org-a                production
-# dev-mysql                    1  dev-app                         shared-mysql      org-b                development
-# prod-mysql                   1  prod-app                        medium-mysql      org-b                production
-# dev-redis                    0                                  BETA-redis-dev    org-a                development
+# Service             Creation Date         #  Bound Application(s)            Plan              Organization         Space
+# -------             -------------   		  -  --------------------            ------------      ------------         -----
+# org-db-shared       2020-03-10T15:49:29Z  0                                  shared-psql       org-a                development
+# org-db-psql         2020-03-10T15:49:29Z  0                                  shared-psql       org-b                staging
+# production-db       2020-03-10T15:49:29Z  2  app-a                           medium-psql       org-a                production
+#                                 
+# dev-mysql           2020-03-10T15:49:29Z  1  dev-app                         shared-mysql      org-b                development
+# prod-mysql          2020-03-10T15:49:29Z  1  prod-app                        medium-mysql      org-b                production
+# dev-redis           2020-03-10T15:49:29Z  0                                  BETA-redis-dev    org-a                development
 ##
 
 set -e
@@ -27,7 +27,7 @@ if [[ $1 == "-?" || $1 == "-h" || $1 == "--help" ]]; then
 	echo
 	echo  cf-services-for-broker will find all service instances
 	echo  that have been created by a specific broker, and print out
-	echo  the service instance name, org and space in which it lies,
+	echo  the service instance name, creation timestamp, org and space in which it lies,
 	echo and what apps are bound to each service instance.
 	exit 0
 fi
@@ -59,6 +59,7 @@ function process_serviceinstance() {
 	set -e
 	service_instance_guid=$1
 	service_name=$(cat $(cf_curl /v2/service_instances/${service_instance_guid}) | jq -r '.entity.name')
+	service_creation_date=$(cat $(cf_curl /v3/service_instances/${service_instance_guid}) | jq -r '.created_at')
   service_plan_url=$(cat $(cf_curl /v2/service_instances/${service_instance_guid}) | jq -r '.entity.service_plan_url')
   service_plan_name=$(cat $(cf_curl ${service_plan_url}) | jq -r '.entity.name')
 	n=0
@@ -83,18 +84,18 @@ function process_serviceinstance() {
 
 				app_name=${app_name:-(${app_guid})}
 				if [[ $n == 0 ]]; then
-					echo -ne "${service_name}\t${count}\t"
+					echo -ne "${service_name}\t${service_creation_date}\t${count}\t"
 				else
 					echo -ne " \t \t"
 				fi
-				echo -e "${app_name}\t${service_plan_name}\t${org_name}\t${space_name}"
+				echo -e "${app_name}\t${service_creation_date}\t${service_plan_name}\t${org_name}\t${space_name}"
 				n=$(( n + 1 ))
 			done
 
 			next_bindings_url=$(cat $(cf_curl ${next_bindings_url}) | jq -r -c ".next_url")
 		done
 	else
-		echo -e "${service_name}\t${n}\t \t${service_plan_name}\t${org_name}\t${space_name}"
+		echo -e "${service_name}\t${service_creation_date}\t${n}\t \t${service_plan_name}\t${org_name}\t${space_name}"
 	fi
 }
 
@@ -140,8 +141,8 @@ function services_for_broker() {
 	broker_guid=$(cat $(cf_curl /v2/service_brokers?q=name:${broker}) | jq -r '.resources[].metadata.guid')
 	debug "broker '${broker}' has guid {${broker_guid}}"
 
-	echo -e "Service\t#\tBound Application(s)\tPlan\tOrganization\tSpace"
-	echo -e "-------\t-\t--------------------\t----\t------------\t-----"
+	echo -e "Service\tCreation Date\t#\tBound Application(s)\tPlan\tOrganization\tSpace"
+	echo -e "-------\t-------------\t-\t--------------------\t----\t------------\t-----"
 	traverse_serviceplans_for_broker ${broker_guid}
 }
 

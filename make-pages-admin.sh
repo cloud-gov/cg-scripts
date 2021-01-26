@@ -33,7 +33,7 @@ if ! hash uaac 2>/dev/null; then
   gem install cf-uaac
 fi
 
-declare -a admin_groups=("pages.admin" "scim.read" "scim.write" )
+declare -a admin_groups=("pages.admin" "scim.read")
 if $REMOVE; then
   for group in ${admin_groups[@]}
   do

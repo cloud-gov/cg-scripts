@@ -4,7 +4,7 @@
 
 # Requires cf CLI version 7+ and jq to work.
 
-# NOTE:  The script logic is based on the assumtion that all sandbox orgs orgs do not have agreements.  
+# NOTE:  The script logic is based on the assumption that all sandbox orgs do not have agreements.  
 
 # NOTE:  Only works if there are 5,000 or less orgs in the system at this time.
 

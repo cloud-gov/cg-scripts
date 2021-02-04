@@ -61,8 +61,8 @@ def get_args():
     parser = argparse.ArgumentParser(
         description=description
     )
-    parser.add_argument('--after', help="find events after this timestamp (timestamp UTC formart YYYY-MM-DDThh:mm:ssZ)")
-    parser.add_argument('--before', help="find events before this timestamp (timestamp UTC formart YYYY-MM-DDThh:mm:ssZ)")
+    parser.add_argument('--after', help="find events after this timestamp (timestamp UTC format YYYY-MM-DDThh:mm:ssZ)")
+    parser.add_argument('--before', help="find events before this timestamp (timestamp UTC format YYYY-MM-DDThh:mm:ssZ)")
     parser.add_argument('--user', help='find events for this user')
     return parser.parse_args()
 

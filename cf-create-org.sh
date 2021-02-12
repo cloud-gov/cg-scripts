@@ -102,10 +102,11 @@ done
 
 # deleting admin user from newly created org. 
 # https://github.com/cloudfoundry/cli/issues/781
-USER_GUID=$(cf curl "/v3/users?username="${ADMIN}"")
+USER_GUID=$(cf curl "/v3/users?usernames="${ADMIN}""| jq -r '.resources[] | .guid')
 ORG_GUID=$(cf org "${ORG_NAME}" --guid)
-ROLE_TO_DELETE=$(cf curl "/v3/roles?types=organization_user&organization_guids="${ORG_GUID}"&user_guids="${USER_GUID}"")
-cf curl -X DELETE "/v3/roles/"${ROLE_TO_DELETE}""
+ROLE_TO_DELETE_GUID=$(cf curl "/v3/roles?types=organization_user&organization_guids="${ORG_GUID}"&user_guids="${USER_GUID}"" | jq -r '.resources[] | .guid')
+# deleting role organization_user
+cf curl -X DELETE "/v3/roles/"${ROLE_TO_DELETE_GUID}""
 
 # Hack: Trigger deployer account broker deploy to update organization whitelist
 fly --target "${FLY_TARGET}" trigger-job --watch --job deploy-deployer-account-broker/push-broker-production

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+#set -e
+set -x
 
 if [ "$#" -lt 5 ]; then
   printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <IAA_NUMBER> <SYSTEM_NAME> <POP_START> <POP_END> <MANAGER> <MEMORY>\n\n"
@@ -99,8 +100,14 @@ do
   cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper
 done
 
+
+# deleting admin user from newly created org. 
 # https://github.com/cloudfoundry/cli/issues/781
-cf curl -X DELETE "/v2/organizations/$(cf org "${ORG_NAME}" --guid)/users" -d "{\"username\": \"${ADMIN}\"}"
+USER_GUID=$(cf curl "/v3/users?usernames=${ADMIN}"| jq -r '.resources[] | .guid')
+ORG_GUID=$(cf org "${ORG_NAME}" --guid)
+ROLE_TO_DELETE_GUID=$(cf curl "/v3/roles?types=organization_user&organization_guids="${ORG_GUID}"&user_guids=${USER_GUID}" | jq -r '.resources[] | .guid')
+# deleting role organization_user
+cf curl -X DELETE "/v3/roles/${ROLE_TO_DELETE_GUID}"
 
 # Hack: Trigger deployer account broker deploy to update organization whitelist
 fly --target "${FLY_TARGET}" trigger-job --watch --job deploy-deployer-account-broker/push-broker-production

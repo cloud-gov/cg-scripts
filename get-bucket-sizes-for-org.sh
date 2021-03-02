@@ -23,7 +23,7 @@ function summarize_bucket {
         summary=$(aws s3 ls --summarize --human-readable --recursive s3://${bucket_prefix}-${service_instance} | grep Total)
     else
         service_bindings=$(cf curl /v3/service_bindings/?service_instance_guids=${service_instance})
-        service_keys_guid=$(cf curl /v3/service_credential_bindings?type=key&service_instance_guids=${service_instance} | jq -r '.resources[].guid' )
+        service_keys_guid=$(cf curl "/v3/service_credential_bindings?type=key&service_instance_guids=${service_instance}" | jq -r '.resources[].guid' )
         service_keys=$(cf curl /v3/service_credential_bindings/${service_keys_guid}/details)
         if [[ $(echo "${service_bindings}" | jq -r '.resources | length') == "0" && $(echo ${service_keys} | jq -r '.credentials | length') == 0 ]]; then
             >&2 echo "    ${service_instance_name} is not bound - can't get credentials"
@@ -87,7 +87,7 @@ fi
 
 # get the s3 broker plan guids
 service_broker_guid=$(cf curl /v3/service_brokers/?names=s3-broker | jq -r '.resources[0].guid')
-s3_service_plan_guids=$(cf curl /v3/service_plans?q=service_broker_guids=$service_broker_guid | jq -r '.resources[].guid')
+s3_service_plan_guids=$(cf curl /v3/service_plans?service_broker_guids=$service_broker_guid | jq -r '.resources[].guid')
 
 # get the spaces for this org 
 spaces=$(paginate_v3_api_for_parameter /v3/spaces/?organization_guids=$(cf org $org --guid) guid)
@@ -114,7 +114,3 @@ for space in ${spaces}; do
         done
     done
 done
-
-
-
-02088ebd-0b16-43b7-8a84-890623b98d25

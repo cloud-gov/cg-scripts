@@ -23,17 +23,18 @@ function summarize_bucket {
         summary=$(aws s3 ls --summarize --human-readable --recursive s3://${bucket_prefix}-${service_instance} | grep Total)
     else
         service_bindings=$(cf curl /v3/service_bindings/?service_instance_guids=${service_instance})
-        service_keys=$(cf curl /v2/service_keys\?q=service_instance_guid:${service_instance})
-        if [[ $(echo "${service_bindings}" | jq -r '.resources | length') == "0" && $(echo ${service_keys} | jq -r '.resources | length') == 0 ]]; then
+        service_keys_guid=$(cf curl "/v3/service_credential_bindings?type=key&service_instance_guids=${service_instance}" | jq -r '.resources[].guid' )
+        service_keys=$(cf curl /v3/service_credential_bindings/${service_keys_guid}/details)
+        if [[ $(echo "${service_bindings}" | jq -r '.resources | length') == "0" && $(echo ${service_keys} | jq -r '.credentials | length') == 0 ]]; then
             >&2 echo "    ${service_instance_name} is not bound - can't get credentials"
             continue
         fi
-        if [[ $(echo ${service_keys} | jq -r '.resources | length') != 0 ]]; then
-            bucket=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.bucket')
-            key_id=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.access_key_id')
-            secret_key=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.secret_access_key')
-            region=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.region')
-            bucket=$(echo "${service_keys}" | jq -r '.resources[0].entity.credentials.bucket')
+        if [[ $(echo ${service_keys} | jq -r '.credentials | length') != 0 ]]; then
+            bucket=$(echo "${service_keys}" | jq -r '.credentials.bucket')
+            key_id=$(echo "${service_keys}" | jq -r '.credentials.access_key_id')
+            secret_key=$(echo "${service_keys}" | jq -r '.credentials.secret_access_key')
+            region=$(echo "${service_keys}" | jq -r '.credentials.region')
+            bucket=$(echo "${service_keys}" | jq -r '.credentials.bucket')
         else
             # get one binding to get the creds. They're redacted if you get a list of bindings
             binding_guid=$(echo "${service_bindings}" | jq -r .resources[0].guid)
@@ -86,7 +87,7 @@ fi
 
 # get the s3 broker plan guids
 service_broker_guid=$(cf curl /v3/service_brokers/?names=s3-broker | jq -r '.resources[0].guid')
-s3_service_plan_guids=$(cf curl /v2/service_plans?q=service_broker_guid:$service_broker_guid | jq -r '.resources[].metadata.guid')
+s3_service_plan_guids=$(cf curl /v3/service_plans?service_broker_guids=$service_broker_guid | jq -r '.resources[].guid')
 
 # get the spaces for this org 
 spaces=$(paginate_v3_api_for_parameter /v3/spaces/?organization_guids=$(cf org $org --guid) guid)
@@ -97,9 +98,9 @@ for space in ${spaces}; do
     space_name=$(echo $space_details | jq -r .name)
     service_instances=$(paginate_v3_api_for_parameter /v3/service_instances/?space_guids=${space} guid)
     for service_instance in ${service_instances}; do
-        service_instance_info=$(cf curl /v2/service_instances/$service_instance)
-        service_instance_name=$(echo ${service_instance_info} | jq -r .entity.name)
-        service_plan_guid=$(echo ${service_instance_info} | jq -r .entity.service_plan_guid)
+        service_instance_info=$(cf curl /v3/service_instances/$service_instance)
+        service_instance_name=$(echo ${service_instance_info} | jq -r .name)
+        service_plan_guid=$(echo ${service_instance_info} | jq -r .relationships.service_plan.data.guid)
         # filter the service instances down to s3 instances
         for s3_service_plan_guid in $s3_service_plan_guids; do
             if [[ $service_plan_guid = $s3_service_plan_guid ]]; then

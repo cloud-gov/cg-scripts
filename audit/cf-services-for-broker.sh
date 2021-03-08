@@ -58,26 +58,26 @@ function cf_curl() {
 function process_serviceinstance() {
 	set -e
 	service_instance_guid=$1
-	service_name=$(cat $(cf_curl /v2/service_instances/${service_instance_guid}) | jq -r '.entity.name')
-  service_plan_url=$(cat $(cf_curl /v2/service_instances/${service_instance_guid}) | jq -r '.entity.service_plan_url')
-  service_plan_name=$(cat $(cf_curl ${service_plan_url}) | jq -r '.entity.name')
+	service_name=$(cat $(cf_curl /v3/service_instances/${service_instance_guid}) | jq -r '.name')
+  service_plan_url=$(cat $(cf_curl /v3/service_instances/${service_instance_guid}) | jq -r '.relationships.service_plan.data.guid')
+  service_plan_name=$(cat $(cf_curl /v3/service_plans/${service_plan_url}) | jq -r '.name')
 	n=0
-	next_bindings_url="/v2/service_bindings?q=service_instance_guid:${service_instance_guid}"
+	next_bindings_url="/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}"
 	apps=""
-	count=$(cat $(cf_curl ${next_bindings_url}) | jq -r '.total_results')
+	count=$(cat $(cf_curl ${next_bindings_url}) | jq -r '.pagination.total_results')
 
 	debug "    found service ${service_name} with guid {${service_instance_guid}}"
-	space_guid=$(cat $(cf_curl /v2/service_instances/${service_instance_guid}) | jq -r '.entity.space_guid')
-	space_name=$(cat $(cf_curl /v2/spaces/${space_guid}) | jq -r '.entity.name')
+	space_guid=$(cat $(cf_curl /v3/service_instances/${service_instance_guid}) | jq -r '.relationships.space.data.guid')
+	space_name=$(cat $(cf_curl /v3/spaces/${space_guid}) | jq -r '.name')
 	debug "    -- in ${org_name} / ${space_name}"
-	org_guid=$(cat $(cf_curl /v2/spaces/${space_guid}) | jq -r '.entity.organization_guid')
-	org_name=$(cat $(cf_curl /v2/organizations/${org_guid}) | jq -r '.entity.name')
+	org_guid=$(cat $(cf_curl /v3/spaces/${space_guid}) | jq -r '.relationships.organization.data.guid')
+	org_name=$(cat $(cf_curl /v3/organizations/${org_guid}) | jq -r '.name')
 
 	if [[ ${count} > 0 ]]; then
-		next_bindings_url="/v2/service_bindings?q=service_instance_guid:${service_instance_guid}"
+		next_bindings_url="/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}"
 		while [[ ${next_bindings_url} != "null" ]]; do
-			for app_guid in $(cat $(cf_curl ${next_bindings_url}) | jq -r '.resources[].entity.app_guid'); do
-				app_name=$(cat $(cf_curl /v2/apps/${app_guid}) | jq -r '.entity.name')
+			for app_guid in $(cat $(cf_curl ${next_bindings_url}) | jq -r '.resources[].relationships.app.data.guid'); do
+				app_name=$(cat $(cf_curl /v3/apps/${app_guid}) | jq -r '.name')
 				debug "      found app '${app_name}' with guid {${app_guid}}"
 
 
@@ -91,7 +91,7 @@ function process_serviceinstance() {
 				n=$(( n + 1 ))
 			done
 
-			next_bindings_url=$(cat $(cf_curl ${next_bindings_url}) | jq -r -c ".next_url")
+			next_bindings_url=$(cat $(cf_curl ${next_bindings_url}) | jq -r -c ".pagination.next.href")
 		done
 	else
 		echo -e "${service_name}\t${n}\t \t${service_plan_name}\t${org_name}\t${space_name}"
@@ -101,33 +101,33 @@ function process_serviceinstance() {
 function traverse_serviceinstances_for_plan() {
 	set -e
 	service_plan_guid=$1
-	next_serviceinstance_url="/v2/service_instances?q=service_plan_guid:${service_plan_guid}"
+	next_serviceinstance_url="/v3/service_instances?service_plan_guids=${service_plan_guid}"
 	while [[ ${next_serviceinstance_url} != "null" ]]; do
-		for service_instance_guid in $(cat $(cf_curl ${next_serviceinstance_url}) | jq -r '.resources[].metadata.guid'); do
+		for service_instance_guid in $(cat $(cf_curl ${next_serviceinstance_url}) | jq -r '.resources[].guid'); do
 			debug "    found service instance '${service_name}' with guid {${service_instance_guid}}"
 			process_serviceinstance ${service_instance_guid}
 		done
-		next_serviceinstance_url=$(cat $(cf_curl ${next_serviceinstance_url}) | jq -r -c ".next_url")
+		next_serviceinstance_url=$(cat $(cf_curl ${next_serviceinstance_url}) | jq -r -c ".pagination.next.href")
 	done
 }
 
 function traverse_serviceplans_for_broker() {
 	set -e
 	broker_guid=$1
-	next_serviceplan_url="/v2/service_plans?q=service_broker_guid:${broker_guid}"
+	next_serviceplan_url="/v3/service_plans?service_broker_guids=${broker_guid}"
 	while [[ ${next_serviceplan_url} != "null" ]]; do
-		for service_plan_guid in $(cat $(cf_curl ${next_serviceplan_url}) | jq -r '.resources[].metadata.guid'); do
+		for service_plan_guid in $(cat $(cf_curl ${next_serviceplan_url}) | jq -r '.resources[].guid'); do
 			debug "  found service plan guid {${service_plan_guid}} for service"
 			traverse_serviceinstances_for_plan ${service_plan_guid}
 		done
-		next_serviceplan_url=$(cat $(cf_curl ${next_serviceplan_url}) | jq -r -c '.next_url')
+		next_serviceplan_url=$(cat $(cf_curl ${next_serviceplan_url}) | jq -r -c '.pagination.next.href')
 	done
 }
 
 function services_for_broker() {
 	set -e
 	broker=$1
-	broker_count=$(cat $(cf_curl /v2/service_brokers?q=name:${broker}) | jq -r '.total_results')
+	broker_count=$(cat $(cf_curl /v3/service_brokers?names=${broker}) | jq -r '.pagination.total_results')
 	if [[ ${broker_count} == 0 ]]; then
 		echo "Could not find broker '${broker}'" >&2
 		exit 1
@@ -137,7 +137,7 @@ function services_for_broker() {
 			exit 1
 		fi
 	fi
-	broker_guid=$(cat $(cf_curl /v2/service_brokers?q=name:${broker}) | jq -r '.resources[].metadata.guid')
+	broker_guid=$(cat $(cf_curl /v3/service_brokers?names=${broker}) | jq -r '.resources[].guid')
 	debug "broker '${broker}' has guid {${broker_guid}}"
 
 	echo -e "Service\t#\tBound Application(s)\tPlan\tOrganization\tSpace"

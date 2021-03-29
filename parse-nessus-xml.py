@@ -95,7 +95,7 @@ for key in sorted(vuln_report):
         affected_hosts = vuln_report[key]["hosts"]
         affected_hosts.sort()
         print(vuln_report[key]["full_description"])
-        print(vuln_report[key]["plugin_output"])
+#        print(vuln_report[key]["plugin_output"])
         if len(affected_hosts) > 6:
             print('\t{} affected hosts found ...'.format(len(affected_hosts)))
         else:

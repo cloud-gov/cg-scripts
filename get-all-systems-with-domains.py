@@ -38,26 +38,25 @@ logger.addHandler(console_handler)
 
 def main():
     """
-    Runs the script.
+    Runs the script to print a header row (unless excluded) and outputs the
+    records.
     """
 
     args = get_args()
 
-    service_instances = get_all_instances(args.limit)
-    num_records = len(service_instances)
+    service_instances = get_service_instances(
+        args.limit,
+        args.exclude_federalist,
+        args.federalist_only
+    )
 
-    # Check to see if we should keep cloud.gov and Federalist domains together
-    # or make them separate and output the results.
-    if not args.split:
-        print("\n----- CSV OUTPUT ({0} TOTAL RECORDS) -----\n".format(
-            num_records
-        ))
-        output_instances(service_instances)
-    else:
-        print("\n----- CSV OUTPUT - SPLIT DOMAINS ({0} TOTAL RECORDS) -----".format(
-            num_records
-        ))
-        output_split_instances(service_instances)
+    # Print out a header row if it's not set to be excluded.
+    if not args.exclude_header:
+        print(
+            "Broker Name,Service Plan Name,Organization Name,Space Name,Broker Instance Name,Creation Date,Is Federalist,Fiscal Year"
+        )
+
+    output_instances(service_instances)
 
 
 def get_args():
@@ -68,21 +67,38 @@ def get_args():
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument(
-        "--limit",
-        default=0,
-        help="Only process this amount of records",
-        type=int)
-    parser.add_argument(
-        "--split",
+        "--exclude-federalist",
         action="store_true",
         default=False,
-        help="Split records between cloud.gov and Federalist domains"
+        help="Excludes Federalist service instances from the results; overridden by --federalist-only flag"
+    )
+    parser.add_argument(
+        "--exclude-header",
+        action="store_true",
+        default=False,
+        help="Excludes the header row from the output"
+    )
+    parser.add_argument(
+        "--federalist-only",
+        action="store_true",
+        default=False,
+        help="Only include Federalist service instances in the results; overrides --exclude-federaist flag"
+    )
+    parser.add_argument(
+        "--limit",
+        default=0,
+        help="Only process the specified amount of records",
+        type=int
     )
 
     return parser.parse_args()
 
 
-def get_all_instances(limit=0):
+def get_service_instances(
+    limit=0,
+    exclude_federalist=False,
+    federalist_only=False
+):
     """
     Retrieves all service instances that are associated with a domain configured
     in the platform.
@@ -90,8 +106,21 @@ def get_all_instances(limit=0):
 
     service_instances = []
     resources_parsed = 0
+    resources_skipped = 0
 
     page = CF_SERVICE_INSTANCES_API_URI
+
+    # Check if we're only retrieving Federalist records; if so, add a query
+    # parameter to the URI to help filter for them.
+    # TODO once the CF API supports it: add support for excluding Federalist
+    # service instances from the API call itself.
+    # http://v3-apidocs.cloudfoundry.org/version/3.99.0/#filters
+    if federalist_only:
+        federalist_org_guid = subprocess.check_output(
+            ["cf", "org", FEDERALIST_ORG_NAME, "--guid"]
+        ).decode("utf-8").replace("\n", "")
+
+        page = page + "&organization_guids=" + federalist_org_guid
 
     # If limit is set, display an extra message to remind the operator.
     if limit > 0:
@@ -116,7 +145,33 @@ def get_all_instances(limit=0):
             if limit > 0 and resources_parsed >= limit:
                 break
 
-            service_instances.append(parse_resource(resource))
+            service_instance = parse_resource(resource)
+
+            # Check to see if we should skip this record because of the
+            # exclusion flags set.  If we skip, don't increase the counter so
+            # that we're still able to retrieve the full amount of records
+            # requested.
+            # Note that if federalist_only was set, the records have already
+            # been filtered to be just Federalist with the API call itself, and
+            # they are returned regardless if exclude_federalist was set.
+            if service_instance["org_name"] == FEDERALIST_ORG_NAME:
+                if exclude_federalist and not federalist_only:
+                    logger.warning("    ...Skipping {0} (Federalist)...".format(
+                        service_instance["instance_name"]
+                    ))
+                    resources_skipped = resources_skipped + 1
+                    continue
+                else:
+                    service_instance["is_federalist"] = "Yes"
+            else:
+                service_instance["is_federalist"] = "No"
+
+            # Get the fiscal year for the instance.
+            service_instance["fiscal_year"] = get_fiscal_year(
+                service_instance["created_at"]
+            )
+
+            service_instances.append(service_instance)
             resources_parsed = resources_parsed + 1
 
         # Check to see if we've hit the limit of the amount of records we want
@@ -133,7 +188,10 @@ def get_all_instances(limit=0):
             page = "{0}/{1}".format(uri_parts[-2], uri_parts[-1])
             logger.info("...Processing next page...")
         else:
-            logger.info("...Finished processing.")
+            logger.info("...Finished processing {0} records ({1} skipped).".format(
+                len(service_instances),
+                resources_skipped
+            ))
 
     return service_instances
 
@@ -145,8 +203,8 @@ def parse_resource(resource):
 
     - The broker name that manages the service instance
     - The service plan name that was used with the broker
-    - The domain name associated with the service instance
-    - The created at date
+    - The name associated with the service instance
+    - The created at date of the service instance
     - The space name that the service instance resides in
     - The organization name that the service instance resides in
     """
@@ -156,9 +214,9 @@ def parse_resource(resource):
         resource["created_at"].split("T")[0]
     ))
 
-    # Start pulling out the service instance information directly.
+    # Start by pulling out the service instance information directly.
     resource_info = {}
-    resource_info["domain_name"] = resource["name"]
+    resource_info["instance_name"] = resource["name"]
     resource_info["created_at"] = resource["created_at"].split("T")[0]
 
     # Retrieve the service plan information.
@@ -184,52 +242,41 @@ def parse_resource(resource):
     return resource_info
 
 
+def get_fiscal_year(date_string):
+    """
+    Figures out and returns the fiscal year label based on a provided calendar
+    date.
+    """
+
+    year, month, day = date_string.split("-")
+    new_fiscal_year_months = ["10", "11", "12"]
+    fiscal_year = int(year[2:])
+
+    # Fiscal years start on October 1.
+    if month in new_fiscal_year_months:
+        fiscal_year = fiscal_year + 1
+
+    return "FY{0}".format(fiscal_year)
+
+
 def output_instances(service_instances):
     """
     Outputs a list of the processed service instances in CSV format.
     """
 
     for instance in service_instances:
-        output = "{0},{1},{2},{3},{4},{5}".format(
+        output = "{0},{1},{2},{3},{4},{5},{6},{7}".format(
             instance["broker"],
             instance["service_plan"],
             instance["org_name"],
             instance["space_name"],
-            instance["domain_name"],
-            instance["created_at"]
+            instance["instance_name"],
+            instance["created_at"],
+            instance["is_federalist"],
+            instance["fiscal_year"]
         )
 
         print(output)
-
-
-def output_split_instances(service_instances):
-    """
-    Splits a list of service instances into two separate lists, one for
-    cloud.gov domains and one for Federalist domains, and outputs the results
-    seperately.
-    """
-
-    # Split out cloud.gov-only domains.
-    cloud_instances = [
-        instance for instance in service_instances
-        if instance["org_name"] != FEDERALIST_ORG_NAME
-    ]
-
-    # Split out Federalist-only domains.
-    federalist_instances = [
-        instance for instance in service_instances
-        if instance["org_name"] == FEDERALIST_ORG_NAME
-    ]
-
-    # Print out the two separate lists.
-    print("\ncloud.gov-only domains ({0} records):\n".format(
-        len(cloud_instances)
-    ))
-    output_instances(cloud_instances)
-    print("\nFederalist-only domains ({0} records):\n".format(
-        len(federalist_instances)
-    ))
-    output_instances(federalist_instances)
 
 
 if __name__ == "__main__":

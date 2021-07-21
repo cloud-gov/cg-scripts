@@ -68,7 +68,6 @@ DAEMONS = """
     node_exporter
     ntp
     oauth2-proxy
-    openjdk_1.8.0
     opt
     policy-server
     prom_scraper
@@ -79,7 +78,6 @@ DAEMONS = """
     reverse_log_proxy
     reverse_log_proxy_gateway
     route_emitter
-    ruby-2.6.5-r0.29.0
     secureproxy
     service-discovery-controller
     silk-controller
@@ -134,10 +132,10 @@ for report_host in nfr.scan.report_hosts(root):
                 if re.search(rf'^/var/vcap/data/packages/({DAEMONS})/[0-9a-f]+/bin/{DAEMONS}$', line):
                     daemon_count += 1
                     continue
-                if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|openjdk-11|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):
+                if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|openjdk_1.8.0|openjdk-11|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):
                     daemon_count += 1
                     continue
-                if (re.search(rf'^/var/vcap/data/packages/ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) and re.search(rf'cc-worker|admin-ui', report_host_name)):
+                if (re.search(rf'^/var/vcap/data/packages/ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) and re.search(rf'cc-worker|admin-ui|bosh-0-cf-tooling', report_host_name)):
                     daemon_count += 1
                     continue
                 print("== Unknown daemon found: ",report_host_name,": ", line)

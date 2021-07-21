@@ -105,7 +105,7 @@ for key in sorted(vuln_report):
 
 print("\n-------  CSV  ------\n")
 remediation_plan="We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
-owner="Ron Williams"
+owner="Ashley Mahan"
 for vuln in sorted(vuln_report):
     if vuln_report[vuln]["risk_factor"] != "None":
         number_of_affected_hosts = len(vuln_report[vuln]["hosts"])

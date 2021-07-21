@@ -3,20 +3,20 @@
 import random
 
 team = [
-    ":eddie:",
-    ":ron-williams:",
     ":kara-reinsel:",
-    ":jessyka:",
     ":amir:",
     ":david-corwin:",
     ":ben-berry:",
     ":peterb:",
     ":andrew-burnes:",
     ":beccag:",
-    ":steve-greenberg:",
     ":van-nguyen:",
     ":chris-mcgowan:",
-    ":kelley:"
+    ":kelley:",
+    ":lindsay:",
+    ":melanie:",
+    ":haywood:",
+    ":gerald:"
 ]
 
 for n in range(1,20):

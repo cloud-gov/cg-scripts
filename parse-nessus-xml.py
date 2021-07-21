@@ -29,17 +29,79 @@ print(f'File name: {file_name}')
 print(f'File size: {file_size}')
 print(f'Scan start date: {start_date}')
 
-DAEMONS = "bosh.dns|bosh.dns.adapter|bosh.dns.health|alertmanager|binding.cache|blackbox.exporter|bosh.exporter|cf.exporter"
-DAEMONS += "|concourse|docker|doomsday|firehose.exporter|gdn|gnatsd|grafana.server|java|kube.state.metrics|nessusd|nginx"
-DAEMONS += "|node.exporter|ntpd|oauth2.proxy|prometheus|pushgateway|ruby"
-DAEMONS += "|auctioneer|bbs|binding.cache|broker|cc.uploader|consul|discovery.registrar|dockerdt"
-DAEMONS += "|doppler|elasticsearch.exporter|etcd|file.server|flanneld|forwarder.agent|gorouter"
-DAEMONS += "|kube.apiserver|kube.controller.manager|kube.proxy|kube.scheduler|kubelet|locket"
-DAEMONS += "|log.cache|log.cache.cf.auth.proxy|log.cache.gateway|log.cache.nozzle|loggregator.agent|metrics.agent"
-DAEMONS += "|netmon|node|policy.server|policy.server.internal|prom.scraper|redis.server|rep"
-DAEMONS += "|reverse.log.proxy|rlp|reverse.log.proxy.gateway|rlp.gateway"
-DAEMONS += "|route.emitter|service.discovery.controller|silk.controller|silk.daemon"
-DAEMONS += "|ssh.proxy|statsd.injector|syslog.agent|tps.watcher|trafficcontroller|udp.forwarder|vxlan.policy.agent"
+DAEMONS = """
+    bosh.dns
+    bosh.dns.adapter
+    bosh.dns.health
+    alertmanager
+    binding.cache
+    blackbox.exporter
+    bosh.exporter
+    cf.exporter
+    concourse
+    docker
+    doomsday
+    firehose.exporter
+    gdn
+    gnatsd
+    grafana.server
+    java
+    nessusd
+    nginx
+    node.exporter
+    ntpd
+    oauth2.proxy
+    prometheus
+    pushgateway
+    ruby
+    auctioneer
+    bbs
+    binding.cache
+    broker
+    cc.uploader
+    consul
+    discovery.registrar
+    dockerd
+    doppler
+    elasticsearch.exporter
+    etcd
+    file.server
+    flanneld
+    forwarder.agent
+    gorouter
+    locket
+    log.cache
+    log.cache.cf.auth.proxy
+    log.cache.gateway
+    log.cache.nozzle
+    loggregator.agent
+    metrics.agent
+    netmon
+    node
+    policy.server
+    policy.server.internal
+    prom.scraper
+    redis.server
+    rep
+    reverse.log.proxy
+    rlp
+    reverse.log.proxy.gateway
+    rlp.gateway
+    route.emitter
+    service.discovery.controller
+    silk.controller
+    silk.daemon
+    ssh.proxy
+    statsd.injector
+    syslog.agent
+    tps.watcher
+    trafficcontroller
+    udp.forwarder
+    vxlan.policy.agent
+""".split()
+
+DAEMONS = '|'.join(DAEMONS)
+
 daemon_count = 0
 
 vuln_report = {}
@@ -74,9 +136,6 @@ for report_host in nfr.scan.report_hosts(root):
                     continue
                 if "The following running daemons are not managed by dpkg" in line:
                     continue
-                if (line == "/bin/kube2iam"):
-                    daemon_count += 1
-                    continue
                 if re.search(rf'/var/vcap/bosh/bin/(bosh-agent|monit)', line):
                     daemon_count += 1
                     continue
@@ -105,7 +164,7 @@ for key in sorted(vuln_report):
 
 print("\n-------  CSV  ------\n")
 remediation_plan="We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
-owner="Ron Williams"
+owner="Ashley Mahan"
 for vuln in sorted(vuln_report):
     if vuln_report[vuln]["risk_factor"] != "None":
         number_of_affected_hosts = len(vuln_report[vuln]["hosts"])

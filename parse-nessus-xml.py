@@ -30,74 +30,66 @@ print(f'File size: {file_size}')
 print(f'Scan start date: {start_date}')
 
 DAEMONS = """
-    bosh.dns
-    bosh.dns.adapter
-    bosh.dns.health
     alertmanager
-    binding.cache
-    blackbox.exporter
-    bosh.exporter
-    cf.exporter
-    concourse
-    docker
-    doomsday
-    firehose.exporter
-    gdn
-    gnatsd
-    grafana.server
-    java
-    nessusd
-    nginx
-    node.exporter
-    ntpd
-    oauth2.proxy
-    prometheus
-    pushgateway
-    ruby
     auctioneer
     bbs
-    binding.cache
-    broker
-    cc.uploader
-    consul
-    discovery.registrar
-    dockerd
+    binding-cache
+    blackbox_exporter
+    bosh_exporter
+    bosh-dns
+    bosh-dns-adapter
+    cc_uploader
+    cf_exporter
+    concourse
+    domain-broker
+    doomsday
     doppler
-    elasticsearch.exporter
-    etcd
-    file.server
-    flanneld
-    forwarder.agent
+    elasticsearch_exporter
+    file_server
+    firehose_exporter
+    forwarder-agent
+    gnatsd
+    gonats
     gorouter
+    grafana
+    guardian
     locket
-    log.cache
-    log.cache.cf.auth.proxy
-    log.cache.gateway
-    log.cache.nozzle
-    loggregator.agent
-    metrics.agent
+    log-cache
+    log-cache-cf-auth-proxy
+    log-cache-gateway
+    log-cache-nozzle
+    loggregator_agent
+    loggregator_trafficcontroller
+    metrics-agent
+    metrics-discovery-registrar
     netmon
-    node
-    policy.server
-    policy.server.internal
-    prom.scraper
-    redis.server
+    nginx
+    nginx_prometheus
+    node_exporter
+    ntp
+    oauth2-proxy
+    openjdk_1.8.0
+    opt
+    policy-server
+    prom_scraper
+    prometheus2
+    pushgateway
+    redis
     rep
-    reverse.log.proxy
-    rlp
-    reverse.log.proxy.gateway
-    rlp.gateway
-    route.emitter
-    service.discovery.controller
-    silk.controller
-    silk.daemon
-    ssh.proxy
-    statsd.injector
-    syslog.agent
-    tps.watcher
-    trafficcontroller
-    udp.forwarder
-    vxlan.policy.agent
+    reverse_log_proxy
+    reverse_log_proxy_gateway
+    route_emitter
+    ruby-2.6.5-r0.29.0
+    secureproxy
+    service-discovery-controller
+    silk-controller
+    silk-daemon
+    ssh_proxy
+    statsd_injector
+    syslog-agent
+    tps
+    udp-forwarder
+    vxlan-policy-agent
 """.split()
 
 DAEMONS = '|'.join(DAEMONS)
@@ -140,6 +132,12 @@ for report_host in nfr.scan.report_hosts(root):
                     daemon_count += 1
                     continue
                 if re.search(rf'^/var/vcap/data/packages/({DAEMONS})/[0-9a-f]+/bin/{DAEMONS}$', line):
+                    daemon_count += 1
+                    continue
+                if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|openjdk-11|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):
+                    daemon_count += 1
+                    continue
+                if (re.search(rf'^/var/vcap/data/packages/ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) and re.search(rf'cc-worker|admin-ui', report_host_name)):
                     daemon_count += 1
                     continue
                 print("== Unknown daemon found: ",report_host_name,": ", line)

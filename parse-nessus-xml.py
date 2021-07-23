@@ -38,14 +38,17 @@ DAEMONS = """
     bosh_exporter
     bosh-dns
     bosh-dns-adapter
-    cc_uploader
+    bosh-dns-health
+    broker
+    cc.uploader
     cf_exporter
     concourse
+    discovery-registrar
     domain-broker
     doomsday
     doppler
     elasticsearch_exporter
-    file_server
+    file.server
     firehose_exporter
     forwarder-agent
     gnatsd
@@ -53,39 +56,47 @@ DAEMONS = """
     gorouter
     grafana
     guardian
+    gdn
     locket
     log-cache
     log-cache-cf-auth-proxy
     log-cache-gateway
     log-cache-nozzle
-    loggregator_agent
+    loggregator.agent
     loggregator_trafficcontroller
     metrics-agent
     metrics-discovery-registrar
     netmon
     nginx
     nginx_prometheus
+    nginx/sbin/nginx
     node_exporter
     ntp
-    oauth2-proxy
+    oauth2.proxy
     opt
     policy-server
-    prom_scraper
+    policy-server-internal
+    prom.scraper
     prometheus2
     pushgateway
     redis
+    redis-server
     rep
     reverse_log_proxy
     reverse_log_proxy_gateway
-    route_emitter
+    rlp
+    rlp-gateway
+    route.emitter
     secureproxy
     service-discovery-controller
     silk-controller
     silk-daemon
-    ssh_proxy
-    statsd_injector
+    ssh.proxy
+    statsd.injector
     syslog-agent
     tps
+    tps-watcher
+    trafficcontroller
     udp-forwarder
     vxlan-policy-agent
 """.split()
@@ -129,7 +140,7 @@ for report_host in nfr.scan.report_hosts(root):
                 if re.search(rf'/var/vcap/bosh/bin/(bosh-agent|monit)', line):
                     daemon_count += 1
                     continue
-                if re.search(rf'^/var/vcap/data/packages/({DAEMONS})/[0-9a-f]+/bin/{DAEMONS}$', line):
+                if re.search(rf'^/var/vcap/data/packages/({DAEMONS})/[0-9a-f]+/(s?bin/)?({DAEMONS})$', line):
                     daemon_count += 1
                     continue
                 if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|openjdk_1.8.0|openjdk-11|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):

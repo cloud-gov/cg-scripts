@@ -15,7 +15,6 @@ team = [
     ":kelley:",
     ":lindsay:",
     ":melanie:",
-#    ":haywood:",
     ":gerald:"
 ]
 

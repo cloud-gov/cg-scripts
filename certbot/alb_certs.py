@@ -25,7 +25,7 @@ def wait_print(seconds, description=""):
     for _ in range(seconds):
         time.sleep(1)
         print(".", end="", sep="", flush=True)
-        print()
+    print()
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -34,7 +34,7 @@ def parse_args():
     return parser.parse_args()
 
 def get_guid(cert_name):
-    certificate_name_re = re.compile(r'cf-domains-(?P<guid>([^-]+-){4}[^-]+)-(?P<expiration>.+)')
+    certificate_name_re = re.compile(r'(cdn-route|cf-domains)-(?P<guid>([^-]+-){4}[^-]+)-(?P<expiration>.+)')
 
     m = re.search(certificate_name_re, cert_name)
     guid = m.group("guid")
@@ -74,7 +74,7 @@ def do_certbot(domains):
     out = subprocess.run(command, capture_output=True, check=True)
 
 
-def upload_certs(domain, guid):
+def upload_certs(domain, guid, path):
     openssl_command = [
         "openssl", "x509",
         "-enddate",
@@ -95,7 +95,7 @@ def upload_certs(domain, guid):
         "--certificate-body", "file://cert.pem",
         "--private-key", "file://privkey.pem",
         "--certificate-chain", "file://chain.pem", 
-        "--path", "/domains/production/"
+        "--path", path
     ]
     with cd(f"config/live/{domain}"):
         out = subprocess.run(upload_command, capture_output=True, text=True,)# check=True)
@@ -181,7 +181,7 @@ def main():
         print("getting certificate")
         do_certbot(domains)
         print("uploading certificate")
-        new_cert_data = upload_certs(domains[0], guid)
+        new_cert_data = upload_certs(domains[0], guid, "/domains/production/")
         print("adding new certificate to load balancer")
         associate_certs(args.alb_listener_arn, new_cert_data["Arn"])
         print("validating new cert is active")

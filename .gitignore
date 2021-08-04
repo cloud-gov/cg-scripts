@@ -16,3 +16,13 @@ my*.yml
 *.csv
 .vscode
 venv
+**/__pycache__
+
+# don't keep certbot stuff
+certbot/config/**
+certbot/logs/**
+certbot/work/**
+# ...but do keep certbot directories
+!certbot/config/.gitkeep
+!certbot/logs/.gitkeep
+!certbot/work/.gitkeep

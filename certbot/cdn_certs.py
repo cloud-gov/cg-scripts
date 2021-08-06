@@ -12,7 +12,7 @@ script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cdn-id", help="the id of the cloudfront distribution")
+    parser.add_argument("--cdn-ids", help="the id of the cloudfront distribution", nargs="+")
     return parser.parse_args()
 
 
@@ -53,8 +53,7 @@ def get_all_certs():
     return cert_metadata_list
 
 
-def cert_data_from_id(cert_id):
-    certs = get_all_certs()
+def cert_data_from_id(cert_id, certs):
     for cert in certs:
         if cert["ServerCertificateId"] == cert_id:
             # dict here is shortcut to copy the cert
@@ -83,21 +82,37 @@ def main():
     if not os.getenv("CERTBOT_BUCKET_NAME"):
         raise RuntimeError("CERTBOT_BUCKET_NAME must be set")
     with alb_certs.cd(script_dir):
-        print("getting CDN information")
-        cdn_info = get_cdn_info(args.cdn_id)
-        domains = domains_from_cdn_info(cdn_info)
-        print("getting certificate information")
-        old_cert_id = cert_id_from_cdn_info(cdn_info)
-        cert_data = cert_data_from_id(old_cert_id)
-        print(cert_data)
-        guid = alb_certs.get_guid(cert_data["ServerCertificateName"])
-        print("getting certificate")
-        alb_certs.do_certbot(domains)
-        print("uploading certificate")
-        new_cert_info = alb_certs.upload_certs(domains[0], guid, "/cloudfront/cg-production/")
-        alb_certs.wait_print(10, "waiting for IAM to figure out cert")
-        update_cdn_info(cdn_info, new_cert_info, args.cdn_id)
+        # only get certs once, since it shouldn't change much
+        certs = get_all_certs()
+        total = len(args.cdn_ids)
+        doing = 0
+        failed = []
+        for cdn_id in args.cdn_ids:
+            doing +=1
+            print(f"working on cdn {doing} of {total}")
+            try:
+                renew_cdn(cdn_id, certs)
+            except Exception as e:
+                failed.append(cdn_id)
+                print(e)
+        print(f"failures: {failed}")
 
+
+def renew_cdn(cdn_id, certs):
+    print(f"getting CDN information for {cdn_id}")
+    cdn_info = get_cdn_info(cdn_id)
+    domains = domains_from_cdn_info(cdn_info)
+    print("getting certificate information")
+    old_cert_id = cert_id_from_cdn_info(cdn_info)
+    cert_data = cert_data_from_id(old_cert_id, certs)
+    print(cert_data)
+    guid = alb_certs.get_guid(cert_data["ServerCertificateName"])
+    print("getting certificate")
+    alb_certs.do_certbot(domains)
+    print("uploading certificate")
+    new_cert_info = alb_certs.upload_certs(domains[0], guid, "/cloudfront/cg-production/")
+    alb_certs.wait_print(10, "waiting for IAM to figure out cert")
+    update_cdn_info(cdn_info, new_cert_info, cdn_id)
 
 
 if __name__ == "__main__":

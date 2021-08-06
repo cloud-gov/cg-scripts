@@ -48,6 +48,7 @@ def get_domains(guid):
 
     description = service_data["last_operation"]["description"]
     domains = description.split(';')[1].split(' ')[2:]
+    domains = [domain.replace(",","") for domain in domains]
     print(f"domains: {domains}")
  
     return domains
@@ -71,7 +72,7 @@ def do_certbot(domains):
     for domain in domains:
         command.extend(["-d", domain])
 
-    out = subprocess.run(command, capture_output=True, check=True)
+    out = subprocess.run(command, check=True)
 
 
 def upload_certs(domain, guid, path):
@@ -98,8 +99,7 @@ def upload_certs(domain, guid, path):
         "--path", path
     ]
     with cd(f"config/live/{domain}"):
-        out = subprocess.run(upload_command, capture_output=True, text=True,)# check=True)
-        print(out.stderr)
+        out = subprocess.run(upload_command, capture_output=True, text=True, check=True)
     data = json.loads(out.stdout)
     return data["ServerCertificateMetadata"]
 

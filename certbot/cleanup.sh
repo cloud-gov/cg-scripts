@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rm $CERTBOT_TOKEN
+rm -- "$CERTBOT_TOKEN"

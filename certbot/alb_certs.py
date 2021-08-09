@@ -176,8 +176,11 @@ def main():
     with cd(script_dir):
         print("getting guid and domains")
         guid = get_guid(args.cert_name)
-        domains = get_domains(guid)
-        input(f"Looks like this is for {domains}. Hit enter to continue, or ctrl-c if this looks fishy")
+        try:
+            domains = get_domains(guid)
+        except:
+            print(f"failed to get domains for {guid}")
+            sys.exit()
         print("getting certificate")
         do_certbot(domains)
         print("uploading certificate")

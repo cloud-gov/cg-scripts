@@ -2,7 +2,7 @@
 
 ## all-in-one
 
-*Note* This uses bash-isms not available on the default OS X bash (3.x). 
+*Note* This uses bash features not available on the default OS X bash (3.x). 
 In order to run either script, make sure you've installed a newer version of
 bash with homebrew
 

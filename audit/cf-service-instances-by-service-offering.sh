@@ -29,13 +29,14 @@ function printServiceInstances() {
     local space_name=$(echo "$space_json" | jq -r '.name')
     local org_guid=$(echo "$space_json" | jq -r '.relationships.organization.data.guid')
     local org_name=$(cf curl "/v3/organizations/${org_guid}" | jq -r '.name')
-    echo "$svc_offering_name,$svc_plan_name,$svc_instance_name,$created_at,$org_name,$space_name"
+    local service_instance_guid=$(echo "$svc_instance_guid")
+    echo "$svc_offering_name,$svc_plan_name,$svc_instance_name,$created_at,$org_name,$space_name,$service_instance_guid,$space_guid,$org_guid"
   done
   #echo "$svc_offering_name $svc_offering_guid $svc_plan_name $svc_plan_guid"
 }
 
 svc_offering_name=$1
-echo "Offering name, Plan, Service Instance Name, Creation Date, Organization, Space"
+echo "Offering name,Plan,Service Instance Name,Creation Date,Organization,Space,Service Instance GUID,Space GUID,Organization GUID"
 svc_offering_guid=$(cf curl "/v3/service_offerings?names=${svc_offering_name}" | jq -r '.resources[].guid')
 #echo "$svc_offering_name $svc_offering_guid"
 svc_plans_json=$(cf curl "/v3/service_plans?service_offering_guids=${svc_offering_guid}")

@@ -42,13 +42,13 @@ def analyze_rds(json_file):
     """
 
     @functools.cache
-    def get_cf_entity_name(entity, org_guid):
+    def get_cf_entity_name(entity, guid):
         """
         Retrieves the name of a CF entity from a GUID.
         """
 
         cf_json = subprocess.check_output(
-            ["cf", "curl", "/v3/" + entity + "/" + org_guid],
+            ["cf", "curl", "/v3/" + entity + "/" + guid],
             universal_newlines=True
         )
         cf_data = json.loads(cf_json)

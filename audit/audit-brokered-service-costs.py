@@ -7,6 +7,23 @@ import json
 import subprocess
 
 
+# Prefix for all production Elasticsearch domains.
+ES_PROD_DOMAIN_PREFIX="cg-broker-prd-"
+
+# As defined by AWS with their pricing calculator at https://calculator.aws/
+HOURS_PER_MONTH = 730
+
+ES_PRICING_INFO = {
+    "storage": {
+        "gp2": 0.162
+    },
+    "instance_classes": {
+        "c5.large.elasticsearch": 0.15,
+        "c5.xlarge.elasticsearch": 0.301,
+        "t2.small.elasticsearch": 0.043,
+    }
+}
+
 RDS_PRICING_INFO = {
     "mysql": {
         "storage": {
@@ -538,6 +555,8 @@ RDS_PRICING_INFO = {
     }
 }
 
+REDIS_PRICING_INFO = {}
+
 
 def parse_args():
     """
@@ -585,7 +604,68 @@ def analyze_es(json_file, limit):
     Analyzes a JSON file containing AWS Elasticsearch domain information.
     """
 
-    print("Not implemented.")
+    def calculate_monthly_cost(num_data_instances, data_instance_class_price, num_master_instances, master_instance_class_price, storage_size, storage_price):
+        """
+        Calculates the monthly cost of an Elasticsearch domain.  Note that this
+        is a rough estimate based on AWS' pricing formula for Elasticsearch:
+
+        (num_data_instances * data_instance_class_price * HOURS_PER_MONTH) +
+        (num_master_instances * master_instance_class_price * HOURS_PER_MONTH) +
+        (storage_size * storage_price * num_data_instances)
+
+        Returns the value formatted as a string, rounded to 2 decimal places.
+        """
+
+        estimate = (int(num_data_instances) * data_instance_class_price * HOURS_PER_MONTH) + (int(num_master_instances) * master_instance_class_price * HOURS_PER_MONTH) + (int(storage_size) * storage_price * int(num_data_instances))
+        return "{estimate:.2f}".format(estimate=estimate)
+
+    count = 0
+    es_domain_data = json.load(open(json_file))
+
+    print("Domain Name,Data Instance Class,Num Data Instances,Data Instance Class Price Per Hour,Master Instance Class,Num Master Instances,Master Instance Class Price per Hour,Data Storage Size,Storage Type,Storage Price per GB/Month,Total Monthly Estimate")
+
+    for es_domain in es_domain_data["DomainStatusList"]:
+        # Retrieve all of the tags associated with the instance.
+        #tags = { tag.get("Key"): tag.get("Value") for tag in db_instance["TagList"] }
+
+        # If we set a processing limit and we haven't skipped, check to see if
+        # we should stop.
+        if limit > 0 and count >= limit:
+            break
+
+        # Check for the presence of master instances.
+        if es_domain["ElasticsearchClusterConfig"]["DedicatedMasterEnabled"]:
+            master_instance_class=es_domain["ElasticsearchClusterConfig"]["DedicatedMasterType"]
+            num_master_instances=es_domain["ElasticsearchClusterConfig"]["DedicatedMasterCount"]
+            master_instance_class_price = ES_PRICING_INFO["instance_classes"][master_instance_class]
+        else:
+            master_instance_class = "N/A"
+            num_master_instances = 0
+            master_instance_class_price = 0
+
+        output = "{domain_name},{data_instance_class},{num_data_instances},{data_instance_class_price},{master_instance_class},{num_master_instances},{master_instance_class_price},{data_storage_size},{storage_type},{storage_price},{total_monthly_estimate}".format(
+            domain_name=es_domain["DomainName"],
+            data_instance_class=es_domain["ElasticsearchClusterConfig"]["InstanceType"],
+            num_data_instances=es_domain["ElasticsearchClusterConfig"]["InstanceCount"],
+            data_instance_class_price=ES_PRICING_INFO["instance_classes"][es_domain["ElasticsearchClusterConfig"]["InstanceType"]],
+            master_instance_class=master_instance_class,
+            num_master_instances=num_master_instances,
+            master_instance_class_price=master_instance_class_price,
+            data_storage_size=es_domain["EBSOptions"]["VolumeSize"],
+            storage_type=es_domain["EBSOptions"]["VolumeType"],
+            storage_price=ES_PRICING_INFO["storage"]["gp2"],
+            total_monthly_estimate=calculate_monthly_cost(
+                es_domain["ElasticsearchClusterConfig"]["InstanceCount"],
+                ES_PRICING_INFO["instance_classes"][es_domain["ElasticsearchClusterConfig"]["InstanceType"]],
+                num_master_instances,
+                master_instance_class_price,
+                es_domain["EBSOptions"]["VolumeSize"],
+                ES_PRICING_INFO["storage"]["gp2"],
+            )
+        )
+
+        print(output)
+        count += 1
 
 
 def analyze_rds(json_file, limit):
@@ -596,15 +676,15 @@ def analyze_rds(json_file, limit):
     def calculate_monthly_cost(instance_class_price, storage_price, storage_size):
         """
         Calculates the monthly cost of an RDS instance.  Note that this is a
-        rough estimate based on AWS' pricing formula for RDS, which assumes 750
-        hours in a month:
+        rough estimate based on AWS' pricing formula for RDS, and the instance
+        class price factors in whether or not an instance is set with MultiAZ:
 
-        (instance_class_price * 750) + ((storage_price * storage_size) * 750)
+        (instance_class_price * HOURS_PER_MONTH) + (storage_size * storage_price)
 
         Returns the value formatted as a string, rounded to 2 decimal places.
         """
 
-        estimate = (instance_class_price * 750) + ((storage_price * storage_size) * 750)
+        estimate = (instance_class_price * HOURS_PER_MONTH) + (storage_size * storage_price)
         return "{estimate:.2f}".format(estimate=estimate)
 
     count = 0

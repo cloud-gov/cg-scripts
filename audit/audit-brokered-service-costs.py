@@ -555,7 +555,11 @@ RDS_PRICING_INFO = {
     }
 }
 
-REDIS_PRICING_INFO = {}
+REDIS_PRICING_INFO = {
+    "cache.t2.micro": 0.019,
+    "cache.t3.micro": 0.02,
+    "cache.t3.small": 0.04,
+}
 
 
 def parse_args():
@@ -569,7 +573,7 @@ def parse_args():
 
     parser.add_argument(
         "aws_service",
-        choices=["es", "rds", "redis"],
+        choices=["es", "rds", "redis", "aws-resource-tags"],
         help="The AWS service to analyze"
     )
     parser.add_argument(
@@ -599,6 +603,83 @@ def get_cf_entity_name(entity, guid):
     return cf_data.get("name", "N/A")
 
 
+def parse_aws_resource_tags(json_file, limit):
+    """
+    Processes tags for a AWS resources and retrieves their associated Cloud
+    Foundry values.
+    """
+
+    def parse_aws_resource_name(aws_resource_arn):
+        """
+        Parses out the AWS resource name from an AWS ARN.  Accounts for at least
+        Elasticsearch and ElastiCache ARN formats.
+        """
+
+        parts = aws_resource_arn.split(":")
+        name_part = parts[-1].split("/")[-1]
+
+        return name_part
+
+    count = 0
+    tag_data = json.load(open(json_file))
+
+    print("AWS Resource Name,Instance GUID,Space GUID,Organization GUID,Instance Name,Space Name,Organization Name")
+
+    for resource in tag_data["aws_resource_tags"]:
+        # Retrieve all of the tags associated with the resource.
+        tags = { tag.get("Key"): tag.get("Value") for tag in resource["TagList"] }
+
+        # If we set a processing limit and we haven't skipped, check to see if
+        # we should stop.
+        if limit > 0 and count >= limit:
+            break
+
+        # Check if the instance has the appropriate CF metadata associated with
+        # it and if not, default to N/A values.
+        if "Instance GUID" in tags:
+            instance_guid = tags["Instance GUID"]
+            instance_name = get_cf_entity_name(
+                "service_instances",
+                tags["Instance GUID"]
+            )
+        else:
+            instance_guid = "N/A"
+            instance_name = "N/A"
+
+        if "Organization GUID" in tags:
+            org_guid = tags["Organization GUID"]
+            org_name = get_cf_entity_name(
+                "organizations",
+                tags["Organization GUID"]
+            )
+        else:
+            org_guid = "N/A"
+            org_name = "N/A"
+
+        if "Space GUID" in tags:
+            space_guid = tags["Space GUID"]
+            space_name = get_cf_entity_name(
+                "spaces",
+                tags["Space GUID"]
+            )
+        else:
+            space_guid = "N/A"
+            space_name = "N/A"
+
+        output = "{aws_resource_name},{instance_guid},{space_guid},{org_guid},{instance_name},{space_name},{org_name}".format(
+            aws_resource_name=parse_aws_resource_name(resource["arn"]),
+            instance_guid=instance_guid,
+            space_guid=space_guid,
+            org_guid=org_guid,
+            instance_name=instance_name,
+            space_name=space_name,
+            org_name=org_name
+        )
+
+        print(output)
+        count += 1
+
+
 def analyze_es(json_file, limit):
     """
     Analyzes a JSON file containing AWS Elasticsearch domain information.
@@ -625,9 +706,6 @@ def analyze_es(json_file, limit):
     print("Domain Name,Data Instance Class,Num Data Instances,Data Instance Class Price Per Hour,Master Instance Class,Num Master Instances,Master Instance Class Price per Hour,Data Storage Size,Storage Type,Storage Price per GB/Month,Total Monthly Estimate")
 
     for es_domain in es_domain_data["DomainStatusList"]:
-        # Retrieve all of the tags associated with the instance.
-        #tags = { tag.get("Key"): tag.get("Value") for tag in db_instance["TagList"] }
-
         # If we set a processing limit and we haven't skipped, check to see if
         # we should stop.
         if limit > 0 and count >= limit:
@@ -755,7 +833,48 @@ def analyze_redis(json_file, limit):
     Analyzes a JSON file containing AWS ElastiCache Redis cluster information.
     """
 
-    print("Not implemented.")
+    def calculate_monthly_cost(num_instances, instance_class_price):
+        """
+        Calculates the monthly cost of a Redis cluster.  Note that this
+        is a rough estimate based on AWS' pricing formula for ElastiCache:
+
+        Actual price for (3 instances) Memcached Memory optimized cache r4.16xlarge OnDemand (Hourly): 3 instance(s) x 8.73600000 USD hourly = 26.208 USD
+
+        3 instance(s) x 8.73600000 USD hourly x 730 hours in a month = 19,131.84 USD
+
+        num_instances * instance_class_price * HOURS_PER_MONTH
+
+        Returns the value formatted as a string, rounded to 2 decimal places.
+        """
+
+        estimate = int(num_instances) * instance_class_price * HOURS_PER_MONTH
+        return "{estimate:.2f}".format(estimate=estimate)
+
+    count = 0
+    redis_cluster_data = json.load(open(json_file))
+
+    print("Cache Cluster ID,Cache Cluster Type,Instance Class,Number of Nodes,Instance Class Price,Total Monthly Estimate")
+
+    for redis_cluster in redis_cluster_data["CacheClusters"]:
+        # If we set a processing limit and we haven't skipped, check to see if
+        # we should stop.
+        if limit > 0 and count >= limit:
+            break
+
+        output = "{cache_cluster_id},{cache_cluster_type},{instance_class},{num_nodes},{instance_class_price},{total_monthly_estimate}".format(
+            cache_cluster_id=redis_cluster["CacheClusterId"],
+            cache_cluster_type=redis_cluster["Engine"],
+            instance_class=redis_cluster["CacheNodeType"],
+            num_nodes=redis_cluster["NumCacheNodes"],
+            instance_class_price=REDIS_PRICING_INFO[redis_cluster["CacheNodeType"]],
+            total_monthly_estimate=calculate_monthly_cost(
+                redis_cluster["NumCacheNodes"],
+                REDIS_PRICING_INFO[redis_cluster["CacheNodeType"]]
+            )
+        )
+
+        print(output)
+        count += 1
 
 
 def main():
@@ -769,6 +888,8 @@ def main():
         analyze_rds(args.json_file, limit)
     elif args.aws_service == "redis":
         analyze_redis(args.json_file, limit)
+    elif args.aws_service == "aws-resource-tags":
+        parse_aws_resource_tags(args.json_file, limit)
     else:
         print("Unknown command, exiting.")
 

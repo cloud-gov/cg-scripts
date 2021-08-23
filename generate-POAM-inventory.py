@@ -49,6 +49,8 @@ def get_os_version_from_stemcell(stemcell):
     stemcell_name = stemcell["name"].lower()
     version = None
     # TODO: validate minor version, as it may change in the future
+    if "bionic" in stemcell_name:
+        version = "18.04.5"
     if "xenial" in stemcell_name:
         version = "16.04.5"
     elif "trusty" in stemcell_name:

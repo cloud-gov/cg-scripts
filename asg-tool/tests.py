@@ -1,3 +1,4 @@
+import subprocess
 import unittest
 from unittest.mock import patch
 import json
@@ -54,10 +55,19 @@ class SubprocessResult:
         self.stderr = json.dumps(stderr)
 
 
+def create_resource(guid, name):
+    resource = result_resource(guid=guid, name=name)
+    return resource
+
+
 def return_cf_request(
-    pagination=result_pagination(), resource=result_resource(), number_or_resources=1
+    pagination=result_pagination(),
+    resource=result_resource(),
+    number_or_resources=1,
+    resources=None,
 ):
-    resources = list(resource for i in range(0, number_or_resources))
+    if not resources:
+        resources = list(resource for i in range(0, number_or_resources))
 
     stdout = results_from_cf(pagination=pagination, resources=resources)
     output = SubprocessResult(stdout=stdout)
@@ -65,14 +75,16 @@ def return_cf_request(
     return output
 
 
-class TestASGTool(unittest.TestCase):
+class TestASGGetSpaces(unittest.TestCase):
     @patch("subprocess.run")
     def test_paginate_response_one_page(self, mock_call):
-        mock_call.return_value = return_cf_request(number_or_resources=10)
-        expected_keys = result_resource().keys()
+        expected_keys = ["guid", "name"]
+        mock_call.return_value = return_cf_request(
+            resource=create_resource("a-guid-id", "a-name"), number_or_resources=10
+        )
         result = asg_tool.get_spaces()
         self.assertIsInstance(result, list)
-        self.assertEqual(result[0].keys(), expected_keys)
+        self.assertEqual(list(result[0].keys()), expected_keys)
         self.assertEqual(len(result), 10)
 
     @patch("subprocess.run")
@@ -80,7 +92,9 @@ class TestASGTool(unittest.TestCase):
         pagination = result_pagination(
             next={"href": "http://example.gov/items?per_page=10"}
         )
-        mock_call.return_value = return_cf_request(pagination=pagination)
+        mock_call.return_value = return_cf_request(
+            resource=create_resource("a-guid-id", "a-name"), pagination=pagination
+        )
         result = asg_tool.get_spaces()
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 100)
@@ -89,15 +103,66 @@ class TestASGTool(unittest.TestCase):
         pagination_1 = result_pagination(
             next={"href": "http://example.gov/items?per_page=10"}
         )
-        mock_call_1 = return_cf_request(pagination=pagination_1, number_or_resources=10)
-        mock_call_2 = return_cf_request(number_or_resources=5)
+        mock_call_1 = return_cf_request(
+            resource=create_resource("a-guid-id", "a-name"),
+            pagination=pagination_1,
+            number_or_resources=10,
+        )
+        mock_call_2 = return_cf_request(
+            resource=create_resource("other-guid-id", "other-name"),
+            number_or_resources=5,
+        )
 
         with patch("subprocess.run", side_effect=[mock_call_1, mock_call_2]):
-            expected_keys = result_resource().keys()
+            expected_keys = ["guid", "name"]
             result = asg_tool.get_spaces()
             self.assertIsInstance(result, list)
-            self.assertEqual(result[0].keys(), expected_keys)
+            self.assertEqual(list(result[0].keys()), expected_keys)
             self.assertEqual(len(result), 15)
+
+    @patch("subprocess.run")
+    def test_remove_invalid_resources_from_list(self, mock_call):
+        expected_keys = ["guid", "name"]
+        valid_resources = list(
+            create_resource("a-guid", "a-name") for i in range(0, 10)
+        )
+        invalid_resources = list(create_resource(None, None) for i in range(0, 10))
+        all_resources = valid_resources + invalid_resources
+        self.assertEqual(len(all_resources), 20)
+        mock_call.return_value = return_cf_request(resources=all_resources)
+        result = asg_tool.get_spaces()
+        self.assertIsInstance(result, list)
+        self.assertEqual(list(result[0].keys()), expected_keys)
+        self.assertEqual(len(result), 10)
+
+
+class TestCheckSpaceASG(unittest.TestCase):
+    def test_curl_space_asg(self):
+        pass
+
+
+class TestGetSpaceASG(unittest.TestCase):
+    @patch("subprocess.run")
+    def test_gets_asg_guid(self, mock_call):
+        asg_name = "asg-name"
+        asg_guid = "asg-guid-id"
+        mock_call.return_value = return_cf_request(
+            resource=create_resource(asg_guid, asg_name)
+        )
+        result = asg_tool.get_asg_guid(asg_name)
+        self.assertIsInstance(result, str)
+        self.assertEqual(result, asg_guid)
+
+    @patch("subprocess.run")
+    def test_gets_none_when_asg_name_not_found(self, mock_call):
+        asg_name = "asg-name"
+        other_asg_name = "other-asg-name"
+        other_asg_guid = "other-asg-guid-id"
+        mock_call.return_value = return_cf_request(
+            resource=create_resource(other_asg_guid, other_asg_name)
+        )
+        result = asg_tool.get_asg_guid(asg_name)
+        self.assertEqual(result, None)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 #!/bin/env python3
 import argparse
-from asg_tool import get_spaces, bind_asg
+import pprint
+from asg_tool import bind_asg, check_spaces, unbind_asg
 
 
 def parse_args():
@@ -12,9 +13,23 @@ def parse_args():
         dest="command", help="Run <command> help for more information."
     )
 
-    subparsers.add_parser("spaces-asg", help="List all spaces and their ASG's.")
-    bind_asg = subparsers.add_parser("bind-asg", help="Bind an ASG to all spaces.")
-    bind_asg.add_argument(
+    subparsers.add_parser("check-spaces", help="List all spaces and their ASG's.")
+    bind_asg_parser = subparsers.add_parser(
+        "bind-asg", help="Bind an ASG to all spaces."
+    )
+    bind_asg_parser.add_argument(
+        "-an",
+        "--asg-name",
+        dest="asg_name",
+        required=True,
+        type=str,
+        help="Name of ASG to bind",
+    )
+
+    unbind_asg_parser = subparsers.add_parser(
+        "unbind-asg", help="Unbind an ASG from all spaces."
+    )
+    unbind_asg_parser.add_argument(
         "-an",
         "--asg-name",
         dest="asg_name",
@@ -30,16 +45,24 @@ def main():
     args = parse_args()
 
     try:
-        if args.command == "spaces-asg":
-            spaces = get_spaces()
-            print(spaces)
+        if args.command == "check-spaces":
+            spaces = check_spaces()
+            pprint.pprint(spaces)
+            return
         if args.command == "bind-asg":
             results = bind_asg(args.asg_name)
             print(results)
+            return
+        if args.command == "unbind-asg":
+            results = unbind_asg(args.asg_name)
+            print(results)
+            return
         else:
             print("Please run 'python3 ./asg-tool --help'")
     except Exception as e:
+        print(f"An error occurred while runing `python3 ./asg-tool {args.command}`")
         print(str(e))
+        print("Please revise your and try again.")
     finally:
         return
 

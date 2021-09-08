@@ -1,4 +1,3 @@
-import subprocess
 import unittest
 from unittest.mock import patch
 import json
@@ -75,6 +74,25 @@ def return_cf_request(
     return output
 
 
+class TestCFCurlResultsHandler(unittest.TestCase):
+    def test_returns_successfull_output(self):
+        stdout = {"test": "Hello World"}
+        output = SubprocessResult(stdout=stdout)
+        results = asg_tool.cf_curl_results_handler(output)
+        self.assertEqual(results, stdout)
+
+    def test_raises_exception(self):
+        stdout = {"errors": {"message": "error"}}
+        with self.assertRaises(Exception):
+            output = SubprocessResult(stdout=stdout)
+            asg_tool.cf_curl_results_handler(output)
+
+    def test_returns_empty_object_if_no_stdout(self):
+        output = {"stdout": "not json"}
+        results = asg_tool.cf_curl_results_handler(output)
+        self.assertEqual(results, {})
+
+
 class TestASGGetSpaces(unittest.TestCase):
     @patch("subprocess.run")
     def test_paginate_response_one_page(self, mock_call):
@@ -134,6 +152,24 @@ class TestASGGetSpaces(unittest.TestCase):
         self.assertIsInstance(result, list)
         self.assertEqual(list(result[0].keys()), expected_keys)
         self.assertEqual(len(result), 10)
+
+
+class TestCFCurlDelete(unittest.TestCase):
+    @patch("subprocess.run")
+    def test_successful_delete(self, mock_call):
+        mock_call.return_value = SubprocessResult()
+        result = asg_tool.cf_curl_delete("/v3/test/1")
+        self.assertEqual(result, {})
+
+
+class TestCFCurlPost(unittest.TestCase):
+    @patch("subprocess.run")
+    def test_successful_post(self, mock_call):
+        data = {"test": "data"}
+        stdout = {"data": {"message": "Success"}}
+        mock_call.return_value = SubprocessResult(stdout=stdout)
+        result = asg_tool.cf_curl_post("/v3/test/1", data)
+        self.assertEqual(result, stdout["data"])
 
 
 class TestCheckSpaceASG(unittest.TestCase):

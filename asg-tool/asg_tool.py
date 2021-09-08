@@ -1,4 +1,3 @@
-#!/bin/env python3
 import json
 import subprocess
 from urllib.parse import urlparse
@@ -30,37 +29,37 @@ def filter_resources(resources: list) -> list:
     return filtered
 
 
+def cf_curl_results_handler(output: object):
+    results = {}
+
+    # Try to load output as JSON.
+    try:
+        results = json.loads(output.stdout)
+    except:
+        results = {}
+
+    if hasattr(results, "__iter__") and "errors" in results:
+        raise Exception(results)
+
+    return results
+
+
 def cf_curl_get(
     api_path: str,
     acc_resources: list = [],
     iteration: int = 0,
-    method: str = "GET",
-    data: dict = None,
 ) -> list:
     if iteration == 100:
         return acc_resources
 
-    next_page = None
-    if data:
-        method = "POST"
-    method = method.upper()
-    command = ["cf", "curl", api_path, "-X", method]
-
-    if data:
-        command.append("-d")
-        command.append(f"{data}")
-
+    command = ["cf", "curl", api_path]
     output = subprocess.run(command, capture_output=True, check=True, encoding="utf-8")
 
-    results = json.loads(output.stdout)
-
-    if not data:
-        pagination = results["pagination"]
-        next_page = pagination["next"]
-        resources = results["resources"]
-        joined_resources = acc_resources + resources
-    else:
-        joined_resources = results["data"]
+    results = cf_curl_results_handler(output)
+    pagination = results["pagination"]
+    next_page = pagination["next"]
+    resources = results["resources"]
+    joined_resources = acc_resources + resources
 
     if next_page:
         parsed_api = urlparse(next_page["href"])
@@ -77,16 +76,18 @@ def cf_curl_delete(
 ) -> list:
     command = ["cf", "curl", api_path, "-X", "DELETE"]
     output = subprocess.run(command, capture_output=True, check=True, encoding="utf-8")
-    return output
+    results = cf_curl_results_handler(output)
+    return results
 
 
 def cf_curl_post(
     api_path: str,
-    data: str,
+    data: dict,
 ) -> list:
-    command = ["cf", "curl", api_path, "-X", "POST", "-d", data]
+    formatted = json.dumps(data)
+    command = ["cf", "curl", api_path, "-X", "POST", "-d", formatted]
     output = subprocess.run(command, capture_output=True, check=True, encoding="utf-8")
-    results = json.loads(output.stdout)
+    results = cf_curl_results_handler(output)
     return results["data"]
 
 
@@ -133,14 +134,14 @@ def setup_asg_action(asg_name: str) -> tuple:
 def bind_asg(asg_name: str) -> str:
     asg_guid, spaces = setup_asg_action(asg_name)
 
-    print(f"Start binding security group {asg_name} to spaces")
+    print(f"Start binding security group {asg_name} to all spaces")
     for space in spaces:
         try:
             data = {"data": [space]}
-            formatted = json.dumps(data)
+
             cf_curl_post(
                 f"/v3/security_groups/{asg_guid}/relationships/running_spaces",
-                data=formatted,
+                data=data,
             )
             print(f'Bound {asg_name} to NAME: {space["name"]} - GUID: {space["guid"]}')
         except Exception as err:
@@ -153,6 +154,7 @@ def bind_asg(asg_name: str) -> str:
 
 
 def check_spaces() -> list:
+    print("Getting space information")
     results = []
     spaces = get_spaces()
 
@@ -174,7 +176,7 @@ def check_spaces() -> list:
 def unbind_asg(asg_name: str) -> str:
     asg_guid, spaces = setup_asg_action(asg_name)
 
-    print(f"Start unbinding security group {asg_name} to spaces")
+    print(f"Start unbinding security group {asg_name} from all spaces")
     for space in spaces:
         try:
             space_guid = space["guid"]
@@ -182,7 +184,7 @@ def unbind_asg(asg_name: str) -> str:
                 f"/v3/security_groups/{asg_guid}/relationships/running_spaces/{space_guid}"
             )
             print(
-                f'Unbond {asg_name} for NAME: {space["name"]} - GUID: {space["guid"]}'
+                f'Unbound {asg_name} for NAME: {space["name"]} - GUID: {space["guid"]}'
             )
         except Exception as err:
             print(

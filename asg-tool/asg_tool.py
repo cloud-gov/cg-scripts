@@ -1,9 +1,10 @@
 import json
 import subprocess
+from typing import Optional
 from urllib.parse import urlparse
 
 
-def filter_resource_item(item: dict) -> dict:
+def filter_resource_item(item: dict) -> Optional[dict]:
     guid = item["guid"]
     name = item["name"]
 
@@ -29,7 +30,7 @@ def filter_resources(resources: list) -> list:
     return filtered
 
 
-def cf_curl_results_handler(output: object):
+def cf_curl_results_handler(output: object) -> dict:
     results = {}
 
     # Try to load output as JSON.
@@ -98,7 +99,7 @@ def get_spaces() -> list:
     return filtered
 
 
-def get_asg_guid(asg_name: str) -> str:
+def get_asg_guid(asg_name: str) -> Optional[str]:
     results = cf_curl_get(f"/v3/security_groups?names={asg_name}")
     pick_asg = list(filter(lambda asg: asg["name"] == asg_name, results))
     filtered = filter_resources(pick_asg)

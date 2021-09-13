@@ -174,7 +174,23 @@ class TestCFCurlPost(unittest.TestCase):
 
 class TestCheckSpaceASG(unittest.TestCase):
     def test_curl_space_asg(self):
-        pass
+        number_of_asgs = 10
+        mock_call_spaces = return_cf_request(
+            resource=create_resource("a-space-guid-id", "a-space-name")
+        )
+        mock_call_space_asgs = return_cf_request(
+            resource=create_resource("a-asg-guid-id", "a-asg-name"),
+            number_or_resources=number_of_asgs,
+        )
+
+        with patch(
+            "subprocess.run", side_effect=[mock_call_spaces, mock_call_space_asgs]
+        ):
+            result = asg_tool.check_spaces()
+            self.assertIsInstance(result, list)
+            self.assertEqual(len(result), 1)
+            first_result = result[0]
+            self.assertEqual(len(first_result["security_groups"]), number_of_asgs)
 
 
 class TestGetSpaceASG(unittest.TestCase):

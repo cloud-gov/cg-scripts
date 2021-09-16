@@ -22,7 +22,7 @@ def filter_resources(resources: list) -> list:
     for item in resources:
         filtered_item = filter_resource_item(item)
 
-        if filtered_item == None:
+        if filtered_item is None:
             continue
 
         filtered.append(filtered_item)

@@ -14,6 +14,7 @@ csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
 from datetime import date
 today = date.today()
 mmddYY = today.strftime("%m/%d/%Y")
+owner="Lindsay Young"
 
 if len(sys.argv) == 1:
     print('please provide a path to an XML ZAP report')
@@ -28,6 +29,12 @@ start_date = nfr.scan.scan_time_start(root)
 print(f'File name: {file_name}')
 print(f'File size: {file_size}')
 print(f'Scan start date: {start_date}')
+
+def remediation_plan(vuln):
+    if ("JDK" in vuln) or ("Java" in vuln):
+        return "cloud.gov services that depend on Java/JDK are patched via updates to code maintained by cloud.gov, for shibboleth or logsearch/ELK, or via vendor-provided updates from CloudFoundry, as noted in the Milestone Changes field"
+    else:
+        return "We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
 
 DAEMONS = """
     alertmanager
@@ -170,15 +177,15 @@ for key in sorted(vuln_report):
                 print('\t{}'.format(site))
 
 print("\n-------  CSV  ------\n")
-remediation_plan="We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
-owner="Ashley Mahan"
+#remediation_plan="We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
 for vuln in sorted(vuln_report):
     if vuln_report[vuln]["risk_factor"] != "None":
         number_of_affected_hosts = len(vuln_report[vuln]["hosts"])
         risk_factor = vuln_report[vuln]["risk_factor"] 
         if risk_factor == "Medium" :
             risk_factor = "Moderate"
-        csvwriter.writerow(["CGXX","RA-5",vuln_report[vuln]["plugin_name"], "", "Nessus Scan Report", 
+        weakness_name=vuln_report[vuln]["plugin_name"]
+        csvwriter.writerow(["CGXX","RA-5", weakness_name, "", "Nessus Scan Report", 
             vuln_report[vuln]["id"], str(number_of_affected_hosts) + " production hosts", 
-            owner, "None", remediation_plan, start_date.date(), "", "Resolve", "", mmddYY, "Yes", mmddYY,
+            owner, "None", remediation_plan(weakness_name), start_date.date(), "", "Resolve", "", mmddYY, "Yes", mmddYY,
             "CloudFoundry stemcell", risk_factor, risk_factor, "No", "No", "No" ])

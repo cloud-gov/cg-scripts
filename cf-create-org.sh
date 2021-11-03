@@ -17,6 +17,9 @@ MANAGER=$6
 
 MEMORY="${7:-4G}"
 
+ASG_TRUSTED_LOCAL_NETWORKS_INTERNAL_EGRESS="trusted_local_networks_egress"
+ASG_PUBLIC_NETWORKS_EGRESS="public_networks_egress"
+
 if ! [[ $AGENCY_NAME =~ ^[a-zA-Z0-9]+$ ]]; then
   echo "AGENCY_NAME must contain only letters and numbers."
   exit 1
@@ -91,17 +94,31 @@ cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager
 declare -a spaces=("dev" "staging" "prod")
 for SPACE in "${spaces[@]}"
 do
-  cf create-space -o "$ORG_NAME" "$SPACE"
+  declare -a spacetypes=("public" "internal" "private")
+  for SPACETYPE in "${spacetypes[@]}"
+  do
+    cf create-space -o "$ORG_NAME" "$SPACE-$SPACETYPE"
 
-  # creator added by default - undo
-  cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE" SpaceManager
-  cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE" SpaceDeveloper
+    # creator added by default - undo
+    cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE-$SPACETYPE" SpaceManager
+    cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE-$SPACETYPE" SpaceDeveloper
 
-  cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper
+    cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE-$SPACETYPE" SpaceDeveloper
+
+    # Set space ASG
+    if [[ $SPACETYPE = "public" ]]; then
+      cf bind-security-group "$ASG_TRUSTED_LOCAL_NETWORKS_INTERNAL_EGRESS" "$ORG_NAME" --space "$SPACE-$SPACETYPE"
+      cf bind-security-group "$ASG_PUBLIC_NETWORKS_EGRESS" "$ORG_NAME" --space "$SPACE-$SPACETYPE"
+    fi
+
+    if [[ $SPACETYPE = "internal" ]]; then
+      cf bind-security-group "$ASG_TRUSTED_LOCAL_NETWORKS_INTERNAL_EGRESS" "$ORG_NAME" --space "$SPACE-$SPACETYPE"
+    fi
+  done
 done
 
 
-# deleting admin user from newly created org. 
+# deleting admin user from newly created org.
 # https://github.com/cloudfoundry/cli/issues/781
 USER_GUID=$(cf curl "/v3/users?usernames=${ADMIN}"| jq -r '.resources[] | .guid')
 ORG_GUID=$(cf org "${ORG_NAME}" --guid)

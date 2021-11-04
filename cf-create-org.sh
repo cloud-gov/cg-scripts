@@ -94,7 +94,7 @@ cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager
 declare -a spaces=("dev" "staging" "prod")
 for SPACE in "${spaces[@]}"
 do
-  declare -a spacetypes=("public" "internal" "private")
+  declare -a spacetypes=("public-egress" "restricted-egress" "closed-egress")
   for SPACETYPE in "${spacetypes[@]}"
   do
     cf create-space -o "$ORG_NAME" "$SPACE-$SPACETYPE"

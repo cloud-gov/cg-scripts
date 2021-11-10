@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Counts the number of current active sandboxes in the system.
+# Counts the number of current active sandboxes in the platform.
 
 # An active sandbox is defined as any user's sandbox space with 1 or more
 # running apps in it.

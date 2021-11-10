@@ -7,7 +7,7 @@
 # If there is more than 1 app, we know the space is active and therefore the
 # sandbox is being used by that user, so we can count that as an active sandbox.
 
-sandbox_orgs=$(cf orgs | \grep '^sandbox')
+sandbox_orgs=($(cf orgs | \grep '^sandbox'))
 total_spaces=0
 total_active_sandboxes=0
 

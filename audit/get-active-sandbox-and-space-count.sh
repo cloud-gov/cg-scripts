@@ -18,7 +18,7 @@ sandbox_org_names=$(cf orgs | \grep '^sandbox' | tr '\n' ',')
 # Get all of the GUIDs for the sandbox orgs in a format to be used with a cf
 # curl call.
 echo "...Retrieving all sandbox org GUIDs..."
-sandbox_org_guids=$(cf curl "/v3/organizations?names=${sandbox_org_names}" | jq -r '.resources | map(.guid) | join(",")')
+sandbox_org_guids=$(cf curl "/v3/organizations?names=${sandbox_org_names}&per_page=5000" | jq -r '.resources | map(.guid) | join(",")')
 
 # Retrieve a count of all spaces across all sandbox orgs.
 echo "...Retrieving total number of spaces for all sandbox orgs..."

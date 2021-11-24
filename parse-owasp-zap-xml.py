@@ -15,7 +15,8 @@ for filename in filenames:
     root = tree.getroot()
     for site in tree.findall('site'):
         sitename = site.attrib['name']
-        if sitename.find('cloud.gov') != -1:
+#        if sitename.find('cloud.gov') != -1:
+        if ((sitename.find('cloud.gov') != -1) or (sitename.find('federalistapp') != -1 )):
             for alert in site.findall('.//alertitem'):
                 id = '{}, CWE id {}, WASC id {}, Risk {}, Plugin ID {}'.format(alert.find('name').text,
                                                         alert.find('cweid').text,

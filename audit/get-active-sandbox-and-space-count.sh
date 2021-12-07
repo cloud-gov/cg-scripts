@@ -3,10 +3,10 @@
 set -e
 
 # Provides counts for the following:
-# - The total number of sandboxes spaces currently in the platform
+# - The total number of sandbox spaces currently in the platform
 # - The number of current active sandboxes in the platform
-# - Optionally provides number of sandboxe spaces created with provided dates or
-#   a date range
+# - Optionally provides the number of sandbox spaces created within a certain
+#   timeframe given any provided dates or date range
 
 # An active sandbox is defined as any user's sandbox space with 1 or more
 # running apps in it.  Sandboxes are cleared out every 90 days from the time of
@@ -22,29 +22,48 @@ set -e
 script_help() {
     cat << EOF
 
-Counts the number of current active sandboxes and total sandboxes spaces in the platform.
+A script that provides counts for the following:
+
+- The total number of sandbox spaces currently in the platform
+
+- The number of current active sandboxes in the platform
+
+- Optionally provides the number of sandbox spaces created within a certain
+  timeframe given any provided dates or date range
+
 
 Usage: ${0##*/} [--start-date START_DATE] [--end-date END_DATE]
 
-    -?, -h, --help  Display this help and exit
-    --start-date    Limit finding sandbox spaces at or after the provided date in YYYY-MM-DD format
-    --end-date      Limit finding sandboxes spaces at or before the provided date in YYYY-MM-DD format
+    -?, -h, --help  Display this help message and exit
+
+    --start-date    Retrieve an additional count of sandbox spaces that were
+                    created at or after the provided start date; must be in
+                    YYYY-MM-DD format
+
+    --end-date      Retrieve an additional count of sandbox spaces that were
+                    created at or before the provided end date; must be in
+                    YYYY-MM-DD format
+
+Including both the --start-date and --end-date arguments will restrict the
+additional sandbox space count to the date range provided with both dates.
 EOF
 }
 
+# Initialize sript variables.
 start_date=""
 end_date=""
 extra_params=""
 
-# Loop through script options.
+# Loop through script options to parse any provided options and retrieve their
+# arguments.
 while :; do
     case $1 in
-        # Script help options
+        # Display script help.
         -\?|-h|--help)
             script_help
             exit
             ;;
-        # Start date option
+        # Parse the start date option.
         --start-date)
             if [ "$2" ]; then
                 if [[ "$2" =~ ^[0-9]{4}\-[0-9]{2}\-[0-9]{2}$ ]]; then
@@ -59,7 +78,7 @@ while :; do
                 exit
             fi
             ;;
-        # End date option
+        # Parse the end date option.
         --end-date)
             if [ "$2" ]; then
                 if [[ "$2" =~ ^[0-9]{4}\-[0-9]{2}\-[0-9]{2}$ ]]; then
@@ -74,7 +93,8 @@ while :; do
                 exit
             fi
             ;;
-        # Default case; ignore anything else, no more options to parse.
+        # Default case; ignore anything else passed in, there are no more
+        # options to parse.
         *)
             break
     esac
@@ -114,7 +134,7 @@ echo "...Retrieving total number of spaces for all sandbox orgs..."
 total_sandbox_spaces=$(cf curl "/v3/spaces?organization_guids=${sandbox_org_guids}&per_page=5000" | jq -r '.pagination.total_results')
 
 # If we're given any dates, also check for spaces created during the specified
-# time frame(s).
+# timeframe(s).
 if [ $extra_params ]; then
     echo "...Retrieving number of spaces created in all sandbox orgs during dates given..."
     total_sandboxe_spaces_created=$(cf curl "/v3/spaces?organization_guids=${sandbox_org_guids}&per_page=5000${extra_params}" | jq -r '.pagination.total_results')
@@ -131,7 +151,7 @@ echo "Total number of sandbox spaces: ${total_sandbox_spaces}"
 echo "Total number of current active sandboxes: ${total_active_sandboxes}"
 
 # If any dates were given, provide the number of sandbox spaces created during
-# the specific time frame(s).
+# the specific timeframe(s).
 if [ $extra_params ]; then
     echo "Total number of sandbox spaces created during the given dates: ${total_sandboxe_spaces_created}"
 fi

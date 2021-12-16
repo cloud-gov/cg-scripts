@@ -37,6 +37,10 @@ case "$BOSH_DIRECTOR_NAME" in
     secret=$(credhub get -n /toolingbosh/opsuaa/uaa_admin_client_secret | grep value | sed -r 's/value: //g')
     main opsuaa.fr.cloud.gov $secret
     ;;
+  staging)
+    secret=$(credhub get -n /bosh/cf-staging/uaa_admin_client_secret | grep value | sed -r 's/value: //g')
+    main login.fr-stage.cloud.gov $secret
+    ;;
   *)
     if [ "$#" -ne 2 ]; then
         echo

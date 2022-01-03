@@ -111,8 +111,9 @@ DAEMONS = """
 DAEMONS = '|'.join(DAEMONS)
 
 daemon_count = 0
-log4j_cell = 0
-log4j_logstash = 0
+l4j_cell = {}
+l4j_logs = {}
+l4j_plugins = [ 155999, 156032, 156057, 156103, 156183 ]
 
 vuln_report = {}
 for report_host in nfr.scan.report_hosts(root):
@@ -162,21 +163,24 @@ for report_host in nfr.scan.report_hosts(root):
 
         vuln_report[plugin_id] = this_vuln
 
-        if plugin_id == 155999:
+        if plugin_id in l4j_plugins:
             for line in plugin_output.splitlines():
                 if not (re.search(rf'^  Path', line)):
                     continue
                 # if host matches diego cell and path matches 
                 if (re.search(rf'^  Path\s+: /var/vcap/data/grootfs/store/unprivileged/(images|volumes)', line) and re.search(rf'-diego-cell-', report_host_name)):
-                    log4j_cell += 1
+                    l4j_cell[plugin_id] = l4j_cell.get(plugin_id, 0) + 1 
                     continue
                 if (re.search(rf'^  Path\s+: /var/vcap/data/packages/elasticsearch/[a-z0-9]+/lib/log4j-core-2.11.1.jar', line) and re.search(rf'^logsearch-', report_host_name)):
-                    log4j_logstash += 1
+                    l4j_logs[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
                     continue
-                print("== Unknown log4j found: ",report_host_name,": ", line)
+                print("== Log4j plugin {} on {} found: {}".format(plugin_id, report_host_name, line))
+        
 
-print("Log4J Diego cells: ", log4j_cell)
-print("Log4J Logstash nodes: ", log4j_logstash)
+for p in l4j_plugins:
+    print("Log4j plugin: ", p)
+    print("\tLog4J Diego cells:    ", l4j_cell.get(p, 0))
+    print("\tLog4J Logstash nodes: ", l4j_logs.get(p, 0))
 print("Known deamons seen: ", daemon_count)
 print("\n------- SUMMARY ------\n")
 

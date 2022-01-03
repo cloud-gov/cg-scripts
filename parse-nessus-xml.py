@@ -160,6 +160,15 @@ for report_host in nfr.scan.report_hosts(root):
 
         vuln_report[plugin_id] = this_vuln
 
+        if plugin_id == 155999:
+            for line in plugin_output.splitlines():
+                # if host matches diego cell and path matches 
+                if re.search(rf'^  Path\s+: /var/vcap/data/grootfs/store/unprivileged/volumes', line):
+                    if re.search(rf'-diego-cell-', report_host_name):
+                        print(".")
+                    else:
+                        print(report_host_name, line)
+
 print("Known deamons seen: ", daemon_count)
 print("\n------- SUMMARY ------\n")
 

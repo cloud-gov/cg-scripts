@@ -19,11 +19,22 @@ main() {
 
     if [ "$environment_name" == "production" ]; then
       local target="uaa.fr.cloud.gov"
+    elif [ "$environment_name" == "westb" ]; then
+      local target="uaa.fr.wb.cloud.gov"
+    elif [ "$environment_name" == "westc" ]; then
+      local target="uaa.fr.wc.cloud.gov"
+    elif [ "$environment_name" == "easta" ]; then
+      local target="uaa.fr.ea.cloud.gov"
+    elif [ "$environment_name" == "eastb" ]; then
+      local target="uaa.fr.eb.cloud.gov"
     elif [ "$environment_name" == "staging" ]; then
-      credhub login --skip-tls-validation
       local target="uaa.fr-stage.cloud.gov"
     elif [ "$environment_name" == "development" ]; then
       local target="uaa.dev.us-gov-west-1.aws-us-gov.cloud.gov"
+    elif [ "$environment_name" == "tooling-east" ]; then
+      local target="opslogin.fr.east.cloud.gov"
+    elif [ "$environment_name" == "tooling-west" ]; then
+      local target="opslogin.fr.west.cloud.gov"
     elif [ "$environment_name" == "tooling" ]; then
       local target="opslogin.fr.cloud.gov"
     else

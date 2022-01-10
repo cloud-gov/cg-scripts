@@ -43,9 +43,13 @@ main() {
     fi
 
     if [ "$environment_name" == "tooling" ]; then
-        local admin_pwd=$(credhub get -n "/toolingbosh/opsuaa/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
+      local admin_pwd=$(credhub get -n "/toolingbosh/opsuaa/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
+    elif [ "$environment_name" == "tooling-east" ]; then
+      local admin_pwd=$(credhub get -n "/tooling-east-bosh/opsuaa/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
+    elif [ "$environment_name" == "tooling-west" ]; then
+      local admin_pwd=$(credhub get -n "/tooling-west-bosh/opsuaa/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
     else
-        local admin_pwd=$(credhub get -n "/bosh/cf-${environment_name}/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
+      local admin_pwd=$(credhub get -n "/bosh/cf-${environment_name}/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
     fi
     uaac target $target
     uaac token client get admin -s "$admin_pwd"

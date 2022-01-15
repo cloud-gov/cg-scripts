@@ -114,6 +114,7 @@ daemon_count = 0
 l4j_cell = {}
 l4j_logs = {}
 l4j_misc = {}
+l4j_stsh = {}
 l4j_plugins = [ 155999, 156032, 156057, 156103, 156183 ]
 
 vuln_report = {}
@@ -164,11 +165,17 @@ for report_host in nfr.scan.report_hosts(root):
 
         vuln_report[plugin_id] = this_vuln
 
+        verbose=0
         if plugin_id in l4j_plugins:
             for line in plugin_output.splitlines():
                 if not (re.search(rf'^  Path', line)):
                     continue
                 # if host matches diego cell and path is in customer area:
+                if (re.search(rf'^  Path\s+:.*usr/share/logstash/logstash-core/lib/jars/log4j-core-2.11.1.jar', line)):
+                    l4j_stsh[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
+                    if verbose: 
+                        print("=== Log4j-core-2.11 plugin {} on {} found: {}".format(plugin_id, report_host_name, line))
+                    continue
                 if (re.search(rf'^  Path\s+: /var/vcap/data/grootfs/store/unprivileged/(images|volumes)', line) and re.search(rf'-diego-cell-', report_host_name)):
                     l4j_cell[plugin_id] = l4j_cell.get(plugin_id, 0) + 1 
                     continue
@@ -176,13 +183,16 @@ for report_host in nfr.scan.report_hosts(root):
                 if (re.search(rf'^  Path\s+: /var/vcap/data/packages/elasticsearch/[a-z0-9]+/lib/log4j-core-2.11.1.jar', line) and re.search(rf'^logsearch-', report_host_name)):
                     l4j_logs[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
                     continue
-                print("== Log4j plugin {} on {} found: {}".format(plugin_id, report_host_name, line))
+                if verbose: 
+                    print("== Log4j plugin {} on {} found: {}".format(plugin_id, report_host_name, line))
                 l4j_misc[plugin_id] = l4j_misc.get(plugin_id, 0) + 1 
 
         
 
+max_hosts = 6
 for p in l4j_plugins:
     print("Log4j plugin: ", p)
+    print("\tLog4J Diego logstash: ", l4j_stsh.get(p, 0))
     print("\tLog4J Diego cells:    ", l4j_cell.get(p, 0))
     print("\tLog4J Logstash nodes: ", l4j_logs.get(p, 0))
     print("\tLog4J Unknown finds:  ", l4j_misc.get(p, 0))
@@ -195,7 +205,7 @@ for key in sorted(vuln_report):
         affected_hosts.sort()
         print(vuln_report[key]["full_description"])
 #        print(vuln_report[key]["plugin_output"]) # For compliance?
-        if len(affected_hosts) > 6:
+        if len(affected_hosts) > max_hosts:
             print('\t{} affected hosts found ...'.format(len(affected_hosts)))
         else:
             #for site in affected_hosts.sort():

@@ -41,6 +41,21 @@ case "$BOSH_DIRECTOR_NAME" in
     secret=$(credhub get -n /bosh/cf-staging/uaa_admin_client_secret | grep value | sed -r 's/value: //g')
     main login.fr-stage.cloud.gov $secret
     ;;
+  easta|eastb)
+    short_boshname=$(echo $BOSH_DIRECTOR_NAME | cut -c1,5)
+    secret=$(credhub get -n /bosh/cf-${BOSH_DIRECTOR_NAME}/uaa_admin_client_secret | grep value | sed -r 's/value: //g')
+    main login.$short_boshname.fr.cloud.gov $secret
+    ;;
+  "West Bro")
+    secret=$(credhub get -n /bosh/cf-westb/uaa_admin_client_secret | grep value | sed -r 's/value: //g')
+    main login.wb.fr.cloud.gov $secret
+    ;;
+  "West Coin")
+    secret=$(credhub get -n /bosh/cf-westc/uaa_admin_client_secret | grep value | sed -r 's/value: //g')
+    main login.wc.fr.cloud.gov $secret
+    ;;
+
+
   *)
     if [ "$#" -ne 2 ]; then
         echo

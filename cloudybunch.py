@@ -3,7 +3,7 @@
 import random
 
 team = [
-    ":amir:",
+    ":david-anderson:",
     ":david-corwin:",
     ":ben-berry:",
     ":peterb:",
@@ -15,7 +15,9 @@ team = [
     ":lindsay:",
     ":melanie:",
     ":gerald:",
-    ":rian-bogle:"
+    ":rian-bogle:",
+    ":sven:",
+    ":carlo:"
 ]
 
 for n in range(1,24):

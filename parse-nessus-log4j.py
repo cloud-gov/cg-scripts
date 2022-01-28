@@ -9,13 +9,9 @@ import sys
 import re
 import pprint
 
-
 from datetime import date
 today = date.today()
 mmddYY = today.strftime("%m/%d/%Y")
-owner="Lindsay Young"
-
-
 
 if len(sys.argv) == 1:
     print('please provide a path to an XML ZAP report')
@@ -39,23 +35,8 @@ for report_host in nfr.scan.report_hosts(root):
     report_host_name = nfr.host.report_host_name(report_host)
     for report_item in nfr.host.report_items(report_host):
         plugin_id = int(nfr.plugin.report_item_value(report_item, 'pluginID'))
-        risk_factor = nfr.plugin.report_item_value(report_item, 'risk_factor')
-        plugin_name = nfr.plugin.report_item_value(report_item, 'pluginName')
         plugin_output = nfr.plugin.report_item_value(report_item, 'plugin_output')
-        description = f"{plugin_id}, Risk: {risk_factor}, Plugin Name: {plugin_name}, https://www.tenable.com/plugins/nessus/{plugin_id}"
-        hosts = vuln_report.get(plugin_id, {}).get('hosts', [])
-        hosts.append(report_host_name)
-        this_vuln = {
-            "id": plugin_id,
-            "risk_factor": risk_factor,
-            "plugin_name": plugin_name,
-            "full_description": description,
-            "plugin_output": plugin_output,
-            "hosts": hosts
-        }
-        vuln_report[plugin_id] = this_vuln
 
-        verbose=0
         if plugin_id == l4j_plugin:
             for line in plugin_output.splitlines():
                 m = re.match(r'^  Path\s+: (\/.*)', line)

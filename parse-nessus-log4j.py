@@ -36,12 +36,12 @@ if len(sys.argv) == 1:
 nessus_scan_file = sys.argv[1]
 
 root = nfr.file.nessus_scan_file_root_element(nessus_scan_file)
-file_name = nfr.file.nessus_scan_file_name_with_path(nessus_scan_file)
-file_size = nfr.file.nessus_scan_file_size_human(nessus_scan_file)
-start_date = nfr.scan.scan_time_start(root)
-print(f'File name: {file_name}')
-print(f'File size: {file_size}')
-print(f'Scan start date: {start_date}')
+#file_name = nfr.file.nessus_scan_file_name_with_path(nessus_scan_file)
+#file_size = nfr.file.nessus_scan_file_size_human(nessus_scan_file)
+#start_date = nfr.scan.scan_time_start(root)
+#print(f'File name: {file_name}')
+#print(f'File size: {file_size}')
+#print(f'Scan start date: {start_date}')
 
 l4j_plugins = [ 155999, 156032, 156057, 156103, 156183 ]
 path_report = {}
@@ -64,16 +64,25 @@ for report_host in nfr.scan.report_hosts(root):
                         path_info["hosts"].append(report_host_name)
                     path_report[path] = path_info
 
+
+# Path	Node 0	Instance GUID	Customer Path Name	Plugin Ids	App GUID	App Name	Space Name	Org Name	Org Manager	Space Developers																				
+
 import csv
 csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
-csvwriter.writerow(["Path", "Plugin Ids", "Node 0", "Instance GUID"])
+csvwriter.writerow(["Path","Node_0","Instance_GUID","Customer_Path","Plugin_URLS","App_GUID","App_Name","Space_Name","Org_Name","Org_Managers","Space_Devs"])
 for p in sorted(path_report):
     if re.match(r'/var/vcap/data/grootfs', p ):
-        m = re.match(r'/var/vcap/data/grootfs/store/unprivileged/(images|volumes)/([^/]+)/', p)
+        m = re.match(r'/var/vcap/data/grootfs/store/unprivileged/(images|volumes)/([^/]+)/(diff|root)?/?(fs)?(.*)$', p)
         instance_guid = m.group(2)
+        customer_path = m.group(5)
+        urls = ""
+        for plugin_id in sorted(path_report[p]["plugins"]):
+            urls += "https://www.tenable.com/plugins/nessus/{} ".format(plugin_id)
+        
         csvwriter.writerow(
             [   p, 
-                sorted(path_report[p]["plugins"]),
                 sorted(path_report[p]["hosts"])[0],
-                instance_guid
+                instance_guid,
+                f"/{customer_path}",
+                urls,
             ])

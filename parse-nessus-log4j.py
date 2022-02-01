@@ -64,8 +64,16 @@ for report_host in nfr.scan.report_hosts(root):
                         path_info["hosts"].append(report_host_name)
                     path_report[path] = path_info
 
-pp = pprint.PrettyPrinter(indent=4)
+import csv
+csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
+csvwriter.writerow(["Path", "Plugin Ids", "Node 0", "Instance GUID"])
 for p in sorted(path_report):
-    print(p)
-    pp.pprint(sorted(path_report[p]["hosts"]))
-    pp.pprint(sorted(path_report[p]["plugins"]))
+    if re.match(r'/var/vcap/data/grootfs', p ):
+        m = re.match(r'/var/vcap/data/grootfs/store/unprivileged/(images|volumes)/([^/]+)/', p)
+        instance_guid = m.group(2)
+        csvwriter.writerow(
+            [   p, 
+                sorted(path_report[p]["plugins"]),
+                sorted(path_report[p]["hosts"])[0],
+                instance_guid
+            ])

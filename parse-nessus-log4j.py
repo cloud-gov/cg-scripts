@@ -6,7 +6,9 @@
 #     /var/vcap/data/grootfs/store/unprivileged/images/395c7a88-7a1c-4001-55df-261d/diff/home/vcap/app/WEB-INF/lib/log4j-core-2.7.jar
 # then SSH to diego-cell/24, run 'cfdot cell-state (cell_id)' and 
 # use `jq` to find the process guid.  The first 36 chars are the app guid. 
-# 
+#
+# From there, use `cf curl` commands to find the app, space and org: 
+#
 #    name, 467435c6c6612e0b91cc843ae331523636a9d7e4a4214213c8500abaa4d3024b
 #    in /var/vcap/data/grootfs/store/unprivileged/meta/dependencies.
 #    There should be a file named with the container id instance_guid,
@@ -25,6 +27,7 @@ import time
 import sys
 import re
 import pprint
+from collections import defaultdict
 
 from datetime import date
 today = date.today()
@@ -44,8 +47,9 @@ print(f'File name: {file_name}')
 print(f'File size: {file_size}')
 print(f'Scan start date: {start_date}')
 
+l4j_plugins = [ 155999, 156032, 156057, 156103, 156183 ]
 l4j_plugin = 155999
-path_dict = {}
+path_report = {}
 
 vuln_report = {}
 for report_host in nfr.scan.report_hosts(root):
@@ -54,16 +58,20 @@ for report_host in nfr.scan.report_hosts(root):
         plugin_id = int(nfr.plugin.report_item_value(report_item, 'pluginID'))
         plugin_output = nfr.plugin.report_item_value(report_item, 'plugin_output')
 
-        if plugin_id == l4j_plugin:
+        if plugin_id in l4j_plugins:
             for line in plugin_output.splitlines():
                 m = re.match(r'^  Path\s+: (\/.*)', line)
                 if m:
                     path = m.group(1)
-                    a = path_dict.get(path,list())
-                    a.append(report_host_name)
-                    path_dict[path] = a
+                    path_info = path_report.get(path, defaultdict(list))
+                    if plugin_id not in path_info["plugins"]:
+                        path_info["plugins"].append(plugin_id)
+                    if report_host_name not in path_info["hosts"]:
+                        path_info["hosts"].append(report_host_name)
+                    path_report[path] = path_info
 
 pp = pprint.PrettyPrinter(indent=4)
-for p in sorted(path_dict):
+for p in sorted(path_report):
     print(p)
-    pp.pprint(sorted(path_dict[p]))
+    pp.pprint(sorted(path_report[p]["hosts"]))
+    pp.pprint(sorted(path_report[p]["plugins"]))

@@ -20,10 +20,6 @@
 #    https://github.com/cloudfoundry/garden-runc-release/blob/develop/docs/understanding_grootfs_store_disk_usage.md
 
 import nessus_file_reader as nfr
-import os
-import glob
-import traceback
-import time
 import sys
 import re
 import pprint
@@ -48,10 +44,8 @@ print(f'File size: {file_size}')
 print(f'Scan start date: {start_date}')
 
 l4j_plugins = [ 155999, 156032, 156057, 156103, 156183 ]
-l4j_plugin = 155999
 path_report = {}
 
-vuln_report = {}
 for report_host in nfr.scan.report_hosts(root):
     report_host_name = nfr.host.report_host_name(report_host)
     for report_item in nfr.host.report_items(report_host):

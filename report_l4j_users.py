@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 
 from cloudfoundry_client.client import CloudFoundryClient
 config_file = os.path.join(os.path.expanduser("~"), ".cf_client_python.json")
@@ -17,13 +18,13 @@ app_guid = "a4dafcbf-16a4-4ee4-a1a3-1fed3fb2402d"
 app = client.v3.apps.get(app_guid)
 space = app.space()
 org = space.organization()
-print(f"\"{app['name']}\", \"{space['name']}\", \"{org['name']}\"")
+m= (f"\"{app['name']}\", \"{space['name']}\", \"{org['name']}\"")
 
-s = f"cf space-users  gsa-forms-prototyping MiA" 
-p = ' | perl -ne \'if (/SPACE DEVELOPER/ .. /^$/) { next unless /@/; m/([a-z\.\]+@[a-z\.]+)/ and print "$1, "}\''
+s = f"cf space-users {org['name']} {space['name']}"
+s = f"cf space-users gsa-forms-prototyping MiA" 
+p = ' | perl -ne \'if (/SPACE DEVELOPER/ .. /^$/) { next unless /@/; m/([a-z\.\]+@[a-z\.]+)/ and print "$1,"}\''
 full_cmd = s + p
-print(full_cmd)
 
-import subprocess
-p = subprocess.check_output(full_cmd, shell=True, text=True)
-print(p)
+out = subprocess.check_output(full_cmd, shell=True, text=True)
+
+print(m, ", \"", out, "\"" )

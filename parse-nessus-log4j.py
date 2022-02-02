@@ -18,6 +18,24 @@
 #    https://community.pivotal.io/s/article/How-to-find-which-Apps-are-Running-in-a-Diego-Cell?language=en_US
 #    with help from
 #    https://github.com/cloudfoundry/garden-runc-release/blob/develop/docs/understanding_grootfs_store_disk_usage.md
+#
+# To run in a diego cell
+# cat instance_guids | while read i; do
+#  if ( echo $i | grep -q -- - ); then
+#          jqcmd="jq '.LRPs[] | select (.instance_guid == \"$i\") | .process_guid'"
+#          echo -n "\"$i\", "
+#          cfdot cell-states | eval $jqcmd | cut -c1-36
+#  else
+#    echo "\"$i\", \"-\""
+#  fi
+# done
+#    f=25f94c5b-fd5b-4508-44ed-5854
+#    jjq="jq '.LRPs[] | select (.instance_guid == \"$f\")'"
+#    cfdot cell-states | eval $jjq
+# It seem that works for all cells from one query point.
+# . The long Docker images can be ignored sinc ethey have the same App guid as the shorter names
+
+
 
 import nessus_file_reader as nfr
 import sys
@@ -36,12 +54,6 @@ if len(sys.argv) == 1:
 nessus_scan_file = sys.argv[1]
 
 root = nfr.file.nessus_scan_file_root_element(nessus_scan_file)
-#file_name = nfr.file.nessus_scan_file_name_with_path(nessus_scan_file)
-#file_size = nfr.file.nessus_scan_file_size_human(nessus_scan_file)
-#start_date = nfr.scan.scan_time_start(root)
-#print(f'File name: {file_name}')
-#print(f'File size: {file_size}')
-#print(f'Scan start date: {start_date}')
 
 l4j_plugins = [ 155999, 156032, 156057, 156103, 156183 ]
 path_report = {}

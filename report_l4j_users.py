@@ -13,15 +13,17 @@ with open(config_file, "r") as f:
     client = CloudFoundryClient(configuration["target_endpoint"], verify=configuration["verify"])
     client.init_with_token(configuration["refresh_token"])
 
-#app_guids = 
-#with open(app_guids, "r") as r:
-#    for guid in r.readlines():
-#        print(guid)
 app_guid = "a4dafcbf-16a4-4ee4-a1a3-1fed3fb2402d"
 app = client.v3.apps.get(app_guid)
-print("App name: %s" % app["name"])
 space = app.space()
-print("Space name: %s" % space["name"])
 org = space.organization()
-print("Org name: %s" % org["name"])
+print(f"\"{app['name']}\", \"{space['name']}\", \"{org['name']}\"")
 
+s = f"cf space-users  gsa-forms-prototyping MiA" 
+p = ' | perl -ne \'if (/SPACE DEVELOPER/ .. /^$/) { next unless /@/; m/([a-z\.\]+@[a-z\.]+)/ and print "$1, "}\''
+full_cmd = s + p
+print(full_cmd)
+
+import subprocess
+p = subprocess.check_output(full_cmd, shell=True, text=True)
+print(p)

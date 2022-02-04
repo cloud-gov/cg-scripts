@@ -4,7 +4,7 @@
 set -x
 
 if [ "$#" -lt 5 ]; then
-  printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <IAA_NUMBER> <SYSTEM_NAME> <POP_START> <POP_END> <MANAGER> <MEMORY>\n\n"
+  printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <IAA_NUMBER> <SYSTEM_NAME> <POP_START> <POP_END> <MANAGER> <MEMORY> <MANAGER_ORIGIN>\n\n"
   exit 1
 fi
 
@@ -16,6 +16,13 @@ POP_END=$5
 MANAGER=$6
 
 MEMORY="${7:-4G}"
+MANAGER_ORIGIN="${8:-}"
+
+# Checks to see if an origin was set for the manager; if so, this will be used
+# for setting the roles later on.
+if [[ "${MANAGER_ORIGIN}" ]]; then
+  ORIGIN_FLAG="--origin ${MANAGER_ORIGIN}"
+fi
 
 if ! [[ $AGENCY_NAME =~ ^[a-zA-Z0-9]+$ ]]; then
   echo "AGENCY_NAME must contain only letters and numbers."
@@ -85,7 +92,7 @@ ADMIN=$(cf target | grep -i user | awk '{print $2}')
 cf create-org "$ORG_NAME" -q "$HASHED_QUOTA_NAME"
 # creator added by default, which is usually not desirable
 cf unset-org-role "$ADMIN" "$ORG_NAME" OrgManager
-cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager
+cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager "$ORIGIN_FLAG"
 
 # Step 4: Create the spaces
 declare -a spaces=("dev" "staging" "prod")
@@ -97,7 +104,7 @@ do
   cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE" SpaceManager
   cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE" SpaceDeveloper
 
-  cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper
+  cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper "$ORIGIN_FLAG"
 done
 
 

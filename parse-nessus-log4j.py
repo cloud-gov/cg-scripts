@@ -55,7 +55,7 @@ nessus_scan_file = sys.argv[1]
 
 root = nfr.file.nessus_scan_file_root_element(nessus_scan_file)
 
-l4j_plugins = [ 155999, 156032, 156057, 156103, 156183 ]
+l4j_plugins = [ 155999, 156032, 156057, 156103, 156183, 156860, 156327 ]
 path_report = {}
 
 for report_host in nfr.scan.report_hosts(root):

@@ -1,39 +1,44 @@
 #!/usr/bin/env python3
 
-# This emits the paths, and hosts, for log4j findings
-# For images with instance guids, like:
-#   ['cf-production-diego-cell-24-cf-production']
-#     /var/vcap/data/grootfs/store/unprivileged/images/395c7a88-7a1c-4001-55df-261d/diff/home/vcap/app/WEB-INF/lib/log4j-core-2.7.jar
-# then SSH to diego-cell/24, run 'cfdot cell-state (cell_id)' and 
-# use `jq` to find the process guid.  The first 36 chars are the app guid. 
+# Usage:
 #
-# From there, use `cf curl` commands to find the app, space and org: 
+#   ./$0 path-to-nessus.xml
+# 
+# This emits the paths, and hosts, for log4j findings, as CSV.  Getting 
+# the final output of responsible users is a few more steps.
+# 
+# At that point I suggest you take the output, and paste it into a google sheet
+# then copy all the instance guids, and be ready to paste them into a file
+# called `instance_guids` on a deigo cell:
+# 
+# Then, on a diego cell, run the following to echo as more CSV the
+# instance_guid and the app_guid.
+# 
+#   cat instance_guids | while read i; do
+#    if ( echo $i | grep -q -- - ); then
+#            jqcmd="jq '.LRPs[] | select (.instance_guid == \"$i\") | .process_guid'"
+#            echo -n "\"$i\", "
+#            cfdot cell-states | eval $jqcmd | cut -c1-36
+#    else
+#      echo "\"$i\", \"-\""
+#    fi
+#   done
 #
-#    name, 467435c6c6612e0b91cc843ae331523636a9d7e4a4214213c8500abaa4d3024b
-#    in /var/vcap/data/grootfs/store/unprivileged/meta/dependencies.
-#    There should be a file named with the container id instance_guid,
-#    e.g. image:f34eb243-17e6-420d-73a7-2c39.json. Then you can use
-#    cfdot cell-state to get from instance_guid to the process_guid,
-#    and the first 36 chars of the process_guid is the app_id. from
-#    https://community.pivotal.io/s/article/How-to-find-which-Apps-are-Running-in-a-Diego-Cell?language=en_US
-#    with help from
-#    https://github.com/cloudfoundry/garden-runc-release/blob/develop/docs/understanding_grootfs_store_disk_usage.md
+# Now, paste all your app_guids, one per line, into another file, and set up
+# to run the report with:
+# 
+#   pip3 install cloudfoundry-client
+#   cf login --sso
+#   cloudfoundry-client import_from_cf_cli`
 #
-# To run in a diego cell
-# cat instance_guids | while read i; do
-#  if ( echo $i | grep -q -- - ); then
-#          jqcmd="jq '.LRPs[] | select (.instance_guid == \"$i\") | .process_guid'"
-#          echo -n "\"$i\", "
-#          cfdot cell-states | eval $jqcmd | cut -c1-36
-#  else
-#    echo "\"$i\", \"-\""
-#  fi
-# done
-#    f=25f94c5b-fd5b-4508-44ed-5854
-#    jjq="jq '.LRPs[] | select (.instance_guid == \"$f\")'"
-#    cfdot cell-states | eval $jjq
-# It seem that works for all cells from one query point.
-# . The long Docker images can be ignored sinc ethey have the same App guid as the shorter names
+# Finally:
+#   ./log4j-report-users.py
+#
+# DO NOT email the list of vulns directly to customer. Determine what medium
+# they want to use for vuln reports.
+#
+# - Peter Burkholder
+# 
 
 
 

@@ -15,8 +15,9 @@ POP_START=$4
 POP_END=$5
 MANAGER=$6
 MEMORY=$7
+MANAGER_ORIGIN=$8
 
-MANAGER_ORIGIN="${8:-}"
+ORIGIN_FLAG=""
 
 # Checks to see if an origin was set for the manager; if so, this will be used
 # for setting the roles later on.

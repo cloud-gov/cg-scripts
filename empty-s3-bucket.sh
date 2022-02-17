@@ -6,7 +6,7 @@
 # space of the bucket you would like to empty.
 
 # This operation may take some time depending on how many objects are in the
-# bucket.  If there are a large number of objects it be better to do the
+# bucket.  If there are a large number of objects it may be better to do the
 # following:
 
 # 1. Create a service key to get the bucket credentials

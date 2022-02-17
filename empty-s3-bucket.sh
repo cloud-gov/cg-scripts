@@ -40,6 +40,23 @@ export AWS_SECRET_ACCESS_KEY=$(echo $S3_CREDENTIALS | jq -r '.secret_access_key'
 export BUCKET_NAME=$(echo $S3_CREDENTIALS | jq -r '.bucket')
 export AWS_DEFAULT_REGION=$(echo $S3_CREDENTIALS | jq -r '.region')
 
+# it takes time for the new creds to propagate in AWS so 
+# we have to while here for abit or this script fails almost everytime. 
+x=0
+set +e
+while [ $x -lt 5 ]; do
+  aws s3 ls s3://$BUCKET_NAME > /dev/null 2>&1 
+  ready=$?
+  if [ $ready -ne 0 ]; then
+     x=$(( $x+1 ))
+     echo "waiting for credentials to be ready in aws..."
+     sleep 2;
+  else
+    break
+  fi
+done
+set -e
+
 # Empty the bucket.
 aws s3 rm s3://$BUCKET_NAME --recursive
 

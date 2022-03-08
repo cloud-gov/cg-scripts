@@ -213,6 +213,11 @@ for key in sorted(vuln_report):
                 print('\t{}'.format(site))
 
 print("\n-------  CSV  ------\n")
+
+weakness_desc = sched_completion_date = milestone = \
+    deviation_rationale = supporting_docs = comments = auto_approve = ""
+KEV = "No"
+
 for vuln in sorted(vuln_report):
     if vuln_report[vuln]["risk_factor"] != "None":
         number_of_affected_hosts = len(vuln_report[vuln]["hosts"])
@@ -220,7 +225,9 @@ for vuln in sorted(vuln_report):
         if risk_factor == "Medium" :
             risk_factor = "Moderate"
         weakness_name=vuln_report[vuln]["plugin_name"]
-        csvwriter.writerow(["CGXX","RA-5", weakness_name, "", "Nessus Scan Report", 
+        csvwriter.writerow(["CGXX","RA-5", weakness_name, weakness_desc, "Nessus Scan Report", 
             vuln_report[vuln]["id"], str(number_of_affected_hosts) + " production hosts", 
-            owner, "None", remediation_plan(weakness_name), start_date.date(), "", "Resolve", "", mmddYY, "Yes", mmddYY,
-            "CloudFoundry stemcell", risk_factor, risk_factor, "No", "No", "No" ])
+            owner, "None", remediation_plan(weakness_name), start_date.date(), sched_completion_date, 
+            "Resolve", milestone, mmddYY, "Yes", mmddYY,
+            "CloudFoundry stemcell", risk_factor, risk_factor, "No", "No", "No",
+            deviation_rationale, supporting_docs, comments, auto_approve, KEV])

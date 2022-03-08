@@ -114,8 +114,8 @@ daemon_count = 0
 l4j_cell = {}
 l4j_logs = {}
 l4j_misc = {}
-l4j_stsh = {}
-l4j_plugins = [ 155999, 156032, 156057, 156103, 156183 ]
+l4j_ghst = {}
+l4j_plugins = [ 155999, 156032, 156057, 156103, 156183, 156327, 156860 ]
 
 vuln_report = {}
 for report_host in nfr.scan.report_hosts(root):
@@ -165,17 +165,18 @@ for report_host in nfr.scan.report_hosts(root):
 
         vuln_report[plugin_id] = this_vuln
 
-        verbose=0
+##### LOG4J ####
         if plugin_id in l4j_plugins:
             for line in plugin_output.splitlines():
                 if not (re.search(rf'^  Path', line)):
                     continue
-                # if host matches diego cell and path is in customer area:
-                if (re.search(rf'^  Path\s+:.*usr/share/logstash/logstash-core/lib/jars/log4j-core-2.11.1.jar', line)):
-                    l4j_stsh[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
-                    if verbose: 
-                        print("=== Log4j-core-2.11 plugin {} on {} found: {}".format(plugin_id, report_host_name, line))
+                # nessus sometimes find customer files on phantom/ghost paths for the _container_ mount point
+                if (re.search(rf'^  Path\s+: /usr/share/logstash/logstash-core/lib/jars/log4j.*jar$', line) or 
+                    re.search(rf'^  Path\s+: /home/vcap/app/lib/boot/log4j-core-2.*jar$',line)):
+                    l4j_ghst[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
+                    print("== Phantom log4j plugin {} violation on {} found at path: {}".format(plugin_id, report_host_name, line))
                     continue
+                # if host matches diego cell and path is in customer area:
                 if (re.search(rf'^  Path\s+: /var/vcap/data/grootfs/store/unprivileged/(images|volumes)', line) and re.search(rf'-diego-cell-', report_host_name)):
                     l4j_cell[plugin_id] = l4j_cell.get(plugin_id, 0) + 1 
                     continue
@@ -183,8 +184,7 @@ for report_host in nfr.scan.report_hosts(root):
                 if (re.search(rf'^  Path\s+: /var/vcap/data/packages/elasticsearch/[a-z0-9]+/lib/log4j-core-2.11.1.jar', line) and re.search(rf'^logsearch-', report_host_name)):
                     l4j_logs[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
                     continue
-                if verbose: 
-                    print("== Log4j plugin {} on {} found: {}".format(plugin_id, report_host_name, line))
+                print("== Unexpected log4j plugin {} violation on {} found at path: {}".format(plugin_id, report_host_name, line))
                 l4j_misc[plugin_id] = l4j_misc.get(plugin_id, 0) + 1 
 
         
@@ -192,10 +192,10 @@ for report_host in nfr.scan.report_hosts(root):
 max_hosts = 6
 for p in l4j_plugins:
     print("Log4j plugin: ", p)
-    print("\tLog4J Diego logstash: ", l4j_stsh.get(p, 0))
-    print("\tLog4J Diego cells:    ", l4j_cell.get(p, 0))
-    print("\tLog4J Logstash nodes: ", l4j_logs.get(p, 0))
-    print("\tLog4J Unknown finds:  ", l4j_misc.get(p, 0))
+    print("\tLog4J violations on Diego cells on phantom paths (safe): ", l4j_ghst.get(p, 0))
+    print("\tLog4J violations on Diego cells in customer path (safe): ", l4j_cell.get(p, 0))
+    print("\tLog4J violations on Logstash nodes at known path (safe): ", l4j_logs.get(p, 0))
+    print("\tLog4J violations of unknown origins found (UNSAFE)     : ", l4j_misc.get(p, 0))
 print("Known deamons seen: ", daemon_count)
 print("\n------- SUMMARY ------\n")
 

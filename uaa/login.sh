@@ -52,7 +52,7 @@ main() {
       local admin_pwd=$(credhub get -n "/bosh/cf-${environment_name}/uaa_admin_client_secret" | grep value | sed -r 's/value: //g')
     fi
     uaac target $target
-    uaac token client get admin -s "$admin_pwd"
+    uaac get-client-credentials-token admin -s "$admin_pwd"
   popd
 }
 main

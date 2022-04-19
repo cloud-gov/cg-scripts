@@ -2,16 +2,21 @@
 
 set -e 
 
-if [ -z $1 ] || [ $1 == "--help" ]; then
+#if [ -z $1 ] || [ $1 == "--help" ]; then
+function usage() {
   echo " "
   echo "Outputs service instance usage in a csv format."
   echo " "
-	echo "Usage: cf-service-instances-by-service-offering <service-offering-name>"
+	echo "Usage: $0 <service-offering-name>"
   echo " "
   echo -e "  service-offering-name: \t The name of the service offering to report on as shown in the marketplace"
   echo " "
+  echo "Options: "
+  echo " "
+  echo "    $0 -h                         Display this help message."
+  echo "    $0 -p <plan-name>             Query for instances of this plan from service-offering"
 	exit 0
-fi
+}
 
 function printServiceInstances() {
   local svc_offering_name=$1
@@ -35,12 +40,48 @@ function printServiceInstances() {
   #echo "$svc_offering_name $svc_offering_guid $svc_plan_name $svc_plan_guid"
 }
 
+svc_plan_names=""
+
+
+while getopts ":hp:" opt; do
+  case ${opt} in
+    h )
+        usage 
+        exit 0
+        ;;
+    p ) 
+        svc_plan_names=$OPTARG
+        ;;
+    \? )
+        echo "Invalid Option: $OPTARG" 1>&2
+        usage 
+        exit 1
+        ;;
+    : )
+        echo "Invalid option: $OPTARG requires an argument" 1>&2
+        usage 
+        exit 1
+        ;;
+  esac
+done
+shift $((OPTIND -1))    
+
+if [ $# -ne 1 ]; then
+    echo "Please provide a service-offering-name" 1>&2
+    usage 
+    exit 1
+fi
+
 svc_offering_name=$1
 echo "Offering name,Plan,Service Instance Name,Creation Date,Organization,Space,Service Instance GUID,Space GUID,Organization GUID"
 svc_offering_guid=$(cf curl "/v3/service_offerings?names=${svc_offering_name}" | jq -r '.resources[].guid')
 #echo "$svc_offering_name $svc_offering_guid"
 svc_plans_json=$(cf curl "/v3/service_plans?service_offering_guids=${svc_offering_guid}")
-svc_plan_names=$(echo "$svc_plans_json" | jq -r '.resources[].name')
+
+if [ -z $svc_plan_names ]; then
+  svc_plan_names=$(echo "$svc_plans_json" | jq -r '.resources[].name')
+fi
+
 for svc_plan_name in $svc_plan_names; do
   svc_plan_guid=$(echo "$svc_plans_json" | jq -r '.resources[] | select(.name=="'"${svc_plan_name}"'") | .guid')
   printServiceInstances $svc_offering_name $svc_offering_guid $svc_plan_name $svc_plan_guid

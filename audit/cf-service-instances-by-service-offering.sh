@@ -14,10 +14,7 @@ function usage() {
   echo "Options: "
   echo " "
   echo "    $0 -h                         Display this help message."
-<<<<<<< HEAD
   echo "    $0 -c                         Include contacts each space."
-=======
->>>>>>> master
   echo "    $0 -p <plan-name>             Query for instances of this plan from service-offering"
 	exit 0
 }
@@ -58,15 +55,9 @@ function printServiceInstances() {
 }
 
 svc_plan_names=""
-<<<<<<< HEAD
 contacts=false
 
 while getopts ":hcp:" opt; do
-=======
-
-
-while getopts ":hp:" opt; do
->>>>>>> master
   case ${opt} in
     h )
         usage 
@@ -75,12 +66,9 @@ while getopts ":hp:" opt; do
     p ) 
         svc_plan_names=$OPTARG
         ;;
-<<<<<<< HEAD
     c ) 
         contacts=true
         ;;
-=======
->>>>>>> master
     \? )
         echo "Invalid Option: $OPTARG" 1>&2
         usage 

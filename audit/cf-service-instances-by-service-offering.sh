@@ -37,18 +37,25 @@ function printServiceInstances() {
     local org_guid=$(echo "$space_json" | jq -r '.relationships.organization.data.guid')
     local org_name=$(cf curl "/v3/organizations/${org_guid}" | jq -r '.name')
     local service_instance_guid=$(echo "$svc_instance_guid")
-    if [ -n ${contacts} ]; then
-      contacts=$(cf curl "/v3/spaces/${space_guid}/users" | jq -r '[.resources[].username]|join(" ")')
-    else
-      contacts=""
+    output="$svc_offering_name,$svc_plan_name,$svc_instance_name,$created_at,$org_name,$space_name,$service_instance_guid,$space_guid,$org_guid"
+    if ${contacts} ; then
+      set +e
+      space_roles=$(cf curl "/v3/roles?types=space_manager&space_guids=${space_guid}&include=user")
+      space_managers=$(echo $space_roles | jq -r '[.included.users[].username] | join(" ")' 2>/dev/null )
+      org_roles=$(cf curl "/v3/roles?types=organization_manager&organization_guids=${org_guid}&include=user")
+      org_managers=$(echo $org_roles | jq -r '[.included.users[].username] | join(" ")' 2>/dev/null )
+      set -e
+      output=$output+",$org_managers,$space_managers"
     fi
-    echo "$svc_offering_name,$svc_plan_name,$svc_instance_name,$created_at,$org_name,$space_name,$service_instance_guid,$space_guid,$org_guid,$contacts"
-    contacts=""
+    echo $output
+    space_managers=""
+    org_managers=""
   done
   #echo "$svc_offering_name $svc_offering_guid $svc_plan_name $svc_plan_guid"
 }
 
 svc_plan_names=""
+contacts=false
 
 while getopts ":hcp:" opt; do
   case ${opt} in
@@ -84,8 +91,8 @@ fi
 
 svc_offering_name=$1
 header="Offering name,Plan,Service Instance Name,Creation Date,Organization,Space,Service Instance GUID,Space GUID,Organization GUID"
-if [ $contacts = true ]; then
-  header=$header+",Contacts"
+if $contacts ; then
+  header=$header+",Org Managers,Space Managers"
 fi 
 echo $header
 svc_offering_guid=$(cf curl "/v3/service_offerings?names=${svc_offering_name}" | jq -r '.resources[].guid')

@@ -125,6 +125,7 @@ for report_host in nfr.scan.report_hosts(root):
 #        if nfr.plugin.compliance_check_item_value(report_item, 'cm:compliance-result') != "PASSED":
 #            print(nfr.plugin.compliance_check_item_value(report_item, 'cm:compliance-check-name'))
         plugin_id = int(nfr.plugin.report_item_value(report_item, 'pluginID'))
+        cve = nfr.plugin.report_item_value(report_item, 'cve')
         risk_factor = nfr.plugin.report_item_value(report_item, 'risk_factor')
         plugin_name = nfr.plugin.report_item_value(report_item, 'pluginName')
         plugin_output = nfr.plugin.report_item_value(report_item, 'plugin_output')
@@ -139,7 +140,8 @@ for report_host in nfr.scan.report_hosts(root):
             "plugin_name": plugin_name,
             "full_description": description,
             "plugin_output": plugin_output,
-            "hosts": hosts
+            "hosts": hosts,
+            "cve": cve
         }
 
         # Match on known daemons:
@@ -224,6 +226,7 @@ for vuln in sorted(vuln_report):
         risk_factor = vuln_report[vuln]["risk_factor"] 
         if risk_factor == "Medium" :
             risk_factor = "Moderate"
+        comments=vuln_report[vuln]["cve"]
         weakness_name=vuln_report[vuln]["plugin_name"]
         csvwriter.writerow(["CGXX","RA-5", weakness_name, weakness_desc, "Nessus Scan Report", 
             vuln_report[vuln]["id"], str(number_of_affected_hosts) + " production hosts", 

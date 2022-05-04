@@ -23,11 +23,13 @@ releases = {
 blobs="/config/blobs.yml"
 
 for line in sys.stdin.readlines():
-    print( line.strip() )
+    print( line.strip(),":" )
     rel=line.split('/')[0] or exit()
     url = "https://raw.githubusercontent.com" + releases[rel]['repo']+blobs
     #print( url )
     yaml_data = urllib.request.urlopen(url).read()
     data = yaml.safe_load(yaml_data)
     if data:
-        print(list(data.keys()))
+        print("\t", list(data.keys()))
+    else:
+        print("\t[]")

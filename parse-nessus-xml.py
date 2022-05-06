@@ -180,8 +180,8 @@ for report_host in nfr.scan.report_hosts(root):
                 if (re.search(rf'^  Path\s+: /var/vcap/data/grootfs/store/unprivileged/(images|volumes)', line) and re.search(rf'-diego-cell-', report_host_name)):
                     l4j_cell[plugin_id] = l4j_cell.get(plugin_id, 0) + 1 
                     continue
-                # if host matches logsearch and path is expected:
-                if (re.search(rf'^  Path\s+: /var/vcap/data/packages/elasticsearch/[a-z0-9]+/lib/log4j-core-2.11.1.jar', line) and re.search(rf'^logsearch-', report_host_name)):
+                # if host matches elasticsearch/logstash and path is expected:
+                if (re.search(rf'^  Path\s+: /var/vcap/data/packages/(elasticsearch|logstash)/[a-z0-9/]+/(lib|logstash-core/lib/jars)/log4j-core-2.(11.1|17.0).jar', line) and re.search(rf'^logsearch-', report_host_name)):
                     l4j_logs[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
                     continue
                 print("== Unexpected log4j plugin {} violation on {} found at path: {}".format(plugin_id, report_host_name, line))

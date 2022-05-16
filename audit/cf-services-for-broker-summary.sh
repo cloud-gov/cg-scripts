@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##
-# A script to capture summary of servivce inventory based on the service broker
+# A script to capture summary of service inventory based on the service broker
 #
 # Added `Plan` field to script to capture the service plan used.
 #
@@ -80,7 +80,7 @@ function get_service_instance_apps_count() {
 	total_apps_count=$(cf_curl "${bindings_url}" | jq -r '.pagination.total_results | tonumber')
     debug "      found $total_apps_count bound applications for ${service_instance_name}"
 
-    echo $total_apps_count
+    echo "$total_apps_count"
 }
 
 function get_service_plan_summary() {

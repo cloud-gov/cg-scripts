@@ -57,36 +57,52 @@ function cf_curl() {
     cat "${path}"
 }
 
-function process_serviceinstance() {
+function get_service_plan_name() {
+    service_plan_guid=$1
+
+    service_plan_name=$(cf_curl "/v3/service_plans/${service_plan_guid}" | jq -r '.name')
+
+    debug "  found service plan ${service_plan_name} with guid {${service_plan_guid}}"
+    echo "$service_plan_name"
+}
+
+function get_service_instance_apps_count() {
 	set -e
 
 	service_instance_guid=$1
-	service_name=$(cf_curl "/v3/service_instances/${service_instance_guid}" | jq -r '.name')
-    service_plan_url=$(cf_curl "/v3/service_instances/${service_instance_guid}" | jq -r '.relationships.service_plan.data.guid')
-    service_plan_name=$(cf_curl "/v3/service_plans/${service_plan_url}" | jq -r '.name')
 
-	next_bindings_url="/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}"
-	count=$(cf_curl "${next_bindings_url}" | jq -r '.pagination.total_results | tonumber')
-
-	debug "    found service ${service_name} with guid {${service_instance_guid}}"
+    service_instance_name=$(cf_curl "/v3/service_instances/${service_instance_guid}" | jq -r '.name')
+    debug "    found service instance '${service_instance_name}' with guid {${service_instance_guid}}"
 
 	bindings_url="/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}"
-    total_apps_count=$(cf_curl "$bindings_url" | jq -r '.pagination.total_results | tonumber')
+	total_apps_count=$(cf_curl "${bindings_url}" | jq -r '.pagination.total_results | tonumber')
+    debug "      found $total_apps_count bound applications for ${service_instance_name}"
 
-    echo -e "${service_plan_name}\t${count}\t$total_apps_count"
+    echo $total_apps_count
 }
 
-function traverse_serviceinstances_for_plan() {
+function get_service_plan_summary() {
 	set -e
-	service_plan_guid=$1
-	next_serviceinstance_url="/v3/service_instances?service_plan_guids=${service_plan_guid}"
-	while [[ ${next_serviceinstance_url} != "null" ]]; do
-		for service_instance_guid in $(cf_curl "${next_serviceinstance_url}" | jq -r '.resources[].guid'); do
-			debug "    found service instance '${service_name}' with guid {${service_instance_guid}}"
-			process_serviceinstance "${service_instance_guid}"
-		done
-		next_serviceinstance_url=$(cf_curl "${next_serviceinstance_url}" | jq -r -c ".pagination.next.href")
-	done
+	
+    service_plan_guid=$1
+    service_plan_name=$(get_service_plan_name "$service_plan_guid")
+
+    next_serviceinstance_url="/v3/service_instances?service_plan_guids=${service_plan_guid}"
+    service_plan_instances_count=$(cf_curl "${next_serviceinstance_url}" | jq -r '.pagination.total_results | tonumber')
+
+    total_apps_count=0
+
+    if [[ $service_plan_instances_count -gt 0 ]]; then
+        while [[ ${next_serviceinstance_url} != "null" ]]; do
+            for service_instance_guid in $(cf_curl "${next_serviceinstance_url}" | jq -r '.resources[].guid'); do
+                service_instance_app_count=$(get_service_instance_apps_count "${service_instance_guid}")
+                total_apps_count=$((total_apps_count + service_instance_app_count))
+            done
+            next_serviceinstance_url=$(cf_curl "${next_serviceinstance_url}" | jq -r -c ".pagination.next.href")
+        done
+    fi
+
+    echo -e "${service_plan_name}\t${service_plan_instances_count}\t$total_apps_count"
 }
 
 function traverse_serviceplans_for_broker() {
@@ -96,7 +112,7 @@ function traverse_serviceplans_for_broker() {
 	while [[ ${next_serviceplan_url} != "null" ]]; do
 		for service_plan_guid in $(cf_curl "${next_serviceplan_url}" | jq -r '.resources[].guid'); do
 			debug "  found service plan guid {${service_plan_guid}} for service"
-			traverse_serviceinstances_for_plan "${service_plan_guid}"
+			get_service_plan_summary "${service_plan_guid}"
 		done
 		next_serviceplan_url=$(cf_curl "${next_serviceplan_url}" | jq -r -c '.pagination.next.href')
 	done
@@ -135,5 +151,5 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf ${tmpdir:?nothing to remove}' INT TERM QUIT EXIT
 debug "set up workspace directory ${tmpdir}"
 
-echo -e "...gathering data from Cloud Foundry (this may take a while )..." >&2
+echo -e "...gathering data from Cloud Foundry (this may take a while)..." >&2
 services_for_broker "${BROKER_NAME}" | column -t -s "	"

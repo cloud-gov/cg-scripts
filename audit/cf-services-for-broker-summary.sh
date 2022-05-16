@@ -7,15 +7,11 @@
 #
 # The script returns a table like the following example for the aws-broker
 #
-# Service                      #  Bound Application(s)            Plan              Organization         Space
-# -------                      -  --------------------            ------------      ------------         -----
-# org-db-shared                0                                  shared-psql       org-a                development
-# org-db-psql                  0                                  shared-psql       org-b                staging
-# production-db                2  app-a                           medium-psql       org-a                production
-#                                 app-b                           medium-psql       org-a                production
-# dev-mysql                    1  dev-app                         shared-mysql      org-b                development
-# prod-mysql                   1  prod-app                        medium-mysql      org-b                production
-# dev-redis                    0                                  BETA-redis-dev    org-a                development
+# Service Plan  # of Instances  # of Bound Application(s)
+# ------------  --------------  -------------------------
+# shared-psql   1               1
+# medium-psql   2               5
+# large-psql    3               3
 ##
 
 set -e
@@ -49,11 +45,11 @@ function cf_curl() {
 	md5name=$(echo "${url}" | md5 | cut -f1 -d " ")
     path="${tmpdir}/${md5name}"
 	if [[ ! -f $path ]]; then
-		debug "No cached data found - cf curl ${url}"
+		# debug "No cached data found - cf curl ${url}"
 		cf curl "${url}" > "${path}"
 	fi
 	
-    debug "Cached data found - cf curl ${url}, path ${path}"
+    # debug "Cached data found - cf curl ${url}, path ${path}"
     cat "${path}"
 }
 
@@ -93,6 +89,7 @@ function get_service_plan_summary() {
     total_apps_count=0
 
     if [[ $service_plan_instances_count -gt 0 ]]; then
+        debug "  $service_plan_guid has instances"
         while [[ ${next_serviceinstance_url} != "null" ]]; do
             for service_instance_guid in $(cf_curl "${next_serviceinstance_url}" | jq -r '.resources[].guid'); do
                 service_instance_app_count=$(get_service_instance_apps_count "${service_instance_guid}")
@@ -100,9 +97,8 @@ function get_service_plan_summary() {
             done
             next_serviceinstance_url=$(cf_curl "${next_serviceinstance_url}" | jq -r -c ".pagination.next.href")
         done
+        echo -e "${service_plan_name}\t${service_plan_instances_count}\t$total_apps_count"
     fi
-
-    echo -e "${service_plan_name}\t${service_plan_instances_count}\t$total_apps_count"
 }
 
 function traverse_serviceplans_for_broker() {

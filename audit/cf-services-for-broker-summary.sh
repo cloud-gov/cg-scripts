@@ -69,35 +69,36 @@ function process_serviceinstance() {
 	next_bindings_url="/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}"
 	count=$(cf_curl "${next_bindings_url}" | jq -r '.pagination.total_results | tonumber')
 
-	# debug "    found service ${service_name} with guid {${service_instance_guid}}"
-	# space_guid=$(cat $(cf_curl /v3/service_instances/${service_instance_guid}) | jq -r '.relationships.space.data.guid')
-	# space_name=$(cat $(cf_curl /v3/spaces/${space_guid}) | jq -r '.name')
-	# debug "    -- in ${org_name} / ${space_name}"
-	# org_guid=$(cat $(cf_curl /v3/spaces/${space_guid}) | jq -r '.relationships.organization.data.guid')
-	# org_name=$(cat $(cf_curl /v3/organizations/${org_guid}) | jq -r '.name')
+	debug "    found service ${service_name} with guid {${service_instance_guid}}"
+	space_guid=$(cf_curl "/v3/service_instances/${service_instance_guid}" | jq -r '.relationships.space.data.guid')
+	space_name=$(cf_curl "/v3/spaces/${space_guid}" | jq -r '.name')
+	debug "    -- in ${org_name} / ${space_name}"
+	org_guid=$(cf_curl "/v3/spaces/${space_guid}" | jq -r '.relationships.organization.data.guid')
+	org_name=$(cf_curl "/v3/organizations/${org_guid}" | jq -r '.name')
 
-    echo -e "${service_plan_name}\t${count}\t "
+	bindings_url="/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}"
+    total_apps_count=$(cf_curl "$bindings_url" | jq -r '.pagination.total_results | tonumber')
+
+    echo -e "${service_plan_name}\t${count}\t$total_apps_count"
 
 	# if [[ ${count} -gt 0 ]]; then
-	# 	next_bindings_url="/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}"
-	# 	while [[ ${next_bindings_url} != "null" ]]; do
-	# 		for app_guid in $(cat $(cf_curl ${next_bindings_url}) | jq -r '.resources[].relationships.app.data.guid'); do
-	# 			app_name=$(cat $(cf_curl /v3/apps/${app_guid}) | jq -r '.name')
-	# 			debug "      found app '${app_name}' with guid {${app_guid}}"
+		# while [[ ${next_bindings_url} != "null" ]]; do
+		# 	for app_guid in $(cf_curl "${next_bindings_url}" | jq -r '.resources[].relationships.app.data.guid'); do
+		# 		app_name=$(cf_curl "/v3/apps/${app_guid}" | jq -r '.name')
+		# 		debug "      found app '${app_name}' with guid {${app_guid}}"
 
+		# 		app_name=${app_name:-(${app_guid})}
+		# 		if [[ $n == 0 ]]; then
+		# 			echo -ne "${service_name}\t${count}\t"
+		# 		else
+		# 			echo -ne " \t \t"
+		# 		fi
+		# 		echo -e "${app_name}\t${service_plan_name}\t${org_name}\t${space_name}"
+		# 		n=$(( n + 1 ))
+		# 	done
 
-	# 			app_name=${app_name:-(${app_guid})}
-	# 			if [[ $n == 0 ]]; then
-	# 				echo -ne "${service_name}\t${count}\t"
-	# 			else
-	# 				echo -ne " \t \t"
-	# 			fi
-	# 			echo -e "${app_name}\t${service_plan_name}\t${org_name}\t${space_name}"
-	# 			n=$(( n + 1 ))
-	# 		done
-
-	# 		next_bindings_url=$(cat $(cf_curl ${next_bindings_url}) | jq -r -c ".pagination.next.href")
-	# 	done
+		# 	next_bindings_url=$(cf_curl "${next_bindings_url}" | jq -r -c ".pagination.next.href")
+		# done
 	# else
 	# 	echo -e "${service_name}\t${n}\t \t${service_plan_name}\t${org_name}\t${space_name}"
 	# fi

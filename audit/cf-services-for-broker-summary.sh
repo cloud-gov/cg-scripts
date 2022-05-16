@@ -7,11 +7,17 @@
 #
 # The script returns a table like the following example for the aws-broker
 #
-# Service Plan  # of Instances  # of Bound Application(s)
-# ------------  --------------  -------------------------
-# shared-psql   1               1
-# medium-psql   2               5
-# large-psql    3               3
+# Service Plan    # of Instances  # of Bound Application(s)
+# ------------    --------------  -------------------------
+# shared-psql     2               5
+# medium-gp-psql  1               3
+# shared-mysql    1               1
+# redis-3node     3               5
+# micro-psql      2               2
+# small-mysql     3               1
+# es-dev          1               0
+# small-psql      1               1
+# medium-psql     1               1
 ##
 
 set -e
@@ -45,11 +51,11 @@ function cf_curl() {
 	md5name=$(echo "${url}" | md5 | cut -f1 -d " ")
     path="${tmpdir}/${md5name}"
 	if [[ ! -f $path ]]; then
-		# debug "No cached data found - cf curl ${url}"
+		debug "No cached data found - cf curl ${url}"
 		cf curl "${url}" > "${path}"
 	fi
 	
-    # debug "Cached data found - cf curl ${url}, path ${path}"
+    debug "Cached data found - cf curl ${url}, path ${path}"
     cat "${path}"
 }
 

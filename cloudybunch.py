@@ -3,23 +3,34 @@
 import random
 
 team = [
+    ":andrew-burnes:",
+    ":arsalan:",
+    ":ben-berry:",
+    ":mogul:",
+    ":brian-hurst:",
+    ":chiaka:",
+    ":chris-mcgowan:",
     ":david-anderson:",
     ":david-corwin:",
-    ":ben-berry:",
-    ":peterb:",
-    ":andrew-burnes:",
-    ":van-nguyen:",
-    ":chris-mcgowan:",
+    ":ephraim:",
     ":kelley:",
+    ":mark-boyd:",
     ":markheadd:",
-    ":lindsay:",
     ":melanie:",
-    ":gerald:",
+    ":peterb:",
     ":rian-bogle:",
-    ":sven:",
-    ":carlo:"
+    ":robert-gottlieb:",
+    ":shea:",
+    ":van-nguyen:",
 ]
+# randomize the input list, t, 
+# then print samples with spacing n
+def bunch(t,n):
+    bunch = random.sample(t,len(t))
+    for n in range(0,len(t)+n,n):
+        print(f':musical_note: {bunch[(n+0)%len(bunch)]} {bunch[(n+1)%len(bunch)]} {bunch[(n+2)%len(bunch)]}\\n',
+            f' :blank: {bunch[(n+3)%len(bunch)]} :cloud-gov: {bunch[(n+4)%len(bunch)]} \\n',
+            f' :blank: {bunch[(n+5)%len(bunch)]} {bunch[(n+6)%len(bunch)]} {bunch[(n+7)%len(bunch)]} :musical_note:')
 
-for n in range(1,24):
-    bunch = random.sample(team,8)
-    print(f':musical_note: {bunch[0]} {bunch[1]} {bunch[2]}\\n :blank: {bunch[3]} :cloud-gov: {bunch[4]} \\n :blank: {bunch[5]} {bunch[6]} {bunch[7]} :musical_note:')
+bunch(team,2)
+bunch(team,2)

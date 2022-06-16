@@ -14,7 +14,7 @@ team = [
     ":david-corwin:",
     ":ephraim:",
     ":kelley:",
-    ":markboyd:",
+    ":mark-boyd:",
     ":markheadd:",
     ":melanie:",
     ":peterb:",

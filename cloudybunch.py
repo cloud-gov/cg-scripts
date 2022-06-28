@@ -7,7 +7,7 @@ team = [
     ":arsalan:",
     ":ben-berry:",
     ":mogul:",
-    ":brian-hurst:",
+    ":bhurst:",
     ":chiaka:",
     ":chris-mcgowan:",
     ":david-anderson:",

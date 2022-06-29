@@ -19,4 +19,9 @@ if [ $ec != 0 ]; then
 fi
 
 timestamp=$(date +%s)
+
+# delete existing PGP keys for this user
+aws s3 rm s3://cg-pgp-keys --recursive --include "$GIT_USER_NAME*.asc"
+
+# upload PGP key to S3
 gpg --export --armor "$GIT_PGP_KEY_ID" | aws s3 cp --sse AES256 - "s3://cg-pgp-keys/$GIT_USER_NAME-$timestamp.asc"

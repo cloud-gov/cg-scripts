@@ -28,14 +28,8 @@ while getopts ":h" opt; do
 done
 
 AWS_VAULT_PROFILE=${1:-gov-prd-plat-admin}
-# if [ -z "$AWS_VAULT_PROFILE" ]; then
-#     # echo "Must specify an aws-vault profile as first argument to the script"
-#     usage
-#     exit 1
-# fi
 
 echo "Using aws-vault profile $AWS_VAULT_PROFILE"
-# aws-vault exec "$AWS_VAULT_PROFILE"
 
 PGP_KEYS_BUCKET="cg-pgp-keys"
 GIT_USER_NAME=$(git config user.name | tr ' ' '-')

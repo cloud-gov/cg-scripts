@@ -22,7 +22,7 @@ fi
 timestamp=$(date +%s)
 
 # delete existing PGP keys for this user
-aws s3 rm s3://$PGP_KEYS_BUCKET --recursive --include "$GIT_USER_NAME*.asc"
+aws s3 rm s3://$PGP_KEYS_BUCKET --recursive --exclude "*" --include "$GIT_USER_NAME*.asc"
 
 PGP_TMP_FILE=$(mktemp)
 gpg --export --armor "$GIT_PGP_KEY_ID" > "$PGP_TMP_FILE"

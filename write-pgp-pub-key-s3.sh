@@ -18,4 +18,5 @@ if [ $ec != 0 ]; then
     exit $ec
 fi
 
-gpg --export --armor "$GIT_PGP_KEY_ID" | aws s3 cp --sse AES256 - "s3://cg-pgp-keys/$GIT_USER_NAME.asc"
+timestamp=$(date +%s)
+gpg --export --armor "$GIT_PGP_KEY_ID" | aws s3 cp --sse AES256 - "s3://cg-pgp-keys/$GIT_USER_NAME-$timestamp.asc"

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+PGP_KEYS_BUCKET="cg-pgp-keys"
 GIT_USER_NAME=$(git config user.name | tr ' ' '-')
 
 if [ -z "$GIT_USER_NAME" ]; then
@@ -21,7 +22,12 @@ fi
 timestamp=$(date +%s)
 
 # delete existing PGP keys for this user
-aws s3 rm s3://cg-pgp-keys --recursive --include "$GIT_USER_NAME*.asc"
+aws s3 rm s3://$PGP_KEYS_BUCKET --recursive --include "$GIT_USER_NAME*.asc"
+
+PGP_TMP_FILE=$(mktemp)
+gpg --export --armor "$GIT_PGP_KEY_ID" > "$PGP_TMP_FILE"
 
 # upload PGP key to S3
-gpg --export --armor "$GIT_PGP_KEY_ID" | aws s3 cp --sse AES256 - "s3://cg-pgp-keys/$GIT_USER_NAME-$timestamp.asc"
+aws s3 cp --sse AES256 "$PGP_TMP_FILE" "s3://$PGP_KEYS_BUCKET/$GIT_USER_NAME-$timestamp.asc"
+
+rm "$PGP_TMP_FILE"

@@ -2,7 +2,6 @@
 
 CI_URL="${CI_URL:-"https://ci.fr.cloud.gov"}"
 FLY_TARGET=$(fly targets | grep "${CI_URL}" | head -n 1 | awk '{print $1}')
-# REPO_REGEX='github.com.*\(cloud-gov\|18[fF]\)'
 
 if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
   echo "Not logged in to concourse"
@@ -10,8 +9,11 @@ if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
 fi
 
 fly --target "${FLY_TARGET}" pipelines | tail -n +1 |  while read -r line; do
-    # echo "$line"
-    # my_process "$line"
     pipeline_name=$(echo "$line"  | awk '{print $2}')
-    echo $pipeline_name
+    printf '%s\n' "$pipeline_name"
+
+    fly -t ci get-pipeline --pipeline secureproxy-boshrelease --json \
+        | jq '.resources[] | select(.type=="git") | select(.source.uri | test("github.com.*(cloud-gov|18[Ff])"))'
+    
+    printf "\n\n\n"
 done

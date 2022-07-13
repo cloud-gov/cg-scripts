@@ -4,15 +4,13 @@ import random
 
 team = [
     ":andrew-burnes:",
-    ":arsalan:",
-    ":ben-berry:",
+    ":arsalan-haider:",
     ":mogul:",
     ":bhurst:",
-    ":chiaka:",
+    ":chiaka-opara:",
     ":chris-mcgowan:",
     ":david-anderson:",
-    ":david-corwin:",
-    ":ephraim:",
+    ":ephraim-gross:",
     ":kelley:",
     ":mark-boyd:",
     ":markheadd:",
@@ -20,7 +18,7 @@ team = [
     ":peterb:",
     ":rian-bogle:",
     ":robert-gottlieb:",
-    ":shea:",
+    ":shea-bennett:",
     ":van-nguyen:",
 ]
 # randomize the input list, t, 

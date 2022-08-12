@@ -15,14 +15,11 @@ output=""
 
 while IFS= read -r space_line; do
     read -ra space_data <<< "$space_line"
-
-    
     space_guid=${space_data[1]}
 
     # todo: handle pagination for multiple pages of apps
     apps=$(cf curl "/v3/apps?organization_guids=${1}&space_guids=${space_guid}")
     apps_data=$(echo "$apps" | jq -r '.resources[] | select(.state == "STARTED") | .name + " " + .guid + " "')
-    # echo $app_data
 
     while IFS= read -r app_line; do
         read -ra app_data <<< "$app_line"

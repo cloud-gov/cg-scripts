@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 
+# set -x
+
 if [ "$#" -ne 1 ]; then
   echo
   echo "Usage:"
-  echo "   ./cf-get-org-apps.sh <organization-guid>"
+  echo "   ./cf-get-org-apps.sh <organization-name>"
   echo
 
   exit 1
 fi
 
 results_per_page=50
+org_guid=$(cf org "$1" --guid)
+output=""
 
 function get_org_spaces {
   page=1
+  echo $1
 
   while true
   do
@@ -41,8 +46,6 @@ function get_org_space_apps {
   done
 }
 
-output=""
-
 while IFS= read -r space_line; do
   if [ -z "$space_line" ]; then
     break
@@ -60,8 +63,8 @@ while IFS= read -r space_line; do
     mem_info="$(cf curl "/v3/apps/${app_data[1]}/processes" | jq -r '.resources[] | (.instances | tostring) + "," + (.memory_in_mb | tostring)')"
     output_line="${space_data[0]},${app_data[0]},$mem_info"
     output="${output}$output_line "
-  done <<< "$(get_org_space_apps "$1" "$space_guid")"
-done <<< "$(get_org_spaces "$1")"
+  done <<< "$(get_org_space_apps "$org_guid" "$space_guid")"
+done <<< "$(get_org_spaces "$org_guid")"
 
 if [ "$output" != "" ]; then
   headers="space,app_name,instances,memory_in_mb"

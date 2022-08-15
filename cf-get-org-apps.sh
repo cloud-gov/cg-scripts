@@ -9,27 +9,62 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
-# todo: handle pagination for multiple pages of spaces
-spaces=$(cf curl "/v3/spaces?organization_guids=${1}" | jq -r '.resources[] | .name + " " + .guid')
+results_per_page=50
+
+function get_org_spaces {
+  page=1
+
+  while true
+  do
+    results=$(cf curl "/v3/spaces?organization_guids=${1}&per_page=${results_per_page}&page=${page}")
+    echo "$results" | jq -r '.resources[] | .name + " " + .guid'
+    next=$(echo "$results" | jq -r '.pagination.next // empty')
+    if [ -z "$next" ]; then
+      break
+    fi
+    page=$((page + 1))
+  done
+}
+
+function get_org_space_apps {
+  page=1
+
+  while true
+  do
+    results=$(cf curl "/v3/apps?organization_guids=${1}&space_guids=${2}&per_page=${results_per_page}&page=${page}")
+    echo "$results" | jq -r '.resources[] | .name + " " + .guid'
+    next=$(echo "$results" | jq -r '.pagination.next // empty')
+    if [ -z "$next" ]; then
+      break
+    fi
+    page=$((page + 1))
+  done
+}
+
 output=""
 
 while IFS= read -r space_line; do
-    read -ra space_data <<< "$space_line"
-    space_guid=${space_data[1]}
+  if [ -z "$space_line" ]; then
+    break
+  fi
+  
+  read -ra space_data <<< "$space_line"
+  space_guid=${space_data[1]}
+  
+  while IFS= read -r app_line; do
+    if [ -z "$app_line" ]; then
+      break
+    fi
 
-    # todo: handle pagination for multiple pages of apps
-    apps=$(cf curl "/v3/apps?organization_guids=${1}&space_guids=${space_guid}")
-    apps_data=$(echo "$apps" | jq -r '.resources[] | select(.state == "STARTED") | .name + " " + .guid + " "')
+    read -ra app_data <<< "$app_line"
+    mem_info="$(cf curl "/v3/apps/${app_data[1]}/processes" | jq -r '.resources[] | (.instances | tostring) + "," + (.memory_in_mb | tostring)')"
+    output_line="${space_data[0]},${app_data[0]},$mem_info"
+    output="${output}$output_line "
+  done <<< "$(get_org_space_apps "$1" "$space_guid")"
+done <<< "$(get_org_spaces "$1")"
 
-    while IFS= read -r app_line; do
-        read -ra app_data <<< "$app_line"
-
-        mem_info="$(cf curl "/v3/apps/${app_data[1]}/processes" | jq -r '.resources[] | (.instances | tostring) + "," + (.memory_in_mb | tostring)')"
-        output_line="${space_data[0]},${app_data[0]},$mem_info"
-        output="${output}$output_line "
-    done <<< "$apps_data"
-done <<< "$spaces"
-
-headers="space,app_name,instances,memory_in_mb"
-separators="-----,--------,---------,------------"
-echo "$headers $separators $output" | tr " " "\n" | column -t -s ","
+if [ "$output" != "" ]; then
+  headers="space,app_name,instances,memory_in_mb"
+  separators="-----,--------,---------,------------"
+  echo "$headers $separators $output" | tr " " "\n" | column -t -s ","
+fi

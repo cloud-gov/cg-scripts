@@ -11,6 +11,7 @@ team = [
     ":david-anderson:",
     ":drew-bollinger:",
     ":ephraim-gross:",
+    ":james-hochadel:",
     ":kelley:",
     ":mark-boyd:",
     ":melanie:",
@@ -19,7 +20,7 @@ team = [
     ":robert-gottlieb:",
     ":van-nguyen:",
 ]
-# randomize the input list, t, 
+# randomize the input list, t,
 # then print samples with spacing n
 def bunch(t,n):
     bunch = random.sample(t,len(t))

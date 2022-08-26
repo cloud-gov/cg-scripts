@@ -43,7 +43,8 @@ fi' >&2
 # reformat the credential file to the Credhub format, excluding entries
 # that don't appear in pipeline.yml.
 cat $source | \
-  yq --arg pipelinename $pipelinename \
+  yq --output-format json | \
+  jq --arg pipelinename $pipelinename \
   --rawfile pipeline ci/pipeline.yml '
   to_entries |
   map(select(.key | inside($pipeline))) |

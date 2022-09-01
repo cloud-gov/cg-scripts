@@ -4,7 +4,7 @@ set -eo pipefail
 # yq operates on yaml documents using a jq-like syntax.
 # For jq program syntax, see: https://stedolan.github.io/jq/manual/
 
-if [ -z $2 ]; then
+if [ "$#" -ne $2 ]; then
   echo "
 Usage: ./credhub-format.sh <source-file> <pipeline-name>
 Example: ./credhub-format.sh credentials.yml deploy-something > output.yml

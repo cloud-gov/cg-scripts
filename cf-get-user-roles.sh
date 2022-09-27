@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Grabs all cf org and space roles for a user
 
@@ -41,4 +41,4 @@ headers=$(echo "role", "org_uuid", "space_uuid")
 formatted_list=$(echo $role_list | jq -r '.resources[] | [.type, .relationships.organization.data.guid // "null", .relationships.space.data.guid // "null"] | @csv')
 
 #output a nice table
-echo "$headers\n$formatted_list" | column -t -s,
+echo -e "$headers\\n$formatted_list" | column -t -s,

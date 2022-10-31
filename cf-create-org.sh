@@ -93,7 +93,7 @@ ADMIN=$(cf target | grep -i user | awk '{print $2}')
 cf create-org "$ORG_NAME" -q "$HASHED_QUOTA_NAME"
 # creator added by default, which is usually not desirable
 cf unset-org-role "$ADMIN" "$ORG_NAME" OrgManager
-cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager "$ORIGIN_FLAG"
+cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager ${ORIGIN_FLAG:+"$ORIGIN_FLAG"}
 
 # Step 4: Create the spaces
 declare -a spaces=("dev" "staging" "prod")
@@ -105,11 +105,11 @@ do
   cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE" SpaceManager
   cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE" SpaceDeveloper
 
-  cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper "$ORIGIN_FLAG"
+  cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper ${ORIGIN_FLAG:+"$ORIGIN_FLAG"}
 done
 
 
-# deleting admin user from newly created org. 
+# deleting admin user from newly created org.
 # https://github.com/cloudfoundry/cli/issues/781
 USER_GUID=$(cf curl "/v3/users?usernames=${ADMIN}"| jq -r '.resources[] | .guid')
 ORG_GUID=$(cf org "${ORG_NAME}" --guid)

@@ -7,13 +7,50 @@ import traceback
 import time
 import sys
 import re
+import getopt
 import csv
 csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
+
+def help():
+   print("parse-nessus-xls.py [-h|--help -l|--log4j -d|--daemons -s|--summary -c|--csv -a|--all] filenames ...")
+   sys.exit(-1)
+
+if len(sys.argv) == 1:
+    help
+
+# Get the command-line arguments, excluding the script name
+args = sys.argv[1:]
+
+# Define the list of possible options and their arguments
+opts, args = getopt.getopt(args, "hldsca", ["help" "log4j", "daemons", "summary", "csv", "all"])
+
+report_log4j = report_daemons = report_summary = report_csv = False
+
+for opt, arg in opts:
+    if opt in ("-h", "--help"):
+        help
+    elif opt in ("-l", "--log4j"):
+        report_log4j = True
+    elif opt in ("-d", "--daemons"):
+        report_daemons = True
+    elif opt in ("-s", "--summary"):
+        report_summary = True
+    elif opt in ("-c", "--csv"):
+        report_csv = True
+    elif opt in ("-a", "--all"):
+        report_log4j = report_daemons = report_summary = report_csv = True
+
+# The remaining arguments are the filenames
+filenames = args
+
+if len(filenames) == 0:
+    print('please provide a path to an XML ZAP report')
+    help
 
 from datetime import date
 today = date.today()
 mmddYY = today.strftime("%m/%d/%Y")
-owner="Shea Bennett"
+owner="Ashley Mahan"
 
 def remediation_plan(vuln):
     if ("JDK" in vuln) or ("Java" in vuln):
@@ -21,16 +58,18 @@ def remediation_plan(vuln):
     else:
         return "We use operating system 'stemcells' from the upstream BOSH open source project, and these libraries are part of those packages. They release updates frequently, usually every couple weeks or so, and we will deploy this update when they make it ready."
 
-if len(sys.argv) == 1:
-    print('please provide a path to an XML ZAP report')
-    sys.exit(-1)
+
 
 daemon_count = 0
+
 l4j_cell = {}
 l4j_logs = {}
 l4j_misc = {}
 l4j_ghst = {}
 l4j_plugins = [ 155999, 156032, 156057, 156103, 156183, 156327, 156860 ]
+l4j_phantoms = []
+l4j_violations = []
+
 vuln_report = {}
 daemon_report = {}
 DAEMONS = """
@@ -107,7 +146,6 @@ DAEMONS = """
 
 DAEMONS = '|'.join(DAEMONS)
 
-filenames = sys.argv[1:]    
 for filename in filenames:
     nessus_scan_file = filename
 
@@ -115,9 +153,9 @@ for filename in filenames:
     file_name = nfr.file.nessus_scan_file_name_with_path(nessus_scan_file)
     file_size = nfr.file.nessus_scan_file_size_human(nessus_scan_file)
     start_date = nfr.scan.scan_time_start(root)
-    print(f'File name: {file_name}')
-    print(f'File size: {file_size}')
-    print(f'Scan start date: {start_date}')
+    print(f'File name: {file_name}', file=sys.stderr)
+    print(f'File size: {file_size}', file=sys.stderr)
+    print(f'Scan start date: {start_date}', file=sys.stderr)
 
 
     for report_host in nfr.scan.report_hosts(root):
@@ -176,7 +214,7 @@ for filename in filenames:
                     if (re.search(rf'^  Path\s+: /usr/share/logstash/logstash-core/lib/jars/log4j.*jar$', line) or 
                         re.search(rf'^  Path\s+: /home/vcap/app/lib/boot/log4j-core-2.*jar$',line)):
                         l4j_ghst[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
-                        print("== Phantom log4j plugin {} violation on {} found at path: {}".format(plugin_id, report_host_name, line))
+                        l4j_phantoms.append("== Phantom log4j plugin {} violation on {} found at path: {}".format(plugin_id, report_host_name, line))
                         continue
                     # if host matches diego cell and path is in customer area:
                     if (re.search(rf'^  Path\s+: /var/vcap/data/grootfs/store/unprivileged/(images|volumes)', line) and re.search(rf'-diego-cell-', report_host_name)):
@@ -186,54 +224,64 @@ for filename in filenames:
                     if (re.search(rf'^  Path\s+: /var/vcap/data/packages/elasticsearch/[a-z0-9]+/lib/log4j-core-2.11.1.jar', line) and re.search(rf'^logsearch-', report_host_name)):
                         l4j_logs[plugin_id] = l4j_logs.get(plugin_id, 0) + 1 
                         continue
-                    print("== Unexpected log4j plugin {} violation on {} found at path: {}".format(plugin_id, report_host_name, line))
+                    l4j_violations.append("== Phantom log4j plugin {} violation on {} found at path: {}".format(plugin_id, report_host_name, line))
                     l4j_misc[plugin_id] = l4j_misc.get(plugin_id, 0) + 1 
 
 max_hosts = 6
-print("\n------- Log4J REPORT  ------\n")
-for p in l4j_plugins:
-    print("Log4j plugin: ", p)
-    print("\tLog4J violations on Diego cells on phantom paths (safe): ", l4j_ghst.get(p, 0))
-    print("\tLog4J violations on Diego cells in customer path (safe): ", l4j_cell.get(p, 0))
-    print("\tLog4J violations on Logstash nodes at known path (safe): ", l4j_logs.get(p, 0))
-    print("\tLog4J violations of unknown origins found (UNSAFE)     : ", l4j_misc.get(p, 0))
-print("\n------- Daemon REPORT  ------\n")
-print("Known deamons seen: ", daemon_count)
-print("Unknown deamons: ")
-for key in sorted(daemon_report):
-    print(key, ": ", daemon_report[key])
+if report_log4j: 
+    print("\n------- Log4J REPORT  ------\n")
+    for pl in l4j_plugins:
+        print("Log4j plugin: ", pl)
+        print("\tLog4J violations on Diego cells on phantom paths (safe): ", l4j_ghst.get(pl, 0))
+        print("\tLog4J violations on Diego cells in customer path (safe): ", l4j_cell.get(pl, 0))
+        print("\tLog4J violations on Logstash nodes at known path (safe): ", l4j_logs.get(pl, 0))
+        print("\tLog4J violations of unknown origins found (UNSAFE)     : ", l4j_misc.get(pl, 0))
+    print("Log4J phantoms: ")
+    for ph in l4j_phantoms:
+        print(ph)
+    print("Log4J violations: ")
+    for vi in l4j_violations:
+        print(vi)
 
-print("\n------- SUMMARY ------\n")
+if report_daemons:
+    print("\n------- Daemon REPORT  ------\n")
+    print("Known deamons seen: ", daemon_count)
+    print("Unknown deamons: ")
+    for key in sorted(daemon_report):
+        print(key, ": ", daemon_report[key])
 
-for key in sorted(vuln_report):
-    if vuln_report[key]["risk_factor"] != "None":
-        affected_hosts = vuln_report[key]["hosts"]
-        affected_hosts.sort()
-        print(vuln_report[key]["full_description"])
-#        print(vuln_report[key]["plugin_output"]) # For compliance?
-        if len(affected_hosts) > max_hosts:
-            print('\t{} affected hosts found ...'.format(len(affected_hosts)))
-        else:
-            #for site in affected_hosts.sort():
-            for site in affected_hosts:
-                print('\t{}'.format(site))
+if report_summary:
+    print("\n------- SUMMARY ------\n")
 
-print("\n-------  CSV  ------\n")
+    for key in sorted(vuln_report):
+        if vuln_report[key]["risk_factor"] != "None":
+            affected_hosts = vuln_report[key]["hosts"]
+            affected_hosts.sort()
+            print(vuln_report[key]["full_description"])
+            if len(affected_hosts) > max_hosts:
+                print('\t{} affected hosts found ...'.format(len(affected_hosts)))
+            else:
+                #for site in affected_hosts.sort():
+                for site in affected_hosts:
+                    print('\t{}'.format(site))
 
-weakness_desc = sched_completion_date = milestone = \
-    deviation_rationale = supporting_docs = comments = auto_approve = ""
-KEV = "No"
+if report_csv:
+    print("\n-------  CSV  ------\n")
 
-for vuln in sorted(vuln_report):
-    if vuln_report[vuln]["risk_factor"] != "None":
-        number_of_affected_hosts = len(vuln_report[vuln]["hosts"])
-        risk_factor = vuln_report[vuln]["risk_factor"] 
-        if risk_factor == "Medium" :
-            risk_factor = "Moderate"
-        weakness_name=vuln_report[vuln]["plugin_name"]
-        csvwriter.writerow(["CGXX","RA-5", weakness_name, weakness_desc, "Nessus Scan Report", 
-            vuln_report[vuln]["id"], str(number_of_affected_hosts) + " production hosts", 
-            owner, "None", remediation_plan(weakness_name), start_date.date(), sched_completion_date, 
-            "Resolve", milestone, mmddYY, "Yes", mmddYY,
-            "CloudFoundry stemcell", risk_factor, risk_factor, "No", "No", "No",
-            deviation_rationale, supporting_docs, comments, auto_approve, KEV])
+    weakness_desc = sched_completion_date = milestone = \
+        deviation_rationale = supporting_docs = comments = auto_approve = ""
+    KEV = "No"
+
+    for vuln in sorted(vuln_report):
+        if vuln_report[vuln]["risk_factor"] != "None":
+            number_of_affected_hosts = len(vuln_report[vuln]["hosts"])
+            risk_factor = vuln_report[vuln]["risk_factor"] 
+            if risk_factor == "Medium" :
+                risk_factor = "Moderate"
+            weakness_name=vuln_report[vuln]["plugin_name"]
+            csvwriter.writerow(["CGXX","RA-5", weakness_name, weakness_desc, "Nessus Scan Report", 
+                vuln_report[vuln]["id"], str(number_of_affected_hosts) + " production hosts", 
+                owner, "None", remediation_plan(weakness_name), start_date.date(), sched_completion_date, 
+                "Resolve", milestone, mmddYY, "Yes", mmddYY,
+                "CloudFoundry stemcell", risk_factor, risk_factor, "No", "No", "No",
+                deviation_rationale, supporting_docs, comments, auto_approve, KEV])

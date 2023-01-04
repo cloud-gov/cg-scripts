@@ -32,6 +32,7 @@ l4j_misc = {}
 l4j_ghst = {}
 l4j_plugins = [ 155999, 156032, 156057, 156103, 156183, 156327, 156860 ]
 vuln_report = {}
+daemon_report = {}
 DAEMONS = """
     alertmanager
     auctioneer
@@ -162,7 +163,7 @@ for filename in filenames:
                     if (re.search(rf'^/var/vcap/data/packages/ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) and re.search(rf'cc-worker|admin-ui|bosh-0-cf-tooling', report_host_name)):
                         daemon_count += 1
                         continue
-                    print("== Unknown daemon found: ",report_host_name,": ", line)
+                    daemon_report[report_host_name] = line
 
             vuln_report[plugin_id] = this_vuln
 
@@ -189,13 +190,19 @@ for filename in filenames:
                     l4j_misc[plugin_id] = l4j_misc.get(plugin_id, 0) + 1 
 
 max_hosts = 6
+print("\n------- Log4J REPORT  ------\n")
 for p in l4j_plugins:
     print("Log4j plugin: ", p)
     print("\tLog4J violations on Diego cells on phantom paths (safe): ", l4j_ghst.get(p, 0))
     print("\tLog4J violations on Diego cells in customer path (safe): ", l4j_cell.get(p, 0))
     print("\tLog4J violations on Logstash nodes at known path (safe): ", l4j_logs.get(p, 0))
     print("\tLog4J violations of unknown origins found (UNSAFE)     : ", l4j_misc.get(p, 0))
+print("\n------- Daemon REPORT  ------\n")
 print("Known deamons seen: ", daemon_count)
+print("Unknown deamons: ")
+for key in sorted(daemon_report):
+    print(key, ": ", daemon_report[key])
+
 print("\n------- SUMMARY ------\n")
 
 for key in sorted(vuln_report):

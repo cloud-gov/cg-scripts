@@ -149,7 +149,6 @@ DAEMONS = """
 """.split()
 
 DAEMONS = '|'.join(DAEMONS)
-print(DAEMONS)
 
 for filename in filenames:
     nessus_scan_file = filename

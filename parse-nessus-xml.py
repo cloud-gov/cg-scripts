@@ -12,7 +12,7 @@ import csv
 csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
 
 def help():
-   print("parse-nessus-xls.py [-h|--help -l|--log4j -d|--daemons -s|--summary -c|--csv -a|--all] filenames ...")
+   print("parse-nessus-xls.py [-h|--help -l|--log4j -d|--daemons -s|--summary -c|--csv -a|--all -m|--max-hosts] filenames ...")
    sys.exit(-1)
 
 if len(sys.argv) == 1:
@@ -22,9 +22,10 @@ if len(sys.argv) == 1:
 args = sys.argv[1:]
 
 # Define the list of possible options and their arguments
-opts, args = getopt.getopt(args, "hldsca", ["help" "log4j", "daemons", "summary", "csv", "all"])
+opts, args = getopt.getopt(args, "hldscam", ["help" "log4j", "daemons", "summary", "csv", "all", "max-hosts"])
 
 report_log4j = report_daemons = report_summary = report_csv = False
+max_hosts = 6
 
 for opt, arg in opts:
     if opt in ("-h", "--help"):
@@ -37,6 +38,8 @@ for opt, arg in opts:
         report_summary = True
     elif opt in ("-c", "--csv"):
         report_csv = True
+    elif opt in ("-m", "--max-hosts"):
+        max_hosts = arg
     elif opt in ("-a", "--all"):
         report_log4j = report_daemons = report_summary = report_csv = True
 
@@ -105,6 +108,7 @@ DAEMONS = """
     log-cache-cf-auth-proxy
     log-cache-gateway
     log-cache-nozzle
+    log-cache-syslog-server
     loggregator.agent
     loggregator_trafficcontroller
     metrics-agent
@@ -120,7 +124,7 @@ DAEMONS = """
     policy-server
     policy-server-internal
     prom.scraper
-    prometheus2
+    prometheus
     pushgateway
     redis
     redis-server
@@ -145,6 +149,7 @@ DAEMONS = """
 """.split()
 
 DAEMONS = '|'.join(DAEMONS)
+print(DAEMONS)
 
 for filename in filenames:
     nessus_scan_file = filename
@@ -189,16 +194,26 @@ for filename in filenames:
                         continue
                     if "The following running daemons are not managed by dpkg" in line:
                         continue
+                    if (re.search(rf'/var/vcap/store/nessus-manager/opt/nessus/sbin/nessusd', line) and
+                      re.search(rf'-nessus-manager-', report_host_name)):
+                        daemon_count += 1
+                        continue
                     if re.search(rf'/var/vcap/bosh/bin/(bosh-agent|monit)', line):
                         daemon_count += 1
                         continue
-                    if re.search(rf'^/var/vcap/data/packages/({DAEMONS})/[0-9a-f]+/(s?bin/)?({DAEMONS})$', line):
+                    if re.search(rf'^/var/vcap/data/packages/({DAEMONS})2?/[0-9a-f]+/(s?bin/)?({DAEMONS})(-server|-asg-syncer)?$', line):
                         daemon_count += 1
                         continue
-                    if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|openjdk_1.8.0|openjdk-11|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):
+                    # allow java and node for idp, ELK
+                    if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|kibana-platform|openjdk_1.8.0|openjdk-11|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):
                         daemon_count += 1
                         continue
-                    if (re.search(rf'^/var/vcap/data/packages/ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) and re.search(rf'cc-worker|admin-ui|bosh-0-cf-tooling', report_host_name)):
+                    # nats daemons are OK on nats and bosh
+                    if (re.search(rf'^/var/vcap/data/packages/(nats|nats-v2-migrate|nats-server)/[0-9a-f]+/bin/(nats-wrapper|nats-server)$', line) and re.search(rf'-nats-|-bosh-', report_host_name)):
+                        daemon_count += 1
+                        continue
+                    # ruby is installed for bosh directors, admin-ui, and cc-worke
+                    if (re.search(rf'^/var/vcap/data/packages/(director-)?ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) and re.search(rf'-cc-worker|-admin-ui|-bosh-0-cf-', report_host_name)):
                         daemon_count += 1
                         continue
                     daemon_report[report_host_name] = line
@@ -227,7 +242,6 @@ for filename in filenames:
                     l4j_violations.append("== Phantom log4j plugin {} violation on {} found at path: {}".format(plugin_id, report_host_name, line))
                     l4j_misc[plugin_id] = l4j_misc.get(plugin_id, 0) + 1 
 
-max_hosts = 6
 if report_log4j: 
     print("\n------- Log4J REPORT  ------\n")
     for pl in l4j_plugins:

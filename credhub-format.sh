@@ -52,7 +52,7 @@ cat $source | \
     credentials: [ .[] |
       {
         name: ("/concourse/main/"+$pipelinename+"/"+.key),
-        type: "value",
+        type: (if .value | type == "object" then "json" else "value" end),
         value: .value
       }
     ]

@@ -37,7 +37,6 @@ wait_for_service_instance() {
   done
 }
 
-# TODO: Eliminate SQL output and instead update DB from within primary loop
 rows_processed=0
 query="select \"serviceName\",origin from domain where state='provisioned';"
 domains=`psql ${DB_URI} --csv -t -c "$query"`
@@ -64,17 +63,12 @@ do
     # For the moment, outputting instead of executing this command...
     echo "cf update-service $service_instance -c '{\"origin\": \"$new_origin\"}'"
 
-    # ... and since we're not executing that we're not yet going to
     # wait_for_service_instance $SERVICE_INSTANCE"
+    echo "wait_for_service_instance $SERVICE_INSTANCE"
 
-    # Here's the SQL we'll need to run to update the database once the origin is updated
-    SQL+="update domain set origin='$new_origin' where \"serviceName\"='$service_instance';"$'\n'
+    update="update domain set origin='$new_origin' where \"serviceName\"='$service_instance';"
+    # psql ${DB_URI} -c "$update"`
+    echo "psql DB_URI -c \"$update\""
+    echo
   fi
 done <<< $domains
-
-# TODO: Ensure that this happens even if an error occurs in the loop above
-if [[ ${#SQL} -gt 0 ]]
-then
-  echo -e "\nThe following SQL will need to be executed against the database:\n"
-  echo "$SQL"
-fi

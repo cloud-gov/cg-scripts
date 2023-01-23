@@ -4,9 +4,8 @@ set -e
 
 # Process parameters
 display_usage() {
-  echo -e "\nUsage: $0 [max-rows] [offset]\n"
-  echo -e "  max-rows: process at most this number of input rows (default: unlimited)\n"
-  echo -e "  offset:   skip an initial set of input rows (default: 0)\n"
+  echo -e "\nUsage: $0 [max-domains]\n"
+  echo -e "  max-domains: process at most this number of input rows (default: unlimited)\n"
 }
 
 if [[ ( $@ == "--help") ||  $@ == "-h" ]]
@@ -15,8 +14,7 @@ then
   exit 0
 fi
 
-max_rows=${1:--1}
-offset=${2:-0}
+max_domains=${1:--1}
 
 # Check for required environment variables
 [ -z "${CF_API_URI}"  ] && echo -e "\n Required CF_API_URI environment variable is not set\n";  exit 1
@@ -49,15 +47,9 @@ query="select \"serviceName\",origin from domain where state='provisioned' and o
 domains=`psql ${DB_URI} --csv -t -c "$query"`
 while IFS="," read -r service_instance current_origin
 do
-  if [[ $offset -gt 0 ]]
-  then
-    ((offset--))
-    continue
-  fi
-
   ((rows_processed++))
 
-  if [[ ($max_rows -gt 0) && ($rows_processed -gt $max_rows)]]
+  if [[ ($max_domains -gt 0) && ($rows_processed -gt $max_domains)]]
   then
     break
   fi

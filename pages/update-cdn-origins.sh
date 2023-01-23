@@ -2,6 +2,7 @@
 
 set -e
 
+# Process parameters
 display_usage() {
   echo -e "\nUsage: $0 [max-rows] [offset]\n"
   echo -e "  max-rows: process at most this number of input rows (default: unlimited)\n"
@@ -15,10 +16,9 @@ then
 fi
 
 max_rows=${1:--1}
-
 offset=${2:-0}
 
-
+# Check for required environment variables
 [ -z "${CF_API_URI}"  ] && echo -e "\n Required CF_API_URI environment variable is not set\n";  exit 1
 [ -z "${CF_USERNAME}" ] && echo -e "\n Required CF_USERNAME environment variable is not set\n"; exit 1
 [ -z "${CF_PASSWORD}" ] && echo -e "\n Required CF_PASSWORD environment variable is not set\n"; exit 1
@@ -26,10 +26,9 @@ offset=${2:-0}
 [ -z "${CF_SPACE}"    ] && echo -e "\n Required CF_SPACE environment variable is not set\n"; exit 1
 [ -z "${DB_URI}"      ] && echo -e "\n Required DB_URI environment variable is not set\n"; exit 1
 
-# CF Auth
+# Authenticate and set Cloud Foundry target
 cf api "${CF_API_URL}"
 (set +x; cf auth "${CF_USERNAME}" "${CF_PASSWORD}")
-
 cf target -o "${CF_ORG}" -s "${CF_SPACE}"
 
 # Waiting for service instance to finish being processed.
@@ -44,6 +43,7 @@ wait_for_service_instance() {
   done
 }
 
+# Find domains that need to be updated and iterate through them
 rows_processed=0
 query="select \"serviceName\",origin from domain where state='provisioned' and origin like '%app.cloud.gov';"
 domains=`psql ${DB_URI} --csv -t -c "$query"`
@@ -62,20 +62,27 @@ do
     break
   fi
 
+  # Make sure the domain origin is of the old form
   if [[ $current_origin =~ (.*)\.app\.cloud\.gov$ ]]
   then
     bucket=${BASH_REMATCH[1]}
     new_origin="$bucket.sites.pages.cloud.gov"
 
-    # For the moment, outputting instead of executing this command...
-    echo "cf update-service $service_instance -c '{\"origin\": \"$new_origin\"}'"
+    # Update the service
+    echo "Updating $service_instance origin"
+    cf update-service $service_instance -c '{\"origin\": \"$new_origin\"}'
 
-    # wait_for_service_instance $SERVICE_INSTANCE"
-    echo "wait_for_service_instance $SERVICE_INSTANCE"
+    # Wait for update-service process to complete"
+    echo "... waiting ..."
+    wait_for_service_instance $SERVICE_INSTANCE
+    echo "Service instance updated."
 
+    # Update domain in core DB
+    echo "Updating domain table."
     update="update domain set origin='$new_origin' where \"serviceName\"='$service_instance';"
-    # psql ${DB_URI} -c "$update"`
-    echo "psql DB_URI -c \"$update\""
+    psql ${DB_URI} -c "$update"`
     echo
   fi
 done <<< $domains
+
+echo "Done. Processed rows: $rows_processed"

@@ -45,7 +45,7 @@ wait_for_service_instance() {
 }
 
 rows_processed=0
-query="select \"serviceName\",origin from domain where state='provisioned';"
+query="select \"serviceName\",origin from domain where state='provisioned' and origin like '%app.cloud.gov';"
 domains=`psql ${DB_URI} --csv -t -c "$query"`
 while IFS="," read -r service_instance current_origin
 do

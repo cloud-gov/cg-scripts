@@ -3,16 +3,10 @@
 set -e
 
 display_usage() {
-  echo -e "\nUsage: $0 input.csv [max-rows] [offset]\n"
+  echo -e "\nUsage: $0 [max-rows] [offset]\n"
   echo -e "  max-rows: process at most this number of input rows (default: unlimited)\n"
   echo -e "  offset:   skip an initial set of input rows (default: 0)\n"
 }
-
-if [  $# -le 0 ]
-then
-  display_usage
-  exit 1
-fi
 
 if [[ ( $@ == "--help") ||  $@ == "-h" ]]
 then
@@ -20,35 +14,16 @@ then
   exit 0
 fi
 
-# Decision made to run this from a different environment. Hence:
-# TODO: Eliminate input file and instead query DB from within the script
-# TODO: Eliminate SQL output and instead update DB from within primary loop
-
-# Expected input file is a comma-seperated-value export of the serviceName and
-# origin columns for provisioned domains in the domains table in the core DB.
-#
-# The expected format can be produced from the psql command line as follows:
-#
-# \copy (select "serviceName",origin from domain where state='provisioned') to '/output/path/for/domains.csv' CSV HEADER;
-domains_file=$1
-
-max_rows=${2:--1}
-
-offset=${3:-0}
-
-if [[ ! -r $domains_file ]]
-then
-  echo "Input file $domains_file does not exist or is not readable"
-  exit 1
-fi
-
-# QUESTION: Should this type of script test for CF session and/or verify targeted org/space?
-
-# QUESTION: Does wait_for_service_instance() require the following?
-#
 # CF Auth
-# cf api "${CF_API_URL}"
-# (set +x; cf auth "${CF_USERNAME}" "${CF_PASSWORD}")
+cf api "${CF_API_URL}"
+(set +x; cf auth "${CF_USERNAME}" "${CF_PASSWORD}")
+
+cf target -o "${CF_ORG}"
+
+
+max_rows=${1:--1}
+
+offset=${2:-0}
 
 # Waiting for service instance to finish being processed.
 wait_for_service_instance() {
@@ -62,8 +37,10 @@ wait_for_service_instance() {
   done
 }
 
+# TODO: Eliminate SQL output and instead update DB from within primary loop
 rows_processed=0
-SQL=""
+query="select \"serviceName\",origin from domain where state='provisioned';"
+domains=`psql ${DB_URI} --csv -t -c "$query"`
 while IFS="," read -r service_instance current_origin
 do
   if [[ $offset -gt 0 ]]
@@ -93,7 +70,7 @@ do
     # Here's the SQL we'll need to run to update the database once the origin is updated
     SQL+="update domain set origin='$new_origin' where \"serviceName\"='$service_instance';"$'\n'
   fi
-done < $domains_file
+done <<< $domains
 
 # TODO: Ensure that this happens even if an error occurs in the loop above
 if [[ ${#SQL} -gt 0 ]]

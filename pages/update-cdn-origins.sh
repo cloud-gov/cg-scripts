@@ -25,7 +25,7 @@ max_domains=${1:--1}
 [ -z "${DB_URI}"      ] && echo -e "\n Required DB_URI environment variable is not set\n"; exit 1
 
 # Authenticate and set Cloud Foundry target
-cf api "${CF_API_URL}"
+cf api "${CF_API_URI}"
 (set +x; cf auth "${CF_USERNAME}" "${CF_PASSWORD}")
 cf target -o "${CF_ORG}" -s "${CF_SPACE}"
 

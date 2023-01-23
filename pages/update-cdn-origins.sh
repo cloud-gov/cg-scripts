@@ -14,16 +14,23 @@ then
   exit 0
 fi
 
+max_rows=${1:--1}
+
+offset=${2:-0}
+
+
+[ -z "${CF_API_URI}"  ] && echo -e "\n Required CF_API_URI environment variable is not set\n";  exit 1
+[ -z "${CF_USERNAME}" ] && echo -e "\n Required CF_USERNAME environment variable is not set\n"; exit 1
+[ -z "${CF_PASSWORD}" ] && echo -e "\n Required CF_PASSWORD environment variable is not set\n"; exit 1
+[ -z "${CF_ORG}"      ] && echo -e "\n Required CF_ORG environment variable is not set\n"; exit 1
+[ -z "${CF_SPACE}"    ] && echo -e "\n Required CF_SPACE environment variable is not set\n"; exit 1
+[ -z "${DB_URI}"      ] && echo -e "\n Required DB_URI environment variable is not set\n"; exit 1
+
 # CF Auth
 cf api "${CF_API_URL}"
 (set +x; cf auth "${CF_USERNAME}" "${CF_PASSWORD}")
 
-cf target -o "${CF_ORG}"
-
-
-max_rows=${1:--1}
-
-offset=${2:-0}
+cf target -o "${CF_ORG}" -s "${CF_SPACE}"
 
 # Waiting for service instance to finish being processed.
 wait_for_service_instance() {

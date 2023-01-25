@@ -66,7 +66,7 @@ do
 
     # Wait for update-service process to complete"
     echo "... waiting ..."
-    wait_for_service_instance $SERVICE_INSTANCE
+    wait_for_service_instance $service_instance
     echo "Service instance updated."
 
     # Update domain in core DB
@@ -75,6 +75,7 @@ do
     psql ${DB_URI} -c "$update"`
     echo
   fi
+
 done <<< $domains
 
 echo "Done. Processed rows: $rows_processed"

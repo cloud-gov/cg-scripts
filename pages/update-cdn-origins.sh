@@ -42,14 +42,14 @@ wait_for_service_instance() {
 }
 
 # Find domains that need to be updated and iterate through them
-rows_processed=0
+domains_processed=0
 query="select \"serviceName\",origin from domain where state='provisioned' and origin like '%app.cloud.gov';"
 domains=`psql ${DB_URI} --csv -t -c "$query"`
 while IFS="," read -r service_instance current_origin
 do
-  ((rows_processed++))
+  ((domains_processed++))
 
-  if [[ ($max_domains -gt 0) && ($rows_processed -gt $max_domains)]]
+  if [[ ($max_domains -gt 0) && ($domains_processed -gt $max_domains)]]
   then
     break
   fi
@@ -78,4 +78,4 @@ do
 
 done <<< $domains
 
-echo "Done. Processed rows: $rows_processed"
+echo "Done. Processed domains: $domains_processed"

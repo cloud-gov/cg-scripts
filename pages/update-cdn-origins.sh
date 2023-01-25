@@ -62,7 +62,7 @@ do
 
     # Update the service
     echo "Updating $service_instance origin"
-    cf update-service $service_instance -c '{\"origin\": \"$new_origin\"}'
+    cf update-service $service_instance -c '{"origin": "'$new_origin'"}'
 
     # Wait for update-service process to complete"
     echo "... waiting ..."
@@ -72,7 +72,7 @@ do
     # Update domain in core DB
     echo "Updating domain table."
     update="update domain set origin='$new_origin' where \"serviceName\"='$service_instance';"
-    psql ${DB_URI} -c "$update"`
+    psql ${DB_URI} -c "$update"
     echo
   fi
 

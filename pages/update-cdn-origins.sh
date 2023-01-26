@@ -43,9 +43,9 @@ wait_for_service_instance() {
 
 # Find domains that need to be updated and iterate through them
 domains_processed=0
-query="select \"serviceName\",origin from domain where state='provisioned' and origin like '%app.cloud.gov';"
+query="select id,\"serviceName\",origin from domain where state='provisioned' and origin like '%app.cloud.gov';"
 domains=`psql ${DB_URI} --csv -t -c "$query"`
-while IFS="," read -r service_instance current_origin
+while IFS="," read -r id service_instance current_origin
 do
   ((domains_processed++))
 
@@ -71,7 +71,7 @@ do
 
     # Update domain in core DB
     echo "Updating domain table."
-    update="update domain set origin='$new_origin' where \"serviceName\"='$service_instance';"
+    update="update domain set origin='$new_origin' where \"id\"='$id';"
     psql ${DB_URI} -c "$update"
     echo
   fi

@@ -47,7 +47,7 @@ query="select id,\"serviceName\",origin from domain where state='provisioned' an
 domains=`psql ${DB_URI} --csv -t -c "$query"`
 while IFS="," read -r id service_instance current_origin
 do
-  ((domains_processed++))
+  let "domains_processed=$domains_processed + 1"
 
   if [[ ($max_domains -gt 0) && ($domains_processed -gt $max_domains)]]
   then

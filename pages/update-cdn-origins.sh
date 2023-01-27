@@ -17,12 +17,12 @@ fi
 max_domains=${1:--1}
 
 # Check for required environment variables
-[ -z "${CF_API_URI}"  ] && echo -e "\n Required CF_API_URI environment variable is not set\n";  exit 1
-[ -z "${CF_USERNAME}" ] && echo -e "\n Required CF_USERNAME environment variable is not set\n"; exit 1
-[ -z "${CF_PASSWORD}" ] && echo -e "\n Required CF_PASSWORD environment variable is not set\n"; exit 1
-[ -z "${CF_ORG}"      ] && echo -e "\n Required CF_ORG environment variable is not set\n"; exit 1
-[ -z "${CF_SPACE}"    ] && echo -e "\n Required CF_SPACE environment variable is not set\n"; exit 1
-[ -z "${DB_URI}"      ] && echo -e "\n Required DB_URI environment variable is not set\n"; exit 1
+[ -z "${CF_API_URI}"  ] && { echo -e "\n Required CF_API_URI environment variable is not set\n";  exit 1; }
+[ -z "${CF_USERNAME}" ] && { echo -e "\n Required CF_USERNAME environment variable is not set\n"; exit 1; }
+[ -z "${CF_PASSWORD}" ] && { echo -e "\n Required CF_PASSWORD environment variable is not set\n"; exit 1; }
+[ -z "${CF_ORG}"      ] && { echo -e "\n Required CF_ORG environment variable is not set\n"; exit 1; }
+[ -z "${CF_SPACE}"    ] && { echo -e "\n Required CF_SPACE environment variable is not set\n"; exit 1; }
+[ -z "${DB_URI}"      ] && { echo -e "\n Required DB_URI environment variable is not set\n"; exit 1; }
 
 # Authenticate and set Cloud Foundry target
 cf api "${CF_API_URI}"
@@ -47,7 +47,7 @@ query="select id,\"serviceName\",origin from domain where state='provisioned' an
 domains=`psql ${DB_URI} --csv -t -c "$query"`
 while IFS="," read -r id service_instance current_origin
 do
-  ((domains_processed++))
+  let "domains_processed=$domains_processed + 1"
 
   if [[ ($max_domains -gt 0) && ($domains_processed -gt $max_domains)]]
   then

@@ -32,23 +32,27 @@ KEY_NAME="cg-operator-empty-s3-bucket-key"
 
 # If the service key already exists, the cf CLI will ignore it and carry on
 # without an error.
-cf create-service-key $SERVICE_INSTANCE_NAME $KEY_NAME
-S3_CREDENTIALS=$(cf service-key $SERVICE_INSTANCE_NAME $KEY_NAME | tail -n +2)
+cf create-service-key "$SERVICE_INSTANCE_NAME" $KEY_NAME
+S3_CREDENTIALS=$(cf service-key "$SERVICE_INSTANCE_NAME" $KEY_NAME | tail -n +2)
 
-export AWS_ACCESS_KEY_ID=$(echo $S3_CREDENTIALS | jq -r '.access_key_id')
-export AWS_SECRET_ACCESS_KEY=$(echo $S3_CREDENTIALS | jq -r '.secret_access_key')
-export BUCKET_NAME=$(echo $S3_CREDENTIALS | jq -r '.bucket')
-export AWS_DEFAULT_REGION=$(echo $S3_CREDENTIALS | jq -r '.region')
+export AWS_ACCESS_KEY_ID
+AWS_ACCESS_KEY_ID=$(echo "$S3_CREDENTIALS" | jq -r '.credentials.access_key_id')
+export AWS_SECRET_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY=$(echo "$S3_CREDENTIALS" | jq -r '.credentials.secret_access_key')
+export BUCKET_NAME
+BUCKET_NAME=$(echo "$S3_CREDENTIALS" | jq -r '.credentials.bucket')
+export AWS_DEFAULT_REGION
+AWS_DEFAULT_REGION=$(echo "$S3_CREDENTIALS" | jq -r '.credentials.region')
 
-# it takes time for the new creds to propagate in AWS so 
-# we have to while here for abit or this script fails almost everytime. 
+# it takes time for the new creds to propagate in AWS so
+# we have to while here for abit or this script fails almost everytime.
 x=0
 set +e
 while [ $x -lt 5 ]; do
-  aws s3 ls s3://$BUCKET_NAME > /dev/null 2>&1 
+  aws s3 ls "s3://$BUCKET_NAME" > /dev/null 2>&1
   ready=$?
   if [ $ready -ne 0 ]; then
-     x=$(( $x+1 ))
+     x=$(( x + 1 ))
      echo "waiting for credentials to be ready in aws..."
      sleep 2;
   else
@@ -58,7 +62,7 @@ done
 set -e
 
 # Empty the bucket.
-aws s3 rm s3://$BUCKET_NAME --recursive
+aws s3 rm "s3://$BUCKET_NAME" --recursive
 
 # Remove the service key.
-cf delete-service-key $SERVICE_INSTANCE_NAME $KEY_NAME -f
+cf delete-service-key "$SERVICE_INSTANCE_NAME" $KEY_NAME -f

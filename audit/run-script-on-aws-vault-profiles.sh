@@ -71,5 +71,5 @@ fi
 for profile in $PROFILES; do
   SCRIPT_FILENAME=$(basename "$SCRIPT")
   DESTINATION_FILE=$(echo "$SCRIPT_FILENAME" | sed -e 's/\//-/g;s/\./-/g')
-  aws-vault exec "$profile" -- "$SCRIPT" > "$DESTINATION/$profile-$DESTINATION_FILE.txt" 2>&1
+  aws-vault exec "$profile" -- "$SCRIPT" > "$DESTINATION/$profile-$DESTINATION_FILE.txt"
 done

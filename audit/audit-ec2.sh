@@ -15,7 +15,7 @@ aws ec2 describe-vpc-endpoints --output table
 aws ec2 describe-vpc-endpoint-services --output table
 aws ec2 describe-vpc-endpoint-service-configurations --output table
 
-for service_id in $(aws ec2 describe-vpc-endpoint-service-configurations  --output json | jq -r '.ServiceConfigurations[].ServiceId'); do
+for service_id in $(aws ec2 describe-vpc-endpoint-service-configurations --output json | jq -r '.ServiceConfigurations[].ServiceId'); do
   aws ec2 describe-vpc-endpoint-service-permissions --service-id "$service_id" --output table
 done
 

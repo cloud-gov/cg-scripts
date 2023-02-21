@@ -4,19 +4,20 @@ function usage {
   echo -e "
   Usage
 
-  ./$( basename "$0" ) -s path/to/script -d destination-folder -p [profile-prefix] [--help, -h] [optional list of profiles]
+  ./$( basename "$0" ) -s path/to/script -o destination-folder -p [profile-prefix] -d [duration] [--help, -h] [optional list of profiles]
 
   Examples:
 
-  ./$( basename "$0" ) -s ./audit-iam.sh -d ~/Downloads -p \"com-\"
-  ./$( basename "$0" ) -s ./audit-iam.sh -d ~/Downloads profile-1,profile-2
+  ./$( basename "$0" ) -s ./audit-iam.sh -o ~/Downloads -p \"com-\"
+  ./$( basename "$0" ) -s ./audit-iam.sh -o ~/Downloads profile-1,profile-2
 
   options:
 
   $0 -h                         Display this help message.
   $0 -s                         Path to script to run against aws-vault profiles
-  $0 -d                         Destination folder for output from script invocations
-  $0 -p                         Optional argument for prefix to use for matching aws-vault profiles. Default is \"gov-\"
+  $0 -o                         Destination folder for output from script invocations
+  $0 -p                         Optional - argument for prefix to use for matching aws-vault profiles. Default is \"gov-\"
+  $0 -d                         Optional - duration to use for lifetime of aws-vault credentials. Default is \"1h\"
 
   Run a script using all the aws-vault profiles matching a prefix. Writes from script invocations
   to the specified folder.
@@ -24,8 +25,9 @@ function usage {
 }
 
 PROFILE_PREFIX="gov-"
+DURATION="1h"
 
-while getopts ":hs:d:p:" opt; do
+while getopts ":hs:o:p:d:" opt; do
   case ${opt} in
     h )
         usage
@@ -34,11 +36,14 @@ while getopts ":hs:d:p:" opt; do
     s )
         SCRIPT=$OPTARG
         ;;
-    d )
+    o )
         DESTINATION=$OPTARG
         ;;
     p )
         PROFILE_PREFIX=$OPTARG
+        ;;
+    d )
+        DURATION="8h"
         ;;
     * )
         usage
@@ -71,5 +76,5 @@ fi
 for profile in $PROFILES; do
   SCRIPT_FILENAME=$(basename "$SCRIPT")
   DESTINATION_FILE=$(echo "$SCRIPT_FILENAME" | sed -e 's/\//-/g;s/\./-/g')
-  aws-vault exec "$profile" -- "$SCRIPT" > "$DESTINATION/$profile-$DESTINATION_FILE.txt" 2>&1
+  aws-vault exec "$profile" -d "$DURATION" -- "$SCRIPT" > "$DESTINATION/$profile-$DESTINATION_FILE.txt" 2>&1
 done

@@ -85,9 +85,10 @@ def get_inventory(deployment_to_os_version):
         ).decode()
         vms = json.loads(response)
         for vm in vms:
+            hostname = deployment + "-" + vm["job"] + "-" + (vm["index"] + 1).to_str + "/"+vm["id"]
             inventory.append(
                 [
-                    vm["job"]+"/"+vm["id"],
+                    hostname,
                     vm["ips"][0],
                     IPV6,
                     DNS_NAME,

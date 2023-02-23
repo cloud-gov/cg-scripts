@@ -3,6 +3,17 @@ import logging
 import subprocess
 
 #
+# 
+
+# For the tooling and production jumpboxes:
+#   Login to each jumpbox and take note of the container number.
+#   Run: 
+#     python3 cg-scripts/generate-POAM-inventory.py > inv.csv 
+#   then exit.
+#   Copy the CSV to your local clipboard by running :
+#     fly -t ci i -j "jumpbox/container-bosh-{environment}" -s jumpbox -b "{container-number}" -- cat inv.csv | pbcopy
+#   where {environment} is production or tooling and container-number is the number from the first step.
+
 # goal: produce a CSV with lines of:
 # `Unique Asset Identifier` - can be any arbirtary name - we use the VM name with BOSH ID
 # IPv4 - hopefully obvious what this means
@@ -85,9 +96,10 @@ def get_inventory(deployment_to_os_version):
         ).decode()
         vms = json.loads(response)
         for vm in vms:
+            hostname = deployment + "-" + vm["job"] + "-" + str(vm["index"] + 1) + "/"+vm["id"]
             inventory.append(
                 [
-                    vm["job"]+"/"+vm["id"],
+                    hostname,
                     vm["ips"][0],
                     IPV6,
                     DNS_NAME,

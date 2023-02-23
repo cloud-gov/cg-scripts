@@ -73,8 +73,15 @@ if [ -n "$1" ]
     PROFILES=${1//,/ }
 fi
 
+export AWS_PAGER=''
+
 for profile in $PROFILES; do
   SCRIPT_FILENAME=$(basename "$SCRIPT")
   DESTINATION_FILE=$(echo "$SCRIPT_FILENAME" | sed -e 's/\//-/g;s/\./-/g')
+  # initial command just to display prompt for MFA, if necessary. prompt for MFA comes from stderr and will
+  # be swallowed by the next command actually running the script, since it redirects stderr to stdout and writes
+  # to a file
+  aws-vault exec "$profile" -d "$DURATION" -- aws sts get-caller-identity
+  # run script using aws-vault profile and redirect stderr to stdout, with stdout written to a file
   aws-vault exec "$profile" -d "$DURATION" -- "$SCRIPT" > "$DESTINATION/$profile-$DESTINATION_FILE.txt" 2>&1
 done

@@ -76,7 +76,7 @@ if [ -z "$1" ]; then
   for pipeline_name in $(fly --target "${FLY_TARGET}" pipelines | tail -n +1 | awk '{print $2}');
   do
     images=$(find_docker_images "$pipeline_name")
-    echo "$images"
+    echo "$images" >&2
 
     all_images="$all_images\n$images"
   done

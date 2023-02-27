@@ -72,11 +72,17 @@ function find_docker_images {
 }
 
 if [ -z "$1" ]; then
-  fly --target "${FLY_TARGET}" pipelines | tail -n +1 |  while read -r line; do
-      pipeline_name=$(echo "$line"  | awk '{print $2}')
-      
-      find_docker_images "$pipeline_name"
+  all_images=""
+  for pipeline_name in $(fly --target "${FLY_TARGET}" pipelines | tail -n +1 | awk '{print $2}');
+  do
+    images=$(find_docker_images "$pipeline_name")
+    echo "$images"
+
+    all_images="$all_images\n$images"
   done
+
+  printf "\nALL IMAGES\n\n"
+  echo -e "$all_images" | jq -s 'add | unique | sort'
 else
   find_docker_images "$1"
 fi

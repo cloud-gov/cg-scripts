@@ -64,7 +64,7 @@ function find_task_docker_images {
 
 function find_docker_images {
   printf "\npipeline: %s\n\n" "$1" >&2
-  pipeline_json=$(fly -t ci get-pipeline --pipeline "$1" --json)
+  pipeline_json=$(fly -t ${FLY_TARGET}  get-pipeline --pipeline "$1" --json)
   resource_type_images=$(find_resource_type_docker_images "$pipeline_json")
   resource_images=$(find_resource_docker_images "$pipeline_json")
   task_images=$(find_task_docker_images "$pipeline_json")

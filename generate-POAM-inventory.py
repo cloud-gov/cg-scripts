@@ -1,6 +1,7 @@
 import json
 import logging
 import subprocess
+import os
 
 #
 # 
@@ -96,7 +97,8 @@ def get_inventory(deployment_to_os_version):
         ).decode()
         vms = json.loads(response)
         for vm in vms:
-            hostname = deployment + "-" + vm["job"] + "-" + str(vm["index"] + 1) + "/"+vm["id"]
+            hostname = (deployment + "-" + vm["job"] + "-" + str(vm["index"]) + 
+                "-cf-" + os.environ["BOSH_DIRECTOR_NAME"].lower() + "/" + vm["id"])
             inventory.append(
                 [
                     hostname,

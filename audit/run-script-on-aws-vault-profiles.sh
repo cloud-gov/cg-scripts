@@ -17,7 +17,8 @@ function usage {
   $0 -s                         Path to script to run against aws-vault profiles
   $0 -o                         Destination folder for output from script invocations
   $0 -p                         Optional - argument for prefix to use for matching aws-vault profiles. Default is \"gov-\"
-  $0 -d                         Optional - duration to use for lifetime of aws-vault credentials. Default is \"1h\"
+  $0 -d                         Optional - duration to use for lifetime of aws-vault credentials. If you need to run a script that will take a long time to execute,
+                                specify a long duration like \"8h\" so that credentials don't expire during execution. Default is \"1h\".
 
   Run a script using all the aws-vault profiles matching a prefix. Writes from script invocations
   to the specified folder.

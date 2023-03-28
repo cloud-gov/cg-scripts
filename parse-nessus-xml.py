@@ -217,9 +217,10 @@ for filename in filenames:
                         daemon_count += 1
                         continue
                     # ruby is installed for bosh directors, admin-ui, and cc-worke
-                    if (re.search(rf'^/var/vcap/data/packages/(director-)?ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) and re.search(rf'-cc-worker|-admin-ui|-bosh-0-cf-', report_host_name)):
-                        daemon_count += 1
-                        continue
+                    if (re.search(rf'^/var/vcap/data/packages/(director-)?ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) 
+                        and re.search(rf'-cc-worker|-admin-ui|-bosh-0-cf-|-api-\d-cf-', report_host_name)):
+                            daemon_count += 1
+                            continue
                     daemon_report[report_host_name] = line
 
             vuln_report[plugin_id] = this_vuln

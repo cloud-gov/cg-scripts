@@ -12,7 +12,7 @@ import csv
 csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
 
 def help():
-   print("parse-nessus-xls.py [-h|--help -l|--log4j -d|--daemons -s|--summary -c|--csv -a|--all -m|--max-hosts MAX] filenames ...")
+   print("parse-nessus-xls.py [-h|--help -l|--log4j -d|--daemons -D|--debug -s|--summary -c|--csv -a|--all -m|--max-hosts MAX] filenames ...")
    sys.exit(-1)
 
 if len(sys.argv) == 1:

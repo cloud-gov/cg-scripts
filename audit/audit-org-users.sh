@@ -43,9 +43,13 @@ for org in $orgs; do
   org_guid=$(cf org "$org" --guid)
   org_users=$(cf curl "/v3/organizations/$org_guid/users" | jq -r '[.resources[] | .username // empty]')
   
-  for space_guid in $(cf curl "/v3/spaces?organization_guids=$org_guid" | jq -r '.resources[].guid'); do
+  for space_info in $(cf curl "/v3/spaces?organization_guids=$org_guid" | jq -r '.resources[] | .guid + "," + .name'); do
+    IFS=',' read -r -a array <<< "$space_info"
+    space_guid="${array[0]}"
+    space_name="${array[1]}"
+    
     space_users=$(cf curl "/v3/spaces/$space_guid/users" | jq -r '[.resources[] | .username // empty]')
-    echo "all users for org $org, space: $space_guid: $space_users" >&2
+    echo "all users for org $org, space: $space_name: $space_users" >&2
     all_org_users=$(echo -e "$org_users\n$space_users" | jq -s 'add | unique | sort')
   done
 

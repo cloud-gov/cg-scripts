@@ -2,7 +2,7 @@
 
 function usage {
   echo -e "
-  ./$( basename "$0" ) [pipeline-name] [--help, -h]
+  ./$( basename "$0" ) repo-name [pipeline-name] [--help, -h]
 
   Get all git resources in Concourse pipelines that don\'t have commit signing
   configured
@@ -11,12 +11,17 @@ function usage {
   example: CI_URL=https://ci.fr.cloud.gov ./$( basename "$0" )
 
   Optional argument for specific pipeline to check
-  example: ./$( basename "$0" ) pipeline-name
+  example: ./$( basename "$0" ) repo-name pipeline-name
 
   \$CI_URL, Defaults to https://ci.fr.cloud.gov
   "
   exit
 }
+
+if [ -z "$1" ]; then
+  echo "Repo name is required as first argument to script"
+  usage
+fi
 
 while getopts ":h" opt; do
   case ${opt} in
@@ -40,30 +45,30 @@ if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
   exit 1
 fi
 
-function find_git_resources_without_commit_verification {
-  fly -t ci get-pipeline --pipeline "$1" --json \
-    | jq '.resources[] |
+function find_git_resources_for_branch {
+  fly -t ci get-pipeline --pipeline "$2" --json \
+    | jq --arg repo "$1" '.resources[] |
         select(.type=="git") |
         select(.source.uri | test("github.com.*(cloud-gov|18[Ff])")) |
-        select(.source.branch=="master")'
+        select(.source.uri | test($repo))'
 }
 
-function report_git_resources_without_verification {
-  resource_names=$(find_git_resources_without_commit_verification "$1" | jq .name)
+function find_git_resource_uris {
+  resource_names=$(find_git_resources_for_branch "$1" "$2" | jq '"repo: " + .source.uri + ", branch: " + .source.branch')
   if [[ $resource_names ]]; then
-      printf 'pipeline: %s\n' "$1"
+      printf 'pipeline: %s\n' "$2"
       echo "$resource_names"
       printf "\n"
   fi
 }
 
-if [ -z "$1" ]; then
+if [ -z "$2" ]; then
   fly --target "${FLY_TARGET}" pipelines | tail -n +1 |  while read -r line; do
       pipeline_name=$(echo "$line"  | awk '{print $2}')
       
-      report_git_resources_without_verification "$pipeline_name"
+      find_git_resource_uris "$1" "$pipeline_name"
   done
 else
-  report_git_resources_without_verification "$1"
+  find_git_resource_uris "$1" "$2"
 fi
 

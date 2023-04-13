@@ -21,5 +21,4 @@ while getopts ":i" opt; do
   esac
 done
 
-gh api --paginate /orgs/cloud-gov/repos${api_qs} | jq -r '.[].name'
-
+gh api --paginate /orgs/cloud-gov/repos${api_qs}

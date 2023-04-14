@@ -7,11 +7,18 @@ function usage {
   Get all git resources in Concourse pipelines that don\'t have commit signing
   configured
 
+  Examples:
+  # Find all uses of repo1 across all pipelines
+  ./$( basename "$0" ) repo1
+
+  # Find all uses of repo1 in a specific pipeline
+  ./$( basename "$0" ) repo1 pipeline1
+
+  # Find all uses of repo1 and repo2 across all pipelines
+  ./$( basename "$0" ) \"repo1|repo2\"
+
   Optional environment variable \$CI_URL matching your Concourse URL.
   example: CI_URL=https://ci.fr.cloud.gov ./$( basename "$0" )
-
-  Optional argument for specific pipeline to check
-  example: ./$( basename "$0" ) repo-name pipeline-name
 
   \$CI_URL, Defaults to https://ci.fr.cloud.gov
   "

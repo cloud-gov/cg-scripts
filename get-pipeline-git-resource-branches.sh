@@ -2,7 +2,7 @@
 
 function usage {
   echo -e "
-  ./$( basename "$0" ) repo-name [pipeline-name] [--help, -h]
+  ./$( basename "$0" ) [-p pipeline-name] [-r repo-name] [--help, -h]
 
   Get all git resources in Concourse pipelines that don\'t have commit signing
   configured
@@ -25,13 +25,16 @@ function usage {
   exit
 }
 
-if [ -z "$1" ]; then
-  echo "Repo name is required as first argument to script"
-  usage
-fi
+REPO=".*"
 
-while getopts ":h" opt; do
+while getopts "r:p:h" opt; do
   case ${opt} in
+    r )
+      REPO=${OPTARG}
+      ;;
+    p )
+      PIPELINE=${OPTARG}
+      ;;
     h )
         usage
         exit 0
@@ -53,29 +56,30 @@ if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
 fi
 
 function find_git_resources_for_branch {
-  fly -t ci get-pipeline --pipeline "$2" --json \
-    | jq --arg repo "$1" '.resources[] |
+  fly -t ci get-pipeline --pipeline "$1" --json \
+    | jq --arg repo "$2" '.resources[] |
         select(.type=="git") |
         select(.source.uri | test("github.com.*(cloud-gov|18[Ff])")) |
-        select(.source.uri | test($repo))'
+        select(.source.uri | test($repo)) |
+        select(.source.branch=="main")'
 }
 
 function find_git_resource_uris {
   resource_names=$(find_git_resources_for_branch "$1" "$2" | jq '"repo: " + .source.uri + ", branch: " + .source.branch')
   if [[ $resource_names ]]; then
-      printf 'pipeline: %s\n' "$2"
+      printf 'pipeline: %s\n' "$1"
       echo "$resource_names"
       printf "\n"
   fi
 }
 
-if [ -z "$2" ]; then
+if [ -z "$PIPELINE" ]; then
   fly --target "${FLY_TARGET}" pipelines | tail -n +1 |  while read -r line; do
       pipeline_name=$(echo "$line"  | awk '{print $2}')
       
-      find_git_resource_uris "$1" "$pipeline_name"
+      find_git_resource_uris "$pipeline_name" "$REPO"
   done
 else
-  find_git_resource_uris "$1" "$2"
+  find_git_resource_uris "$PIPELINE" "$REPO"
 fi
 

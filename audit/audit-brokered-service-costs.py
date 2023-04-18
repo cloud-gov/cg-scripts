@@ -17,8 +17,11 @@ ES_PRICING_INFO = {
         "gp2": 0.162
     },
     "instance_classes": {
+
         "c5.large.elasticsearch": 0.15,
         "c5.xlarge.elasticsearch": 0.301,
+        "m5.2xlarge.search": 0.602,
+        "m5.4xlarge.search": 1.204,
         "t2.small.elasticsearch": 0.043,
     }
 }

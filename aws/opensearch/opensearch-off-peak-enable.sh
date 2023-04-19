@@ -8,7 +8,6 @@ function update_offpeak_config {
 
   domain_config=$(aws opensearch describe-domain-config --domain-name "$1" | jq -r '.DomainConfig')
   offpeak_enabled=$(echo "$domain_config" | jq -r '.OffPeakWindowOptions.Options.Enabled // false')
-  auto_tune_offpeak_enabled=$(echo "$domain_config" | jq -r '.AutoTuneOptions.Options.UseOffPeakWindow // false')
 
   update_options=""
 
@@ -16,12 +15,6 @@ function update_offpeak_config {
     printf "off-peak window already enabled for domain %s, nothing to do\n" "$1"
   else
     update_options="--off-peak-window-options Enabled=true"
-  fi
-
-  if $auto_tune_offpeak_enabled; then
-    printf "auto-tune already configured to use off-peak window for domain %s, nothing to do\n" "$1"
-  else
-    update_options="$update_options --auto-tune-options DesiredState=ENABLED,UseOffPeakWindow=true,MaintenanceSchedules=[]"
   fi
 
   if [ -n "$update_options" ]; then

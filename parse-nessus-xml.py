@@ -12,7 +12,7 @@ import csv
 csvwriter = csv.writer(sys.stdout,quoting=csv.QUOTE_ALL)
 
 def help():
-   print("parse-nessus-xls.py [-h|--help -l|--log4j -d|--daemons -s|--summary -c|--csv -a|--all -m|--max-hosts] filenames ...")
+   print("parse-nessus-xls.py [-h|--help -l|--log4j -d|--daemons -D|--debug -s|--summary -c|--csv -a|--all -m|--max-hosts MAX] filenames ...")
    sys.exit(-1)
 
 if len(sys.argv) == 1:
@@ -22,10 +22,13 @@ if len(sys.argv) == 1:
 args = sys.argv[1:]
 
 # Define the list of possible options and their arguments
-opts, args = getopt.getopt(args, "hldscam", ["help" "log4j", "daemons", "summary", "csv", "all", "max-hosts"])
+opts, args = getopt.getopt(args, "hldDscam:", ["help" "log4j", "daemons",
+                                              "debug", "summary", "csv", "all",
+                                              "max-hosts"])
 
 report_log4j = report_daemons = report_summary = report_csv = False
 max_hosts = 6
+opt_debug = False
 
 for opt, arg in opts:
     if opt in ("-h", "--help"):
@@ -34,12 +37,14 @@ for opt, arg in opts:
         report_log4j = True
     elif opt in ("-d", "--daemons"):
         report_daemons = True
+    elif opt in ("-D", "--debug"):
+        opt_debug = True
     elif opt in ("-s", "--summary"):
         report_summary = True
     elif opt in ("-c", "--csv"):
         report_csv = True
     elif opt in ("-m", "--max-hosts"):
-        max_hosts = arg
+        max_hosts = int(arg)
     elif opt in ("-a", "--all"):
         report_log4j = report_daemons = report_summary = report_csv = True
 
@@ -212,9 +217,10 @@ for filename in filenames:
                         daemon_count += 1
                         continue
                     # ruby is installed for bosh directors, admin-ui, and cc-worke
-                    if (re.search(rf'^/var/vcap/data/packages/(director-)?ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) and re.search(rf'-cc-worker|-admin-ui|-bosh-0-cf-', report_host_name)):
-                        daemon_count += 1
-                        continue
+                    if (re.search(rf'^/var/vcap/data/packages/(director-)?ruby[-.r\d]+/[0-9a-z]+/bin/ruby$', line) 
+                        and re.search(rf'-cc-worker|-admin-ui|-bosh-0-cf-|-api-\d-cf-', report_host_name)):
+                            daemon_count += 1
+                            continue
                     daemon_report[report_host_name] = line
 
             vuln_report[plugin_id] = this_vuln
@@ -222,6 +228,8 @@ for filename in filenames:
     ##### LOG4J ####
             if plugin_id in l4j_plugins:
                 for line in plugin_output.splitlines():
+                    if ( opt_debug ):
+                        print(line)
                     if not (re.search(rf'^  Path', line)):
                         continue
                     # nessus sometimes find customer files on phantom/ghost paths for the _container_ mount point

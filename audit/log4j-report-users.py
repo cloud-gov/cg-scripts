@@ -6,7 +6,17 @@ import subprocess
 import sys
 import re
 
+# init with endpoint & token from the cf cli config file
 from cloudfoundry_client.client import CloudFoundryClient
+
+# use the default file, i.e. ~/.cf/config.json
+client = CloudFoundryClient.build_from_cf_config()
+# or specify an alternative path
+# - other kwargs can be passed through to CloudFoundryClient instantiation
+from cloudfoundry_client.client import CloudFoundryClient
+
+#client = CloudFoundryClient.build_from_cf_config(config_path="/Users/peterdburkholder/.cf/config.json", verify=False)
+
 config_file = os.path.join(os.path.expanduser("~"), ".cf_client_python.json")
 
 # If this fail, run `cf login --sso`, then `cloudfoundry-client import_from_cf_cli`
@@ -32,7 +42,12 @@ while app_guid:
               "null"
             ])
     else:
-        app = client.v3.apps.get(app_guid)
+        try: 
+            app = client.v3.apps.get(app_guid)
+        except:
+            print("No such app", app_guid)
+            app_guid = app_guid_file.readline().strip()
+            continue
         space = app.space()
         org = space.organization()
 

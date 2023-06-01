@@ -39,7 +39,7 @@ def print_db_instances_csv_lines(instances):
         print(output)
 
 def print_rds_database_csv_header():
-  print("Database ID,Instance Class,Storage Type,Storage Size,Instance GUID,Space GUID,Organization GUID")
+  print("Database ID,Instance Class,Storage Type,Storage Size (in GB),Instance GUID,Space GUID,Organization GUID")
 
 def print_rds_database_audit_csv():
   print_rds_database_csv_header()

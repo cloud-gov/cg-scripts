@@ -4,6 +4,8 @@ import boto3
 
 rds_client = boto3.client('rds')
 
+PROD_DATABASE_PREFIX = "cg-aws-broker-prod"
+
 def print_all_db_instances_csv_lines():
     rds_response = rds_client.describe_db_instances()
     print_db_instances_csv_lines(rds_response['DBInstances'])
@@ -17,6 +19,10 @@ def print_db_instances_csv_lines(instances):
     """
 
     for db_instance in instances:
+        # Skip databases that aren't brokered in production
+        if PROD_DATABASE_PREFIX not in db_instance["DBInstanceIdentifier"]:
+            continue
+        
         # Retrieve all of the tags associated with the instance.
         tags = { tag.get("Key"): tag.get("Value") for tag in db_instance["TagList"] }
 

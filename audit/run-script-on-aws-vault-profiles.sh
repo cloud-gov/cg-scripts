@@ -16,7 +16,7 @@ function usage {
   $0 -h                         Display this help message.
   $0 -s                         Path to script to run against aws-vault profiles
   $0 -o                         Destination folder for output from script invocations
-  $0 -p                         Optional - argument for prefix to use for matching aws-vault profiles. Default is \"gov-\"
+  $0 -p                         Optional - grep pattern to use for matching aws-vault profiles. Default is \"^gov-\"
   $0 -d                         Optional - duration to use for lifetime of aws-vault credentials. If you need to run a script that will take a long time to execute, specify a long duration like \"8h\" so that credentials don't expire during execution. Default is \"1h\".
 
   Run a script using all the aws-vault profiles matching a prefix. Writes from script invocations
@@ -24,7 +24,7 @@ function usage {
   "
 }
 
-PROFILE_PREFIX="gov-"
+PROFILE_REGEX="^gov-"
 DURATION="1h"
 
 while getopts ":hs:o:p:d:" opt; do
@@ -40,7 +40,7 @@ while getopts ":hs:o:p:d:" opt; do
         DESTINATION=$OPTARG
         ;;
     p )
-        PROFILE_PREFIX=$OPTARG
+        PROFILE_REGEX=$OPTARG
         ;;
     d )
         DURATION="8h"
@@ -67,7 +67,7 @@ if [ -z "$DESTINATION" ]
     exit 1
 fi
 
-PROFILES=$(aws-vault ls --profiles | grep "^$PROFILE_PREFIX")
+PROFILES=$(aws-vault ls --profiles | grep "$PROFILE_REGEX")
 if [ -n "$1" ]
   then
     PROFILES=${1//,/ }

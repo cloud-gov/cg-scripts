@@ -19,5 +19,3 @@ elif [[ "$SUPPORT_STATUS" == *"urgent"* ]]; then
 elif [[ "$SUPPORT_STATUS" == *"high"* ]]; then
   echo "Only Developer Level Support enabled for account..."
 fi
-
-printf "\n\n"

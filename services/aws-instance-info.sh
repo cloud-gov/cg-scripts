@@ -15,7 +15,7 @@ options:
   $0 -o org                     Set org [default current target]
   $0 -s space                   Set space [default current target]
 
-query CF platform and AWS to provide detailed 
+query CF platform and AWS to provide detailed
 service instance information as json on stdout.
 Currently supports RDS, S3, Redis and Elasticsearch.
 EOM
@@ -97,28 +97,28 @@ SPACE=$(echo "${target_output}" | grep 'space:' | awk '{print $2}')
 while getopts ":hqo:s:" opt; do
   case ${opt} in
     h )
-        usage 
+        usage
         exit 0
         ;;
-    q ) 
+    q )
         quiet="true"
         ;;
-    o ) 
+    o )
         ORG=$OPTARG
         ;;
-    s ) 
+    s )
         SPACE=$OPTARG
         ;;
     \? )
-        raise "Invalid Option: $OPTARG" 
+        raise "Invalid Option: $OPTARG"
 
         ;;
     : )
-        raise "Invalid option: $OPTARG requires an argument" 
+        raise "Invalid option: $OPTARG requires an argument"
         ;;
   esac
 done
-shift $((OPTIND -1))   
+shift $((OPTIND -1))
 # check for args
 [ $# -ne 1 ] && raise_with_usage 'Must provide 1 argument'
 
@@ -148,12 +148,12 @@ service_count=$( echo ${service_json} | jq -r '.resources | length')
 #echo $service_count
 if [[ ${service_count} -eq 0 ]]; then
     raise "No service named $service_name in $ORG and $SPACE"
-fi 
+fi
 
 service_guid=$( echo ${service_json} | jq -r .resources[0].guid)
 service_plan_guid=$( echo ${service_json} | jq -r .resources[0].relationships.service_plan.data.guid)
 service_plan_json=$(cf curl "/v3/service_plans/${service_plan_guid}")
-service_plan_name=$(echo ${service_plan_json}| jq -r .name) 
+service_plan_name=$(echo ${service_plan_json}| jq -r .name)
 service_offering_guid=$(echo ${service_plan_json} | jq -r .relationships.service_offering.data.guid)
 service_offering_json=$(cf curl "/v3/service_offerings/${service_offering_guid}")
 service_offering_name=$(echo ${service_offering_json}| jq -r .name)
@@ -200,7 +200,7 @@ if [ "${service_offering_name}" == "aws-rds" ]; then
 elif [ "${service_offering_name}" == "aws-elasticsearch" ]; then
     aws_instance_info=$(query_es "${service_key_details}" )
 elif [ "${service_offering_name}" == "aws-elasticache-redis" ]; then
-   aws_instance_info=$(query_redis "${service_key_details}" )  
+   aws_instance_info=$(query_redis "${service_key_details}" )
 elif [ "${service_offering_name}" == "s3" ]; then
     aws_instance_info=$(query_s3 "${service_key_details}" )
 else

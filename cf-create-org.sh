@@ -118,7 +118,7 @@ ROLE_TO_DELETE_GUID=$(cf curl "/v3/roles?types=organization_user&organization_gu
 cf curl -X DELETE "/v3/roles/${ROLE_TO_DELETE_GUID}"
 
 # Hack: Trigger deployer account broker deploy to update organization whitelist
-fly --target "${FLY_TARGET}" trigger-job --job deploy-deployer-account-broker/push-broker-${CF_INSTALL:=production}
+fly --target "${FLY_TARGET}" trigger-job --job deploy-uaa-credentials-broker/push-broker-${CF_INSTALL:=production}
 fly --target "${FLY_TARGET}" trigger-job --job deploy-go-s3-broker/push-s3-broker-${CF_INSTALL}
 
 printf "Org created successfully. Target with\n\n\t\$ cf target -o $ORG_NAME\n\n"

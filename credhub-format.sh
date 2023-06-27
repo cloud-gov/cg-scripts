@@ -9,11 +9,16 @@ if [ "$#" -ne 2 ]; then
 Usage: ./credhub-format.sh <source-file> <pipeline-name>
 Example: ./credhub-format.sh credentials.yml deploy-something > output.yml
 
-Read from a credential file and reformat the contents to a JSON format that CredHub
-can import, excluding any keys that do not appear in ci/pipeline.yml.
+You can optionally override the location for your pipeline configuration, which
+defaults to ci/pipeline.yml:
 
-Run this script from the root of the repository so it can find pipeline.yml. The
-output file is written to stdout. Additional output, such as the keys that were
+PIPELINE_CONFIG_PATH=pipeline.yml ./credhub-format.sh credentials.yml deploy-something > output.yml
+
+Read from a credential file and reformat the contents to a JSON format that CredHub
+can import, excluding any keys that do not appear in the pipeline configuration file.
+
+Run this script from the root of the repository so it can find the pipeline configuration
+file. The output file is written to stdout. Additional output, such as the keys that were
 excluded, is written to stderr." >&2
   exit 1
 fi
@@ -24,28 +29,29 @@ if ! which -s yq; then
   exit 1
 fi
 
-if [ ! -f ci/pipeline.yml ]; then
-  echo "ci/pipeline.yml not found. Is the script being run from the root directory of the repository?" >&2
+PIPELINE_CONFIG_PATH=${PIPELINE_CONFIG_PATH:-ci/pipeline.yml}
+
+if [ ! -f "$PIPELINE_CONFIG_PATH" ]; then
+  echo "$PIPELINE_CONFIG_PATH not found. Is the script being run from the root directory of the repository?" >&2
   exit 1
 fi
 
 source=$1
 pipelinename=$2
 
-echo "The following values do not appear in pipeline.yml and will not be exported:
+echo "The following values do not appear in $PIPELINE_CONFIG_PATH and will not be exported:
 " >&2
 # without setting -S, strings longer than the default of 255 will not be fully interpolated by xargs.
-cat $source | yq 'keys | .[]' | xargs -I % -S 512 bash -c \
-'if ! grep -q % ci/pipeline.yml; then
+yq 'keys | .[]' < "$source" | xargs -I % -S 512 bash -c \
+"if ! grep -q % $PIPELINE_CONFIG_PATH; then
   echo %
-fi' >&2
+fi" >&2
 
 # reformat the credential file to the Credhub format, excluding entries
 # that don't appear in pipeline.yml.
-cat $source | \
-  yq --output-format json | \
-  jq --arg pipelinename $pipelinename \
-  --rawfile pipeline ci/pipeline.yml '
+yq --output-format json < "$source" | \
+jq --arg pipelinename $pipelinename \
+  --rawfile pipeline $PIPELINE_CONFIG_PATH '
   to_entries |
   map(select(.key | inside($pipeline))) |
   {

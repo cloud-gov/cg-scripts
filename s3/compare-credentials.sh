@@ -1,3 +1,4 @@
+# Pass the credential file as an arguments
 main() {
     CREDENTIAL_FILE=$(basename $1)
     aws-vault exec gov-prd-plat-admin -- aws s3 cp --sse AES256 s3://concourse-credentials/$CREDENTIAL_FILE test-file-s3.yml

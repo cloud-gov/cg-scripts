@@ -15,9 +15,6 @@ Query AWS by tag value to find AWS resources. Currently supports RDS, Opensearch
 EOM
 }
 
-# echo "$TAG_VALUE"
-# exit
-
 RESOURCE_TYPE="rds"
 TAG_NAME="Instance GUID"
 

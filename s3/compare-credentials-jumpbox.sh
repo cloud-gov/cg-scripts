@@ -8,7 +8,7 @@ main() {
     read response
     if [[ $response = "y" ]]
     then
-      aws-vault exec gov-prd-plat-admin -- aws s3 cp --sse AES256 $1 s3://concourse-credentials/$CREDENTIAL_FILE
+      aws s3 cp --sse AES256 $1 s3://concourse-credentials/$CREDENTIAL_FILE
     fi
 }
 

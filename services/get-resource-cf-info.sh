@@ -44,7 +44,11 @@ function query_space {
 function query_service {
   if [ -n "$INSTANCE_GUID" ]; then
     SERVICE_NAME=$(cf curl "/v3/service_instances/$INSTANCE_GUID"  | jq -r '.name')
-    echo "service name: $SERVICE_NAME"
+    if [ -z "$SERVICE_NAME" ]; then
+      echo "could not find service name for GUID $INSTANCE_GUID"
+    else
+      echo "service name: $SERVICE_NAME"
+    fi
   fi
 }
 
@@ -63,8 +67,8 @@ function query_rds {
 function query_s3 {
   TAGS=$(aws s3api get-bucket-tagging --bucket "${1}" | jq -r '.TagSet')
 
-  ORG_GUID=$(echo "$TAGS" | jq -r '.[] | select(.Key=="Organization ID") | .Value')
-  SPACE_GUID=$(echo "$TAGS" | jq -r '.[] | select(.Key=="Space ID") | .Value')
+  ORG_GUID=$(echo "$TAGS" | jq -r '.[] | select(.Key=="Organization ID" or .Key=="organizationGuid") | .Value')
+  SPACE_GUID=$(echo "$TAGS" | jq -r '.[] | select(.Key=="Space ID" or .Key=="spaceGuid") | .Value')
   INSTANCE_GUID="${1/cg-/}"
 
   query_org "$ORG_GUID"

@@ -6,6 +6,8 @@ function usage {
 
   Get all container images used in Concourse pipelines
 
+  Generates a csv file with current container images in use
+
   Optional environment variable \$CI_URL matching your Concourse URL.
   example: CI_URL=https://ci.fr.cloud.gov ./$( basename "$0" )
 
@@ -83,6 +85,7 @@ if [ -z "$1" ]; then
 
   printf "\nALL IMAGES\n\n"
   echo -e "$all_images" | jq -s 'add | unique | sort'
+  echo -e "$all_images" | jq -rs 'add | unique | sort | .[]' > concourse_images.csv
 else
   find_docker_images "$1"
 fi

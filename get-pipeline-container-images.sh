@@ -6,7 +6,7 @@ function usage {
 
   Get all container images used in Concourse pipelines
 
-  Generates a csv file with current container images in use
+  Generates a csv file listing all container images currently used
 
   Optional environment variable \$CI_URL matching your Concourse URL.
   example: CI_URL=https://ci.fr.cloud.gov ./$( basename "$0" )

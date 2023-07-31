@@ -67,7 +67,15 @@ HASHED_QUOTA_NAME=$(md5 -qs $QUOTA_NAME)
 
 # Step 0: Confirm the inputs.
 # http://stackoverflow.com/a/226724/358804
-printf "Create the following?\n\nQuota: $HASHED_QUOTA_NAME\nOrg: $ORG_NAME\n\n"
+cat << EOF
+Create the following?
+
+Quota: $HASHED_QUOTA_NAME
+Org: $ORG_NAME
+
+Enter 1 for "Yes" and 2 for "No"
+
+EOF
 select yn in "Yes" "No"; do
   case $yn in
     Yes ) break;;

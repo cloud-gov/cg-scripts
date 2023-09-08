@@ -62,7 +62,7 @@ def print_db_instances_csv_lines(instances):
         instance_guid
       ) if instance_guid else ""
 
-      output = "{db_identifer},{engine},{engine_version},{storage_type},{storage_size},{org_guid},{space_guid},{instance_guid},{org_name},{space_name},{instance_name}".format(
+      output = "{db_identifer},{engine},{engine_version},{storage_type},{storage_size},{org_guid},{space_guid},{instance_guid},{org_name},{space_name},{instance_name},{instance_create_time}".format(
         db_identifer=db_instance["DBInstanceIdentifier"],
         engine=db_instance["Engine"],
         engine_version=db_instance["EngineVersion"],
@@ -74,13 +74,14 @@ def print_db_instances_csv_lines(instances):
         org_name=org_name,
         space_name=space_name,
         instance_name=instance_name,
+        instance_create_time=db_instance["InstanceCreateTime"]
       )
 
       print(output)
 
 def print_rds_database_csv_header():
   if os.getenv("NO_HEADER"): return
-  print("Database ID,Engine,Engine Version,Storage Type,Storage Size (in GB),Organization GUID,Space GUID,Instance GUID,Org,Space,Instance")
+  print("Database ID,Engine,Engine Version,Storage Type,Storage Size (in GB),Organization GUID,Space GUID,Instance GUID,Org,Space,Instance,Created")
 
 def print_rds_database_audit_csv():
   print_rds_database_csv_header()

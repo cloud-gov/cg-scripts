@@ -14,7 +14,7 @@ HOURS_PER_MONTH = 730
 
 ES_PRICING_INFO = {
     "storage": {
-        "gp2": 0.162
+        "gp3": 0.162
     },
     "instance_classes": {
         "c5.large.elasticsearch": 0.15,

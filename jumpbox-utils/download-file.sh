@@ -42,7 +42,7 @@ FLY_TARGET=$(fly targets | grep "${CI_URL}" | head -n 1 | awk '{print $1}')
 JUMPBOX_CONTAINER="container-bosh-${ENVIRONMENT}"
 BUILD_NUMBER=$(fly -t "$FLY_TARGET" containers | grep jumpbox | grep "$JUMPBOX_CONTAINER" | awk '{print $5}' | sort -nr | head -n 1)
 
-echo "Attempting to download files from container-bosh-${ENVIRONMENT}, build ${BUILD_NUMBER}"
+echo "Attempting to download files from $JUMPBOX_CONTAINER, build ${BUILD_NUMBER}"
 
 fly -t "$FLY_TARGET" i -j "jumpbox/$JUMPBOX_CONTAINER" -s jumpbox -b "$BUILD_NUMBER" -- cat "$FILE" > "$OUTPUT_DIR/$FILE"
 

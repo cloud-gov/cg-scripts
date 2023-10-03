@@ -17,6 +17,16 @@ if [ -z "$1" ]; then
   usage
 fi
 
+if [ -z "$2" ]; then
+  echo "Filename containing search query JSON is required as second argument"
+  usage
+fi
+
+if [ -z "$3" ]; then
+  echo "String containing fields to extract into CSV is required as third argument"
+  usage
+fi
+
 # Use port 9200
 es_url="$1:9200"
 search_json_file="$2"

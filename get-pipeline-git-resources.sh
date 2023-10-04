@@ -75,7 +75,7 @@ if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
 fi
 
 function find_git_resources_for_branch {
-  fly -t ci get-pipeline --pipeline "$1" --json \
+  fly -t "${FLY_TARGET}" get-pipeline --pipeline "$1" --json \
     | jq --arg repo "$REPO" --arg branch "$BRANCH" '.resources[] |
         select(.type=="git") |
         select(.source.uri | test("github.com.*(cloud-gov|18[Ff])")) |

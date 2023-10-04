@@ -5,6 +5,7 @@ function usage {
   ./$( basename "$0" ) <IP_OR_HOSTNAME> <SEARCH_JSON_FILE> <'field1,field2'>
 
   Use the Elasticsearch/Opensearch scroll API to query logs for bulk export
+  See full docs at: https://github.com/cloud-gov/internal-docs/blob/main/docs/runbooks/Logging/bulk-data-export.md
 
   Examples:
     ./$( basename "$0" ) 127.0.0.1 search.json '."@timestamp",.rtr.path,.rtr.status'

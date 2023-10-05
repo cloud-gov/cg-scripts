@@ -205,7 +205,7 @@ for filename in filenames:
                     if re.search(rf'/var/vcap/bosh/bin/(bosh-agent|monit)', line):
                         daemon_count += 1
                         continue
-                    if re.search(rf'^/var/vcap/data/packages/({DAEMONS})2?/[0-9a-f]+/(s?bin/)?({DAEMONS})(-server|-asg-syncer)?$', line):
+                    if re.search(rf'^/var/vcap/data/packages/({DAEMONS})(2|-attic)?/[0-9a-f]+/(s?bin/)?({DAEMONS})(-server|-asg-syncer)?$', line):
                         daemon_count += 1
                         continue
                     # allow java and node for idp, ELK

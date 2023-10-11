@@ -117,7 +117,7 @@ def export_idle_dbs():
             db_instance_created_at = dbinstance['InstanceCreateTime']
             db_age = end_time_utc - db_instance_created_at
             db_tag_list = dbinstance['TagList']
-            stop_command = "aws rds stop-db-instance --db-instance-identifier mydbinstance " + db_instance_name + " ;"
+            stop_command = "aws rds stop-db-instance --db-instance-identifier " + db_instance_name + " ;"
 
             # Pull the org and space id's from the tags
             org_id = space_id = ""

@@ -9,8 +9,6 @@
 #  - SHOW_ALL: Emit results for ALL databases, not just those with no db connections, default is false
 #  - SYSTEM_DOMAIN: CF system domain, default is pointed to production with the value "fr.cloud.gov"
 
-# SHOW_ALL=true python3 aws-list-unused-rds-databases.py
-
 import boto3
 import csv, sys, os 
 import requests, warnings
@@ -151,8 +149,6 @@ def export_idle_dbs():
 
             # Try loop is here because if the rds is brand new, it will error out trying to pull cloudwatch stats
             try:
-                #connection_count = rds_conn_metric['Datapoints'][0]['Sum'] + rds_conn_metric['Datapoints'][1]['Sum']
-
                 connection_count = 0.0
                 for datapoint in rds_conn_metric['Datapoints']:
                     connection_count = connection_count + datapoint['Sum']

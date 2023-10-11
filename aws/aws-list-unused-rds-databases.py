@@ -17,7 +17,7 @@ from requests.structures import CaseInsensitiveDict
 from datetime import datetime, timedelta, timezone
 
 # Function to retrieve org and space name for an app
-def get_org_space(space_id):
+def get_org_space_service_instance(space_id, instance_id):
 
     if not sys.warnoptions:
         warnings.simplefilter("ignore")
@@ -48,7 +48,15 @@ def get_org_space(space_id):
         org_name="NOTFOUND"
         space_name="NOTFOUND"
 
-    return org_name, space_name
+    try:
+        service_instance_url = "https://api." + system_domain + "/v3/service_instances/" + instance_id
+        service_instance_vars = requests.get(service_instance_url, headers=headers, verify=False).json()
+        instance_name = service_instance_vars["name"]
+    except:
+        instance_name="NOTFOUND"
+
+
+    return org_name, space_name, instance_name
 
 # Business logic on what to do with the instance
 def determine_action(connection_count, db_instance_name, space_name):
@@ -101,7 +109,7 @@ def export_idle_dbs():
     paginator = rds.get_paginator('describe_db_instances').paginate()
 
     # Create and write out header row for csv file
-    header_row = ("DBInstanceIdentifier","DBInstanceClass","Action","DBName","AllocatedStorage","Engine","EngineVersion","DB Connections","Created At","Age in Days","Org ID", "Org Name", "Space ID", "Space Name", "Stop Command","TagList")
+    header_row = ("DBInstanceIdentifier","DBInstanceClass","Action","DBName","AllocatedStorage","Engine","EngineVersion","DB Connections","Created At","Age in Days","Org ID", "Org Name", "Space ID", "Space Name", "Instance ID", "Instance Name", "Stop Command","TagList")
     obj.writerow(header_row)
 
     for page in paginator:
@@ -120,13 +128,15 @@ def export_idle_dbs():
             stop_command = "aws rds stop-db-instance --db-instance-identifier " + db_instance_name + " ;"
 
             # Pull the org and space id's from the tags
-            org_id = space_id = ""
+            org_id = space_id = instance_guid = ""
 
             for tagArray in db_tag_list:
                 if tagArray['Key'] == "Organization GUID":
                     org_id = tagArray['Value']
                 if tagArray['Key'] == "Space GUID":
                     space_id = tagArray['Value']
+                if tagArray['Key'] == "Instance GUID":
+                    instance_guid = tagArray['Value']
 
             # Pull the cloudwatch db connections metrics for the db instance
             rds_conn_metric = cloudwatch_client.get_metric_statistics(
@@ -158,12 +168,12 @@ def export_idle_dbs():
                 connection_count = -1
 
             if (connection_count == 0.0 and db_age.days >= num_days_history) or show_all:
-                org_name = space_name = ""
+                org_name = space_name = instance_name = ""
                 if space_id != "":
-                    org_name, space_name = get_org_space(space_id)  #Only lookup org/space name if needed because of performance hit
+                    org_name, space_name, instance_name = get_org_space_service_instance(space_id, instance_guid)  #Only lookup org/space name if needed because of performance hit
 
                 action = determine_action(connection_count, db_instance_name, space_name)
-                output = (db_instance_name,db_type, action, db_name,db_storage,db_engine,db_engine_version, connection_count, db_instance_created_at, db_age.days, org_id, org_name, space_id, space_name, stop_command, db_tag_list)
+                output = (db_instance_name,db_type, action, db_name,db_storage,db_engine,db_engine_version, connection_count, db_instance_created_at, db_age.days, org_id, org_name, space_id, space_name, instance_guid, instance_name, stop_command, db_tag_list)
                 obj.writerow(output)
 
 

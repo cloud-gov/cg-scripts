@@ -39,27 +39,8 @@ for ENVIRONMENT in $(echo ${ENVIRONMENTS:-"common master tooling development sta
   # download from s3
   aws s3 cp s3://"${SECRETS_BUCKET}"/secrets-"${ENVIRONMENT}".yml secrets-"${ENVIRONMENT}".yml
 
-  # fish passphrase out of secret-rotation pipeline
-  PASSPHRASE=$(
-  fly --target "${CI_ENV}" \
-    get-pipeline \
-    --pipeline secret-rotation \
-  | spruce json \
-  | jq --arg SECRETS "secrets-in-${ENVIRONMENT}" -r '
-      .resources[] |
-      select ( .name == $SECRETS ) |
-      .source.secrets_passphrase
-  '
-  )
-
-  # decrypt secrets file
-  INPUT_FILE="secrets-${ENVIRONMENT}.yml" \
-    OUTPUT_FILE="secrets-${ENVIRONMENT}-decrypted.yml" \
-    PASSPHRASE="${PASSPHRASE}" \
-    "${CG_PIPELINE}"/decrypt.sh
-
   # tag secrets per environment
-  spruce json secrets-${ENVIRONMENT}-decrypted.yml \
+  spruce json secrets-${ENVIRONMENT}.yml \
     | jq --arg SOURCE "${ENVIRONMENT}_" '.secrets | with_entries(.key |= $SOURCE + .)' \
     | spruce merge \
     > secrets-${ENVIRONMENT}-updated.yml

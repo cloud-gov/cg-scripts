@@ -1,7 +1,38 @@
 #!/bin/bash
 
+function usage {
+cat >&2 <<EOM
+
+Gets all service instances for the given organization GUID
+
+usage: $0 <org guid value> [service offering name]
+
+Examples:
+  $0 org-guid-123 aws-elasticsearch
+  $0 org-guid-123 aws-rds
+  $0 org-guid-123 aws-elasticache-redis
+
+EOM
+}
+
+while getopts ":h" opt; do
+  case ${opt} in
+    h )
+      usage
+      exit 0
+      ;;
+    * )
+      echo "Invalid Option: $OPTARG"
+      usage
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+
 if [ -z "$1" ]; then
   echo "organization GUID filter is required"
+  usage
   exit 1
 fi
 

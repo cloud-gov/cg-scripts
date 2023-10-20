@@ -1,0 +1,28 @@
+platform_engineer: &platform_engineer
+  cf_tooling_groups: 
+    - admin-ui
+    - foo
+  aws: 
+    - awsfoo
+
+
+staff: 
+  van: 
+    <<: *platform_engineer
+    cf_tooling_groups: 
+      - admin-ui
+      - superpower
+      - foo
+  jason: *platform_engineer
+
+
+some_stuff: &some_stuff |-
+    a
+    b
+    c
+
+combined_stuff:
+  - *some_stuff
+  - d
+  - e
+  - f

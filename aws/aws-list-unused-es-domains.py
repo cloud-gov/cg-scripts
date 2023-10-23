@@ -99,6 +99,9 @@ def export_domains():
         arn = domain['DomainStatus']['ARN']
         tags = es_client.list_tags(ARN=arn)
 
+        # Pull the org and space id's from the tags
+        org_id = space_id = instance_guid = ""
+
         for tag in tags['TagList']:
             if tag['Key'] == "Organization GUID":
                 org_id = tag['Value']

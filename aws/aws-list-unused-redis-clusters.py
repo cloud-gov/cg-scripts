@@ -119,9 +119,9 @@ def export_idle_redis():
 
                 # Got to the last node in the cluster
                 org_name = space_name = instance_name = ""
-                org_name, space_name, instance_name = get_org_space_service_instance(instance_guid)  #Only lookup org/space name if needed because of performance hit
 
                 if show_all or cluster_max_curr_items == 0.0:
+                    org_name, space_name, instance_name = get_org_space_service_instance(instance_guid)  #Only lookup org/space name if needed because of performance hit
                     print(cluster_id, comma, node_type, comma, engine, comma, engine_version, comma, status, comma, instance_guid, comma, cluster_max_curr_items, comma, org_name, comma, space_name, comma, instance_name)
                 cluster_max_curr_items = 0
                 last_cluster_id = cluster_id

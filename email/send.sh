@@ -31,3 +31,6 @@ while read line; do
 	sed -e "s/%/${line}/g" -i "" message.html
 	msmtp -t < ./message.html
 done <addresses.txt
+
+# clean up
+rm message.html

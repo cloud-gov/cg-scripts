@@ -99,6 +99,7 @@ DAEMONS = """
     doomsday
     doppler
     elasticsearch_exporter
+    eventgenerator
     file.server
     firehose_exporter
     forwarder-agent
@@ -118,6 +119,7 @@ DAEMONS = """
     loggregator_trafficcontroller
     metrics-agent
     metrics-discovery-registrar
+    metricsforwarder
     netmon
     nginx
     nginx_prometheus
@@ -125,7 +127,7 @@ DAEMONS = """
     node_exporter
     ntp
     oauth2.proxy
-    opt
+    operator
     policy-server
     policy-server-internal
     prom.scraper
@@ -139,6 +141,7 @@ DAEMONS = """
     rlp
     rlp-gateway
     route.emitter
+    scalingengine
     secureproxy
     service-discovery-controller
     silk-controller
@@ -205,11 +208,14 @@ for filename in filenames:
                     if re.search(rf'/var/vcap/bosh/bin/(bosh-agent|monit)', line):
                         daemon_count += 1
                         continue
-                    if re.search(rf'^/var/vcap/data/packages/({DAEMONS})2?/[0-9a-f]+/(s?bin/)?({DAEMONS})(-server|-asg-syncer)?$', line):
+                    if re.search(rf'^/var/vcap/data/packages/({DAEMONS})(2|-attic)?/[0-9a-f]+/(s?bin/)?({DAEMONS})(-server|-asg-syncer)?$', line):
+                        daemon_count += 1
+                        continue
+                    if re.search(rf'^/var/vcap/data/packages/golangapiserver/[0-9a-f]+/api$', line):
                         daemon_count += 1
                         continue
                     # allow java and node for idp, ELK
-                    if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|kibana-platform|openjdk_1.8.0|openjdk-11|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):
+                    if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|kibana-platform|openjdk_1.8.0|openjdk[-_]11(.0)?|openjdk-17|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):
                         daemon_count += 1
                         continue
                     # nats daemons are OK on nats and bosh

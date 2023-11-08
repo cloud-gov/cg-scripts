@@ -4,6 +4,9 @@ set -eo pipefail
 # For each recipient email in addresses.txt, substitute the
 # address into the template message and send the email
 # with msmtp.
+#
+# For full setup instructions, see:
+# https://github.com/cloud-gov/internal-docs/tree/main/docs/runbooks/Customer-Communication/email-customers.md
 
 if [ ! -f addresses.txt ]; then
     echo "To run, create addresses.txt with one email address per line. See example-addresses.txt."

@@ -96,9 +96,8 @@ def export_idle_dbs():
     show_all = os.getenv('SHOW_ALL', False )
 
     # Set history
-    start_time = datetime.now() - timedelta(days=int(num_days_history))
-    end_time = datetime.now()
-    end_time_utc = datetime.now(tz=timezone.utc)
+    start_time = datetime.now(tz=timezone.utc) - timedelta(days=int(num_days_history))
+    end_time = datetime.now(tz=timezone.utc)
 
     cloudwatch_client = boto3.client('cloudwatch', region_name='us-gov-west-1')
 
@@ -123,7 +122,7 @@ def export_idle_dbs():
             db_engine = dbinstance['Engine']
             db_engine_version = dbinstance['EngineVersion']
             db_instance_created_at = dbinstance['InstanceCreateTime']
-            db_age = end_time_utc - db_instance_created_at
+            db_age = end_time - db_instance_created_at
             db_tag_list = dbinstance['TagList']
             stop_command = "aws rds stop-db-instance --db-instance-identifier " + db_instance_name + " ;"
 

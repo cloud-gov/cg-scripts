@@ -297,7 +297,7 @@ if report_csv:
 
     weakness_desc = sched_completion_date = milestone = \
         deviation_rationale = supporting_docs = comments = auto_approve = ""
-    KEV = "No"
+    known_exploited = "No"
 
     for vuln in sorted(vuln_report):
         if vuln_report[vuln]["cvss3_base_score"] is not None:
@@ -340,5 +340,5 @@ if report_csv:
                 supporting_docs, 
                 comments, 
                 auto_approve, 
-                KEV
+                known_exploited
             ])

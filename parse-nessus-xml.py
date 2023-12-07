@@ -177,17 +177,17 @@ for filename in filenames:
     #        if nfr.plugin.compliance_check_item_value(report_item, 'cm:compliance-result') != "PASSED":
     #            print(nfr.plugin.compliance_check_item_value(report_item, 'cm:compliance-check-name'))
             plugin_id = int(nfr.plugin.report_item_value(report_item, 'pluginID'))
-            risk_factor = nfr.plugin.report_item_value(report_item, 'risk_factor')
+            cvss3_base_score = nfr.plugin.report_item_value(report_item, 'cvss3_base_score')
             plugin_name = nfr.plugin.report_item_value(report_item, 'pluginName')
             plugin_output = nfr.plugin.report_item_value(report_item, 'plugin_output')
 
-            description = f"{plugin_id}, Risk: {risk_factor}, Plugin Name: {plugin_name}, https://www.tenable.com/plugins/nessus/{plugin_id}"
+            description = f"{plugin_id}, CVSS3 Base: {cvss3_base_score}, Plugin Name: {plugin_name}, https://www.tenable.com/plugins/nessus/{plugin_id}"
 
             hosts = vuln_report.get(plugin_id, {}).get('hosts', [])
             hosts.append(report_host_name)
             this_vuln = {
                 "id": plugin_id,
-                "risk_factor": risk_factor,
+                "cvss3_base_score": cvss3_base_score,
                 "plugin_name": plugin_name,
                 "full_description": description,
                 "plugin_output": plugin_output,
@@ -281,7 +281,7 @@ if report_summary:
     print("\n------- SUMMARY ------\n")
 
     for key in sorted(vuln_report):
-        if vuln_report[key]["risk_factor"] != "None":
+        if vuln_report[key]["cvss3_base_score"] is not None:
             affected_hosts = vuln_report[key]["hosts"]
             affected_hosts.sort()
             print(vuln_report[key]["full_description"])
@@ -297,18 +297,48 @@ if report_csv:
 
     weakness_desc = sched_completion_date = milestone = \
         deviation_rationale = supporting_docs = comments = auto_approve = ""
-    KEV = "No"
+    known_exploited = "No"
 
     for vuln in sorted(vuln_report):
-        if vuln_report[vuln]["risk_factor"] != "None":
+        if vuln_report[vuln]["cvss3_base_score"] is not None:
             number_of_affected_hosts = len(vuln_report[vuln]["hosts"])
-            risk_factor = vuln_report[vuln]["risk_factor"] 
-            if risk_factor == "Medium" :
-                risk_factor = "Moderate"
+            cvss3_base_score = vuln_report[vuln]["cvss3_base_score"]
+            if cvss3_base_score is None:
+                risk_factor3 = "None"
+            elif float(cvss3_base_score) >= 7.0: 
+                risk_factor3 = "High"
+            elif float(cvss3_base_score) >= 4.0: 
+                risk_factor3 = "Moderate"
+            elif float(cvss3_base_score) > 0.1: 
+                risk_factor3 = "Low"
+            else:
+                risk_factor3 = "Undefined"
             weakness_name=vuln_report[vuln]["plugin_name"]
-            csvwriter.writerow(["CGXX","RA-5", weakness_name, weakness_desc, "Nessus Scan Report", 
-                vuln_report[vuln]["id"], str(number_of_affected_hosts) + " production hosts", 
-                owner, "None", remediation_plan(weakness_name), start_date.date(), sched_completion_date, 
-                "Resolve", milestone, mmddYY, "Yes", mmddYY,
-                "CloudFoundry stemcell", risk_factor, risk_factor, "No", "No", "No",
-                deviation_rationale, supporting_docs, comments, auto_approve, KEV])
+            csvwriter.writerow( [
+                "CGXX", 
+                "RA-5", 
+                weakness_name, 
+                weakness_desc, 
+                "Nessus Scan Report", 
+                vuln_report[vuln]["id"], 
+                str(number_of_affected_hosts) + " production hosts", 
+                owner, 
+                "None", 
+                remediation_plan(weakness_name), 
+                start_date.date(), 
+                sched_completion_date, 
+                "Resolve", 
+                milestone, 
+                mmddYY, 
+                "Yes", 
+                mmddYY,
+                "CloudFoundry stemcell", 
+                risk_factor3, 
+                risk_factor3, 
+                "No", "No", "No", 
+                deviation_rationale, 
+                supporting_docs, 
+                comments, 
+                auto_approve, 
+                known_exploited
+            ])

@@ -58,7 +58,7 @@ if len(filenames) == 0:
 from datetime import date
 today = date.today()
 mmddYY = today.strftime("%m/%d/%Y")
-owner="Ashley Mahan"
+owner="Kelsey Foley"
 
 def remediation_plan(vuln):
     if ("JDK" in vuln) or ("Java" in vuln):
@@ -74,7 +74,7 @@ l4j_cell = {}
 l4j_logs = {}
 l4j_misc = {}
 l4j_ghst = {}
-l4j_plugins = [ 155999, 156032, 156057, 156103, 156183, 156327, 156860 ]
+l4j_plugins = [ 155999, 156057, 156103, 156183, 156327, 156860, 182252 ] 
 l4j_phantoms = []
 l4j_violations = []
 
@@ -215,7 +215,7 @@ for filename in filenames:
                         daemon_count += 1
                         continue
                     # allow java and node for idp, ELK
-                    if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|kibana-platform|openjdk_1.8.0|openjdk[-_]11(.0)?|openjdk-17|uaa)/[/[0-9a-z]+/bin/(java|node)$', line):
+                    if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|kibana-platform|openjdk_1.8.0|openjdk[-_]11(.0)?|openjdk[-_]17(.0)?|uaa)/[/[0-9a-z]+/bin/(java|jre|node)$', line):
                         daemon_count += 1
                         continue
                     # nats daemons are OK on nats and bosh

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. "$(dirname "$0")/../lib/cf.sh"
+
 function usage {
   echo -e "
 
@@ -27,29 +29,30 @@ if [ -z "$RESOURCE_IDENTIFIER" ]; then
   exit 1
 fi
 
-function query_org {
-  if [ -n "$ORG_GUID" ]; then
-    ORG_NAME=$(cf curl "/v3/organizations/$ORG_GUID" | jq -r '.name')
-    echo "org name: $ORG_NAME"
+function print_org {
+  if [ -n "$1" ]; then
+    echo "org name: $1"
   fi
 }
 
-function query_space {
-  if [ -n "$SPACE_GUID" ]; then
-    SPACE_NAME=$(cf curl "/v3/spaces/$SPACE_GUID" | jq -r '.name')
-    echo "space name: $SPACE_NAME"
+function print_space {
+  if [ -n "$1" ]; then
+    echo "space name: $1"
   fi
 }
 
-function query_service {
-  if [ -n "$INSTANCE_GUID" ]; then
-    SERVICE_NAME=$(cf curl "/v3/service_instances/$INSTANCE_GUID"  | jq -r '.name')
-    if [ -z "$SERVICE_NAME" ]; then
-      echo "could not find service name for GUID $INSTANCE_GUID"
-    else
-      echo "service name: $SERVICE_NAME"
-    fi
+function print_service_name {
+  if [ -z "$1" ]; then
+    echo "could not find service instance name for GUID $INSTANCE_GUID"
+  else
+    echo "service instance name: $1"
   fi
+}
+
+function print_cf_info {
+  print_org "$(query_org_name "$ORG_GUID")"
+  print_space "$(query_space_name "$SPACE_GUID")"
+  print_service_name "$(query_service_instance_name "$INSTANCE_GUID")"
 }
 
 function query_rds {
@@ -59,9 +62,7 @@ function query_rds {
   SPACE_GUID=$(echo "$TAGS" | jq -r '.[] | select(.Key=="Space GUID") | .Value')
   INSTANCE_GUID=$(echo "$TAGS" | jq -r '.[] | select(.Key=="Instance GUID") | .Value')
 
-  query_org "$ORG_GUID"
-  query_space "$SPACE_GUID"
-  query_service "$INSTANCE_GUID"
+  print_cf_info
 }
 
 function query_s3 {
@@ -71,9 +72,7 @@ function query_s3 {
   SPACE_GUID=$(echo "$TAGS" | jq -r '.[] | select(.Key=="Space ID" or .Key=="spaceGuid") | .Value')
   INSTANCE_GUID="${1/cg-/}"
 
-  query_org "$ORG_GUID"
-  query_space "$SPACE_GUID"
-  query_service "$INSTANCE_GUID"
+  print_cf_info
 }
 
 if [ "${RESOURCE_TYPE}" == "rds" ]; then

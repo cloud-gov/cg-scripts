@@ -34,7 +34,7 @@ function query_rds {
   echo ${output}
 }
 
- function query_es {
+function query_es {
   local service_key=$1
   # get the db instance name
   local hostname=$(echo $service_key | jq -r .host)
@@ -49,7 +49,7 @@ function query_rds {
   echo ${output}
 }
 
- function query_redis {
+function query_redis {
   local service_key=$1
   # get the db instance name
   local hostname=$(echo $service_key | jq -r .host)

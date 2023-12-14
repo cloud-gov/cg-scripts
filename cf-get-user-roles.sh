@@ -50,10 +50,10 @@ for result in $ORG_SPACE_RESULTS; do
   role=$(echo "$result" | awk -F "," '{print $1}')
   
   ORG_GUID=$(echo "$result" | awk -F "," '{print $2}')
-  org_name=$(query_org "$ORG_GUID")
+  org_name=$(query_org_name "$ORG_GUID")
 
   SPACE_GUID=$(echo "$result" | awk -F "," '{print $3}')
-  space_name=$(query_space "$SPACE_GUID")
+  space_name=$(query_space_name "$SPACE_GUID")
 
   output="$role:"
   if [[ -n "$org_name" ]]; then

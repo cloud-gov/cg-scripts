@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# import common functions
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib/cf.sh"
+
 # Grabs all cf org and space roles for a user
 
 set -e
@@ -29,16 +33,34 @@ fi
 
 username=$1
 
-echo "Retrieving all org and space roles for user: $username"
+printf "Retrieving all org and space roles for user: %s\n\n" "$username"
 
-#get the user guid
+# get the user guid
 user_guid=$(cf curl "/v3/users?usernames=$username" | jq -r '.resources[].guid')
 
-#get all user roles and orgs
+# get all user roles and orgs
 role_list=$(cf curl "/v3/roles?user_guids=${user_guid}&per_page=5000")
 
-headers=$(echo "role", "org_uuid", "space_uuid")
-formatted_list=$(echo $role_list | jq -r '.resources[] | [.type, .relationships.organization.data.guid // "null", .relationships.space.data.guid // "null"] | @csv')
+ORG_SPACE_RESULTS=$(echo "$role_list" | jq -r '
+  .resources[] |
+  .type + "," + (.relationships.organization.data.guid // "") + "," + (.relationships.space.data.guid // "")
+')
 
-#output a nice table
-echo -e "$headers\\n$formatted_list" | column -t -s,
+for result in $ORG_SPACE_RESULTS; do
+  role=$(echo "$result" | awk -F "," '{print $1}')
+  
+  ORG_GUID=$(echo "$result" | awk -F "," '{print $2}')
+  org_name=$(query_org_name "$ORG_GUID")
+
+  SPACE_GUID=$(echo "$result" | awk -F "," '{print $3}')
+  space_name=$(query_space_name "$SPACE_GUID")
+
+  output="$role:"
+  if [[ -n "$org_name" ]]; then
+    output="$output $org_name"
+  fi
+  if [[ -n "$space_name" ]]; then
+    output="$output $space_name"
+  fi
+  echo "$output"
+done

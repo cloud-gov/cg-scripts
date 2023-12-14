@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-shopt -s inherit_errexit
+shopt -s inherit_errexit || true
 
 main() {
   [[ $# -eq 3 ]] || usage "Expected three arguments, got $#"

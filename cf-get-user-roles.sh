@@ -27,18 +27,50 @@ if [ "$cf_version" -lt "$min_cf_version" ]; then
   exit 1
 fi
 
+function query_org {
+  if [ -n "$ORG_GUID" ]; then
+    ORG_NAME=$(cf curl "/v3/organizations/$ORG_GUID" | jq -r '.name')
+    echo "$ORG_NAME"
+  fi
+}
+
+function query_space {
+  if [ -n "$SPACE_GUID" ]; then
+    SPACE_NAME=$(cf curl "/v3/spaces/$SPACE_GUID" | jq -r '.name')
+    echo "$SPACE_NAME"
+  fi
+}
+
 username=$1
 
-echo "Retrieving all org and space roles for user: $username"
+printf "Retrieving all org and space roles for user: %s\n\n" "$username"
 
-#get the user guid
+# get the user guid
 user_guid=$(cf curl "/v3/users?usernames=$username" | jq -r '.resources[].guid')
 
-#get all user roles and orgs
+# get all user roles and orgs
 role_list=$(cf curl "/v3/roles?user_guids=${user_guid}&per_page=5000")
 
-headers=$(echo "role", "org_uuid", "space_uuid")
-formatted_list=$(echo $role_list | jq -r '.resources[] | [.type, .relationships.organization.data.guid // "null", .relationships.space.data.guid // "null"] | @csv')
+ORG_SPACE_RESULTS=$(echo "$role_list" | jq -r '
+  .resources[] |
+  .type + "," + (.relationships.organization.data.guid // "") + "," + (.relationships.space.data.guid // "")
+')
 
-#output a nice table
-echo -e "$headers\\n$formatted_list" | column -t -s,
+for result in $ORG_SPACE_RESULTS; do
+  role=$(echo "$result" | awk -F "," '{print $1}')
+  
+  ORG_GUID=$(echo "$result" | awk -F "," '{print $2}')
+  org_name=$(query_org "$ORG_GUID")
+
+  SPACE_GUID=$(echo "$result" | awk -F "," '{print $3}')
+  space_name=$(query_space "$SPACE_GUID")
+
+  output="$role:"
+  if [[ -n "$org_name" ]]; then
+    output="$output $org_name"
+  fi
+  if [[ -n "$space_name" ]]; then
+    output="$output $space_name"
+  fi
+  echo "$output"
+done

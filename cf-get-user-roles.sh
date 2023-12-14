@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# import common functions
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib/cf.sh"
+
 # Grabs all cf org and space roles for a user
 
 set -e
@@ -26,20 +30,6 @@ if [ "$cf_version" -lt "$min_cf_version" ]; then
 
   exit 1
 fi
-
-function query_org {
-  if [ -n "$ORG_GUID" ]; then
-    ORG_NAME=$(cf curl "/v3/organizations/$ORG_GUID" | jq -r '.name')
-    echo "$ORG_NAME"
-  fi
-}
-
-function query_space {
-  if [ -n "$SPACE_GUID" ]; then
-    SPACE_NAME=$(cf curl "/v3/spaces/$SPACE_GUID" | jq -r '.name')
-    echo "$SPACE_NAME"
-  fi
-}
 
 username=$1
 

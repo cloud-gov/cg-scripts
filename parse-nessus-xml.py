@@ -169,7 +169,6 @@ for filename in filenames:
     print(f'File size: {file_size}', file=sys.stderr)
     print(f'Scan start date: {start_date}', file=sys.stderr)
 
-
     for report_host in nfr.scan.report_hosts(root):
         report_host_name = nfr.host.report_host_name(report_host)
     #    print("===",report_host_name, nfr.host.number_of_compliance_plugins_per_result(report_host,"FAILED"),"===")
@@ -181,13 +180,27 @@ for filename in filenames:
             plugin_name = nfr.plugin.report_item_value(report_item, 'pluginName')
             plugin_output = nfr.plugin.report_item_value(report_item, 'plugin_output')
 
-            description = f"{plugin_id}, CVSS3 Base: {cvss3_base_score}, Plugin Name: {plugin_name}, https://www.tenable.com/plugins/nessus/{plugin_id}"
+            if cvss3_base_score is None:
+                cvss3_risk_factor = "None"
+            elif float(cvss3_base_score) >= 9.0:
+                cvss3_risk_factor = "Critical"
+            elif float(cvss3_base_score) >= 7.0:
+                cvss3_risk_factor = "High"
+            elif float(cvss3_base_score) >= 4.0:
+                cvss3_risk_factor = "Moderate"
+            elif float(cvss3_base_score) > 0.1:
+                cvss3_risk_factor = "Low"
+            else:
+                cvss3_risk_factor = "Undefined"
+
+            description = f"{plugin_id}, Risk: {cvss3_risk_factor}, Plugin Name: {plugin_name}, https://www.tenable.com/plugins/nessus/{plugin_id}"
 
             hosts = vuln_report.get(plugin_id, {}).get('hosts', [])
             hosts.append(report_host_name)
             this_vuln = {
                 "id": plugin_id,
                 "cvss3_base_score": cvss3_base_score,
+                "cvss3_risk_factor": cvss3_risk_factor,
                 "plugin_name": plugin_name,
                 "full_description": description,
                 "plugin_output": plugin_output,
@@ -307,16 +320,9 @@ if report_csv:
         if vuln_report[vuln]["cvss3_base_score"] is not None:
             number_of_affected_hosts = len(vuln_report[vuln]["hosts"])
             cvss3_base_score = vuln_report[vuln]["cvss3_base_score"]
-            if cvss3_base_score is None:
-                risk_factor3 = "None"
-            elif float(cvss3_base_score) >= 7.0: 
-                risk_factor3 = "High"
-            elif float(cvss3_base_score) >= 4.0: 
-                risk_factor3 = "Moderate"
-            elif float(cvss3_base_score) > 0.1: 
-                risk_factor3 = "Low"
-            else:
-                risk_factor3 = "Undefined"
+            cvss3_risk_factor = vuln_report[vuln]["cvss3_risk_factor"]
+            if cvss3_risk_factor == "Critical":
+                cvss3_risk_factor = "High"
             weakness_name=vuln_report[vuln]["plugin_name"]
             csvwriter.writerow( [
                 "CGXX", 
@@ -337,8 +343,8 @@ if report_csv:
                 "Yes", 
                 mmddYY,
                 "CloudFoundry stemcell", 
-                risk_factor3, 
-                risk_factor3, 
+                cvss3_risk_factor,
+                cvss3_risk_factor,
                 "No", "No", "No", 
                 deviation_rationale, 
                 supporting_docs, 

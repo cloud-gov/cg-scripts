@@ -211,6 +211,10 @@ for filename in filenames:
                     if re.search(rf'^/var/vcap/data/packages/({DAEMONS})(2|-attic)?/[0-9a-f]+/(s?bin/)?({DAEMONS})(-server|-asg-syncer)?$', line):
                         daemon_count += 1
                         continue
+                    # add defect dojo
+                    if re.search(rf'^/var/vcap/data/packages/godojo/[0-9a-f]+/bin/bin/uwsgi$', line):
+                        daemon_count += 1
+                        continue
                     if re.search(rf'^/var/vcap/data/packages/golangapiserver/[0-9a-f]+/api$', line):
                         daemon_count += 1
                         continue

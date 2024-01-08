@@ -187,7 +187,7 @@ for filename in filenames:
             elif float(cvss3_base_score) >= 7.0:
                 cvss3_risk_factor = "High"
             elif float(cvss3_base_score) >= 4.0:
-                cvss3_risk_factor = "Moderate"
+                cvss3_risk_factor = "Medium"
             elif float(cvss3_base_score) > 0.1:
                 cvss3_risk_factor = "Low"
             else:
@@ -322,7 +322,7 @@ if report_csv:
             cvss3_base_score = vuln_report[vuln]["cvss3_base_score"]
             cvss3_risk_factor = vuln_report[vuln]["cvss3_risk_factor"]
             if cvss3_risk_factor == "Critical":
-                cvss3_risk_factor = "High"
+                cvss3_risk_factor = "High"      # Critical is not a valid FedRAMP® POA&M risk
             weakness_name=vuln_report[vuln]["plugin_name"]
             csvwriter.writerow( [
                 "CGXX", 

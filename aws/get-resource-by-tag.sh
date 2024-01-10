@@ -56,6 +56,9 @@ case ${RESOURCE_TYPE} in
   s3 )
     RESOURCE_TYPE_FILTER="s3:bucket"
     ;;
+  redis | elasticache )
+    RESOURCE_TYPE_FILTER="elasticache:replicationgroup"
+    ;;
   * )
     echo "Invalid option: $RESOURCE_TYPE" >&2
     usage

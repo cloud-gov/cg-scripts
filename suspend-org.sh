@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Deactivates an organization by setting its suspended status to true and stops
-# all running applications in all spaces of the organization.
+# all running applications in all spaces of the organization. 
 
 # Requires cf CLI version 7+ and jq to work.
 

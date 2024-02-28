@@ -5,7 +5,7 @@ set -e
 if [ "$#" -lt 1 ]; then
   echo
   echo "Usage:"
-  echo "  $ ./make-pages-ops-admin.sh [-r] <EMAIL_ADDRESS>"
+  echo "  $ ./make-ops-viewer.sh [-r] <EMAIL_ADDRESS>"
   echo
   echo "  Options:"
   echo "     -r    :    Remove the user instead of add"
@@ -33,14 +33,11 @@ fi
 
 if $REMOVE; then
   echo -n "Removing user ${EMAIL}... "
-  uaac member delete concourse.pages "${EMAIL}" || true
   uaac member delete prometheus-support "${EMAIL}" || true
-  uaac member delete concourse.apps "${EMAIL}" || true
   uaac user delete "${EMAIL}"
 else
   echo -n "Adding user ${EMAIL}... "
   uaac curl -XPOST /Users -H"If-Match:*" -H"Accept:application/json" -H"Content-Type:application/json" -d\{\"userName\":\""${EMAIL}"\",\"emails\":[\{\"value\":\""${EMAIL}"\"\}],\"active\":true,\"verified\":true,\"origin\":\"gsa\"\}
-  uaac member add concourse.pages "${EMAIL}" || true
   uaac member add prometheus-support "${EMAIL}" || true
 fi
 

@@ -33,12 +33,12 @@ fi
 
 if $REMOVE; then
   echo -n "Removing user ${EMAIL}... "
-  uaac member delete prometheus-support "${EMAIL}" || true
+  uaac member delete prometheus.support "${EMAIL}" || true
   uaac user delete "${EMAIL}"
 else
   echo -n "Adding user ${EMAIL}... "
   uaac curl -XPOST /Users -H"If-Match:*" -H"Accept:application/json" -H"Content-Type:application/json" -d\{\"userName\":\""${EMAIL}"\",\"emails\":[\{\"value\":\""${EMAIL}"\"\}],\"active\":true,\"verified\":true,\"origin\":\"gsa\"\}
-  uaac member add prometheus-support "${EMAIL}" || true
+  uaac member add prometheus.support "${EMAIL}" || true
 fi
 
 echo "DONE"

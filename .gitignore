@@ -26,3 +26,5 @@ certbot/work/**
 !certbot/config/.gitkeep
 !certbot/logs/.gitkeep
 !certbot/work/.gitkeep
+
+concourse/*.yml

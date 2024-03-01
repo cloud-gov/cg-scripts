@@ -34,6 +34,7 @@ done
 
 CI_URL="${CI_URL:-"https://ci.fr.cloud.gov"}"
 FLY_TARGET=$(fly targets | grep "${CI_URL}" | head -n 1 | awk '{print $1}')
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
   echo "Not logged in to concourse"
@@ -41,8 +42,8 @@ if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
 fi
 
 function get_pipeline {
-  printf "\npipeline: %s\n\n" "$1" >&2
-  fly --target "${FLY_TARGET}" get-pipeline -p "$1" > "$1.yml"
+  printf "getting pipeline: %s\n" "$1" >&2
+  fly --target "${FLY_TARGET}" get-pipeline -p "$1" > "$SCRIPT_DIR/$1.yml"
 }
 
 if [ -z "$1" ]; then

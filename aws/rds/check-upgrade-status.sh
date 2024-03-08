@@ -26,9 +26,10 @@ while read -r line; do
 
   DB_INFO=$(aws rds describe-db-instances --db-instance-identifier "$DB_ARN")
   DB_INSTANCE_TYPE=$(echo "$DB_INFO" | jq -r '.DBInstances[0].DBInstanceClass')
+  ENGINE_VERSION=$(echo "$DB_INFO" | jq -r '.DBInstances[0].EngineVersion')
   CUR_MAINTENANCE_WINDOW=$(echo "$DB_INFO" | jq -r '.DBInstances[0].PreferredMaintenanceWindow')
 
-  printf "instance type for %s is %s\n" "$DB_NAME" "$DB_INSTANCE_TYPE"
+  printf "%s, instance type: %s, engine version: %s\n" "$DB_NAME" "$DB_INSTANCE_TYPE" "$ENGINE_VERSION"
 
   if [ "$MAINTENANCE_WINDOW" != "$CUR_MAINTENANCE_WINDOW" ]; then
     printf "expected maintenance window %s does not match current maintenance window %s\n" "$MAINTENANCE_WINDOW" "$CUR_MAINTENANCE_WINDOW"

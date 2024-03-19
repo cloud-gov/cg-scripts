@@ -19,21 +19,34 @@ if [ ! -f template.html ]; then
 fi
 
 if ! msmtp --version &> /dev/null; then
-	echo "send.sh requires msmtp to be installed. See https://github.com/internal-docs/tree/main/docs/runbooks/Customer-Communication/bulk-email.md for full setup instructions."
+	echo "send.sh requires msmtp to be installed. See https://github.com/cloud-gov/internal-docs/blob/main/docs/runbooks/Customer-Communication/email-customers.md for full setup instructions."
 	exit 1
 fi
 
-if [ ! -f $HOME/.msmtprc ]; then
-	echo "To run, create ~/.msmtprc. See https://github.com/internal-docs/tree/main/docs/runbooks/Customer-Communication/bulk-email.md for full setup instructions."
+if [ ! -f "$HOME/.msmtprc" ]; then
+	echo "To run, create ~/.msmtprc. See https://github.com/cloud-gov/internal-docs/blob/main/docs/runbooks/Customer-Communication/email-customers.md for full setup instructions."
 	exit 1
 fi
 
-while read line; do
-	cp template.html message.html
-	# edit message.html in-place to replace the "%" placeholder with the recipient address.
-	sed -e "s/%/${line}/g" -i "" message.html
-	msmtp -t < ./message.html
+while read -r line; do
+  IFS=';' read -r -a array <<< "$line"
+	EMAIL="${array[0]}"
+
+	# if you have more data on each line separate by ";", you can parse out each value like so
+	# SPACE_NAME="${array[1]}"
+
+	MESSAGE="message.html"
+
+	cp template.html "$MESSAGE"
+
+	# edit message.html in-place to replace the "%email" placeholder with the recipient address.
+	sed -e "s/%email/${EMAIL}/g" -i "" "$MESSAGE"
+
+	# this is an example of how you can replace "%space" in the template.html file with more custom data
+	# sed -e "s/%space/${SPACE_NAME}/g" -i "" "$MESSAGE"
+
+	msmtp -t < "$MESSAGE"
 done <addresses.txt
 
 # clean up
-rm message.html
+rm message*.html

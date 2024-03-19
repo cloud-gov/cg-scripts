@@ -9,7 +9,7 @@ set -eo pipefail
 # https://github.com/cloud-gov/internal-docs/tree/main/docs/runbooks/Customer-Communication/email-customers.md
 
 if [ ! -f addresses.txt ]; then
-    echo "To run, create addresses.txt with one email address per line. See example-addresses.txt."
+    echo "To run, create addresses.txt with one email address per line. Other data can follow the email address separated by \";\". See example-addresses.txt."
     exit 1
 fi
 

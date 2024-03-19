@@ -1,2 +1,2 @@
-recipient@cloud.gov
-recipient@gsa.gov
+recipient@cloud.gov;space-1;org-1
+recipient@gsa.gov;space-2;org-1

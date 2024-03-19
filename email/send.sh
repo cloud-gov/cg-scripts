@@ -30,20 +30,22 @@ fi
 
 while read -r line; do
   IFS=';' read -r -a array <<< "$line"
-	EMAIL="${array[0]}"
-
-	# if you have more data on each line separate by ";", you can parse out each value like so
-	# SPACE_NAME="${array[1]}"
 
 	MESSAGE="message.html"
 
 	cp template.html "$MESSAGE"
 
 	# edit message.html in-place to replace the "%email" placeholder with the recipient address.
+	EMAIL="${array[0]}"
 	sed -e "s/%email/${EMAIL}/g" -i "" "$MESSAGE"
 
 	# this is an example of how you can replace "%space" in the template.html file with more custom data
-	# sed -e "s/%space/${SPACE_NAME}/g" -i "" "$MESSAGE"
+	SPACE_NAME="${array[1]}"
+	sed -e "s/%space/${SPACE_NAME}/g" -i "" "$MESSAGE"
+
+	# this is an example of how you can replace "%org" in the template.html file with more custom data
+	ORG_NAME="${array[2]}"
+	sed -e "s/%org/${ORG_NAME}/g" -i "" "$MESSAGE"
 
 	msmtp -t < "$MESSAGE"
 done <addresses.txt

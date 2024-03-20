@@ -7,6 +7,8 @@ if [ "$#" -lt 1 ]; then
   echo "Usage:"
   echo "  $ ./add-user.sh <EMAIL_ADDRESS>"
   echo
+  echo "Note: the user is added to UAA with an origin of their email domain"
+  echo
   exit 1;
 fi
 

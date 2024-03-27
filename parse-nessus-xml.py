@@ -153,6 +153,7 @@ DAEMONS = """
     tps-watcher
     trafficcontroller
     udp-forwarder
+    uwsgi
     vxlan-policy-agent
 """.split()
 

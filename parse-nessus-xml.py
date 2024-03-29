@@ -232,6 +232,14 @@ for filename in filenames:
                     if re.search(rf'^/var/vcap/data/packages/golangapiserver/[0-9a-f]+/api$', line):
                         daemon_count += 1
                         continue
+                    if re.search(r'uwsgi', line):
+                        daemon_count += 1
+                        continue
+
+                    # Add a condition specifically for defectdojo-staging-defectdojo-0-cf-tooling if it has a unique path or pattern
+                    if re.search(rf'^/var/vcap/jobs/godojo/bin/uwsgi', line):
+                        daemon_count += 1
+                        continue
                     # allow java and node for idp, ELK
                     if re.search(rf'^/var/vcap/data/packages/(elasticsearch|idp|kibana|kibana-platform|openjdk_1.8.0|openjdk[-_]11(.0)?|openjdk[-_]17(.0)?|uaa)/[/[0-9a-z]+/bin/(java|jre|node)$', line):
                         daemon_count += 1

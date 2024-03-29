@@ -94,8 +94,7 @@ DAEMONS = """
     cc.uploader
     cf_exporter
     concourse
-    discovery-registra
-    defectdojo-staging-defectdojo-0-cf-tooling
+    discovery-registrar
     domain-broker
     doomsday
     doppler

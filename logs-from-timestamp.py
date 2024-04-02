@@ -2,10 +2,17 @@
 """
 Given a unix timestamp, list the prefix for files that might contain relevant logs
 usage:
-$ python3 logs-from-timestamp.py 1709655649692
+```shell
+python3 logs-from-timestamp.py 1709655649692
+```
 s3://bucket/AWSlogs/[...]domains-2[...]20240301T0105
 s3://bucket/AWSlogs/[...]domains-1[...]20240301T0105
 s3://bucket/AWSlogs/[...]domains-0[...]20240301T0105
+
+To sort and uniq output from a list of timestamps:
+```shell
+cat ~/Downloads/timestamps.txt | xargs -n1 python3 logs-from-timestamp.py > filenames.txt; cat filenames.txt | sort |uniq > filenames_filtered.txt
+```
 """
 
 import sys

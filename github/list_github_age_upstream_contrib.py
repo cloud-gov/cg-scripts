@@ -1,3 +1,33 @@
+"""
+GitHub Organization Repository Analyzer
+
+This script communicates with the GitHub GraphQL API to analyze repositories within a specified GitHub organization.
+It is designed to fetch details about each repository, including its name, last update timestamp, fork status, and the existence of critical files (README.md, SECURITY.md, LICENSE.md).
+Additionally, it compiles a list of unique contributors for each repository.
+
+Key Features:
+- Fetches a list of repositories from the specified organization, excluding archived and private repositories to focus on active and public projects.
+- Checks for the presence of README.md, SECURITY.md, and LICENSE.md in each repository to assess basic documentation and security policy adherence.
+- Gathers a unique list of contributors for each repository, providing insight into community or team engagement.
+- Implements pagination to handle organizations with more than 100 repositories, ensuring comprehensive analysis without hitting the GitHub API's first-page data limit.
+- Outputs the collected data in both JSON and CSV formats, providing flexibility for further analysis or reporting. The JSON output offers a structured view, ideal for applications requiring detailed data processing. The CSV format is suitable for spreadsheets and other tools that support CSV, offering a straightforward way to view or share the analysis results.
+
+Output Files:
+- A JSON file named '<script_name>_<current_date_time>.json', containing detailed data about each repository in a structured format.
+- A CSV file named '<script_name>_<current_date_time>.csv', with columns for repository details and rows for each repository, including a concatenated list of contributors.
+
+Requirements:
+- A GitHub Personal Access Token set as an environment variable 'GITHUB_AUTH_TOKEN' with sufficient permissions to query repository and organization details.
+- The 'requests' Python package for making API requests.
+
+Usage:
+- Ensure the 'GITHUB_AUTH_TOKEN' environment variable is set with your GitHub Personal Access Token.
+- Update the 'ORG_NAME' variable in the script with the target organization's name.
+- Run the script. The output files will be saved in the current directory.
+
+Note: The script assumes all repositories have a similar structure for the fetched data. If a repository lacks certain details (like a default branch), the script handles these cases gracefully, marking contributors as 'No contributors or commit history' when applicable.
+"""
+
 import requests
 import json
 import os

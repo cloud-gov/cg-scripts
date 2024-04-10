@@ -1,3 +1,8 @@
+# Use this script to add security.md files to all repos in an org that are missing one.
+# Replace ADD_GITHUB_USERNAME with valid usernames from the github org
+# This script requires a json file created by list_github_age_upstream_contrib.py to work.
+#
+
 import os
 import json
 import logging
@@ -10,12 +15,16 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Configuration
+# Configuration variables
 ORG_NAME = os.getenv("ORG_NAME", "cloud-gov")
 REPOS_JSON_PATH = os.getenv("REPOS_JSON_PATH", "repos.json")
+PRIMARY_REVIEWER = "ADD_GITHUB_USERNAME"
+ASSIGNEE = "ADD_GITHUB_USERNAME"
+FALLBACK_REVIEWER = "ADD_GITHUB_USERNAME"
 current_time = datetime.now().strftime("%Y%m%d%H%M%S")
 BASE_PATH = os.path.expanduser(f"~/Downloads/repos_{current_time}")
 
+# Security.md file content
 SECURITY_MD_CONTENT = """
 **Reporting Security Issues**
 
@@ -37,8 +46,8 @@ Providing this information will facilitate a quicker triage of your report.
 """
 
 
+# Function to run shell commands
 def run_command(cmd, cwd=None, ignore_error=False):
-    """Run a command and return its output, handling errors."""
     try:
         result = subprocess.run(
             cmd,
@@ -57,6 +66,7 @@ def run_command(cmd, cwd=None, ignore_error=False):
         return None
 
 
+# Check GitHub CLI authentication
 def check_gh_auth():
     """Check if 'gh' CLI is authenticated."""
     if run_command(["gh", "auth", "status"], ignore_error=True):
@@ -65,6 +75,7 @@ def check_gh_auth():
         logging.error("GitHub CLI is not authenticated. Please check the setup.")
 
 
+# Fetch the default branch of the repository
 def get_default_branch(repo_name):
     """Fetch the default branch for the repository using 'gh'."""
     try:
@@ -79,6 +90,7 @@ def get_default_branch(repo_name):
         return None
 
 
+# Check if SECURITY.md exists
 def security_md_exists(repo_name):
     """Check if SECURITY.md exists in the repository's default branch."""
     try:
@@ -98,6 +110,7 @@ def security_md_exists(repo_name):
         return None
 
 
+# Clone the repository and prepare for adding SECURITY.md
 def clone_and_prepare_repo(repo_name):
     """Clone a repository and prepare it for adding SECURITY.md."""
     repo_path = os.path.join(BASE_PATH, repo_name)
@@ -120,34 +133,37 @@ def clone_and_prepare_repo(repo_name):
         return None, None
 
 
+# Add, commit, and push SECURITY
 def add_commit_push_security_md(repo_path, branch_name):
-    """Add SECURITY.md, commit, and push it."""
+    """Add SECURITY.md, commit with signature, and push it."""
     try:
         security_md_path = os.path.join(repo_path, "SECURITY.md")
         with open(security_md_path, "w") as file:
             file.write(SECURITY_MD_CONTENT)
         repo = git.Repo(repo_path)
         repo.index.add(["SECURITY.md"])
-        repo.index.commit("Add SECURITY.md")
+        # Commit with signing
+        repo.git.commit("-S", "-m", "Add SECURITY.md")
         origin = repo.remote(name="origin")
         origin.push(refspec=f"{branch_name}:{branch_name}")
         logging.info(
-            f"SECURITY.md added, committed, and pushed to {branch_name} in {repo_path}."
+            f"SECURITY.md added, signed commit, and pushed to {branch_name} in {repo_path}."
         )
     except Exception as e:
         logging.error(
-            f"Failed to add, commit, and push SECURITY.md for {repo_path}: {e}"
+            f"Failed to add, sign commit, and push SECURITY.md for {repo_path}: {e}"
         )
 
 
+# Create a pull request
 def create_pull_request(repo_path, branch_name, default_branch):
-    """Create a pull request for the branch and attempt to add reviewers."""
+    """Create a pull request for the branch, attempt to add reviewers, and assign 'wz-gsa'."""
     original_dir = os.getcwd()  # Save the current directory
     try:
         os.chdir(repo_path)  # Change to the repo's directory
         pr_body = """## Changes proposed in this pull request:
 
-- added Security.md
+- Added Security.md
 
 ## Things to check
 
@@ -155,59 +171,47 @@ def create_pull_request(repo_path, branch_name, default_branch):
 
 ## Security considerations
 
-Improves security by adding Security.md"""
-        # Attempt to create the pull request and add the primary reviewer
-        result = run_command(
-            [
-                "gh",
-                "pr",
-                "create",
-                "--title",
-                "Add SECURITY.md",
-                "--body",
-                pr_body,
-                "--base",
-                default_branch,
-                "--head",
-                f"{ORG_NAME}:{branch_name}",
-                "--reviewer",
-                "cloud-gov/platform-ops",
-            ],  # Primary reviewer
-            ignore_error=True,
-        )
+- Improves security by adding Security.md"""
+        # Create the pull request, assign 'ASSIGNEE', and add the primary reviewer
+        command = [
+            "gh",
+            "pr",
+            "create",
+            "--title",
+            "Add SECURITY.md",
+            "--body",
+            pr_body,
+            "--base",
+            default_branch,
+            "--head",
+            f"{ORG_NAME}:{branch_name}",
+            "--reviewer",
+            PRIMARY_REVIEWER,
+            "--assignee",
+            ASSIGNEE,
+        ]
 
-        # If the primary reviewer addition fails, try the secondary reviewer
-        if "could not be requested" in result:
+        result = run_command(command, ignore_error=True)
+
+        if (
+            "Reviewers could not be requested" in result
+            or "Assignee could not be added" in result
+        ):
             logging.warning(
-                f"Failed to add cloud-gov/platform-ops as a reviewer, trying cloud-gov-pages-operations."
+                "Attempting to add 'cloud-gov-pages-operations' as a fallback reviewer."
             )
-            result = run_command(
-                [
-                    "gh",
-                    "pr",
-                    "create",
-                    "--title",
-                    "Add SECURITY.md",
-                    "--body",
-                    pr_body,
-                    "--base",
-                    default_branch,
-                    "--head",
-                    f"{ORG_NAME}:{branch_name}",
-                    "--reviewer",
-                    "drewbo",
-                ],  # Secondary reviewer
-                ignore_error=True,
-            )
+            command[11] = FALLBACK_REVIEWER  # Fallback reviewer
+            result = run_command(command, ignore_error=True)
 
-        if "could not be requested" in result:
-            logging.error(
-                f"Failed to add drewbo as a reviewer as well."
-            )
+        if "Reviewers could not be requested" in result:
+            logging.error("Failed to add any reviewers.")
         else:
-            logging.info(
-                f"Pull request created for {branch_name}. Reviewer added successfully."
-            )
+            logging.info("Reviewer successfully added.")
+
+        if "Assignee could not be added" in result:
+            logging.error("Failed to add 'wz-gsa' as the assignee.")
+        else:
+            logging.info("'wz-gsa' successfully assigned to the PR.")
 
     except Exception as e:
         logging.error(
@@ -217,6 +221,7 @@ Improves security by adding Security.md"""
         os.chdir(original_dir)  # Restore the original directory
 
 
+# Main function
 def main():
     check_gh_auth()
     if not os.path.exists(BASE_PATH):

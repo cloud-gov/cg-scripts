@@ -2,7 +2,7 @@
 
 # import common functions
 
-source "$(dirname "${BASH_SOURCE[0]}")/lib/cf.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/cf.sh"
 
 # Grabs all cf org and space roles for a user
 

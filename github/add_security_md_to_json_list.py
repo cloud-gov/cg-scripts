@@ -157,7 +157,7 @@ def add_commit_push_security_md(repo_path, branch_name):
 
 # Create a pull request
 def create_pull_request(repo_path, branch_name, default_branch):
-    """Create a pull request for the branch, attempt to add reviewers, and assign 'wz-gsa'."""
+    ""f"Create a pull request for the branch, attempt to add reviewers, and assign '{ASSIGNEE}'."""
     original_dir = os.getcwd()  # Save the current directory
     try:
         os.chdir(repo_path)  # Change to the repo's directory
@@ -195,7 +195,7 @@ def create_pull_request(repo_path, branch_name, default_branch):
 
         if (
             "Reviewers could not be requested" in result
-            or "Assignee could not be added" in result
+            or f"{ASSIGNEE} could not be added" in result
         ):
             logging.warning(
                 "Attempting to add 'cloud-gov-pages-operations' as a fallback reviewer."
@@ -208,10 +208,10 @@ def create_pull_request(repo_path, branch_name, default_branch):
         else:
             logging.info("Reviewer successfully added.")
 
-        if "Assignee could not be added" in result:
-            logging.error("Failed to add 'wz-gsa' as the assignee.")
+        if f"{ASSIGNEE} could not be added" in result:
+            logging.error(f"Failed to add '{ASSIGNEE}' as the assignee.")
         else:
-            logging.info("'wz-gsa' successfully assigned to the PR.")
+            logging.info(f"'{ASSIGNEE}' successfully assigned to the PR.")
 
     except Exception as e:
         logging.error(

@@ -71,8 +71,8 @@ for space_info in $(cf curl "/v3/spaces?organization_guids=$ORG_GUID" | jq -r '.
     cf delete-route $ROUTE_DOMAIN $DELETE_ARGS -f
   done
 
-  cf delete-orphaned-routes
-  cf delete-space "$SPACE_NAME" -o "$ORG"
+  cf delete-orphaned-routes -f
+  cf delete-space "$SPACE_NAME" -o "$ORG" -f
 done
 
 cf delete-org "$ORG"

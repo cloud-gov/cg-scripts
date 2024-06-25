@@ -81,8 +81,11 @@ def print_db_instances_csv_lines(instances):
             StartTime=now - datetime.timedelta(minutes=1),
             EndTime=now,
         )
-        free_space_bytes = free_storage_space_metric["Datapoints"][0]["Maximum"]
-        free_space_gigabytes = free_space_bytes / (10**9)
+        if free_storage_space_metric["Datapoints"]:
+            free_space_bytes = free_storage_space_metric["Datapoints"][0]["Maximum"]
+            free_space_gigabytes = free_space_bytes / (10**9)
+        else:
+            free_space_gigabytes = "Unknown"
 
         output = "{db_identifer},{engine},{engine_version},{storage_type},{storage_size},{free_space_gigabytes},{org_guid},{space_guid},{instance_guid},{org_name},{space_name},{instance_name},{instance_create_time}".format(
             db_identifer=db_instance["DBInstanceIdentifier"],

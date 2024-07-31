@@ -19,7 +19,7 @@ address=$(bosh interpolate "${manifest}" --path /instance_groups/name=uaa/jobs/n
 password=$(bosh interpolate "${manifest}" --path /instance_groups/name=uaa/jobs/name=uaa/properties/uaadb/roles/name=cfdb/password)
 rm "${manifest}"
 
-psql "postgres://cfdb:${password}@${address}:5432/uaadb" -c "delete from totp_seed where username = '${totp_username}'"
+psql "postgres://cfdb:${password}@${address}:5432/uaadb" -c "delete from totp_seed where lower(username) = lower('${totp_username}')"
 
 echo "Successfully reset the totp for ${totp_username}. Please notify the user."
 echo "NOTE: Username is case-sensitive - if the user is unable to reset, recheck capitalization"

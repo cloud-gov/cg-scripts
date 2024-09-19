@@ -10,9 +10,9 @@ for instance in $log_groups; do
     TAGS_STRING=$(echo "$RDS_TAGS" | jq -r '.[] | "\(.Key)=\(.Value)"' | paste -sd ',' -)
     TAGS_STRING=$(echo "$TAGS_STRING" | sed 's/ //g')
     if [ -z "$RDS_TAGS" ]; then
-        echo "invalid tags for ${instance}"
+        echo "invalid tags for ${instance}, does it exist?"
     else
-        echo "Sucess on ${instance}"
+        echo "Success on ${instance}"
         aws logs tag-log-group --log-group-name "${instance}" --tags "$TAGS_STRING"
     fi
 done

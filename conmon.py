@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pip install matplotlib nessus-file-reader PyYAML
 
 import os
 import logging

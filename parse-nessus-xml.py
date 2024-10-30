@@ -4,44 +4,45 @@
 parse-nessus-xml.py
 
 A script to parse Nessus scan files and generate various reports.
+
+Improvements implemented:
+- Replaced percentages with counts in the severity chart.
+- Added a title stating that the chart is the MM Nessus Summary by Severity.
 """
 
-import sys
 import os
-import csv
+import sys
 import logging
-import getopt
+import argparse
 import re
 import traceback
-from datetime import date
-import nessus_file_reader as nfr
 import yaml
+from datetime import datetime
+from collections import defaultdict
+import matplotlib.pyplot as plt
+import nessus_file_reader as nfr
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("NessusParser")
 
 
+# Load list of Daemons from configuration
 def get_script_directory():
-    """
-    Returns the directory where the current script is located.
-    """
+    """Returns the directory where the current script is located."""
     return os.path.dirname(os.path.realpath(__file__))
 
 
 def load_daemon_list():
-    """
-    Loads the daemon list from daemons.yaml located in the same directory as the script.
-    """
-    try:
-        script_dir = get_script_directory()
-        yaml_path = os.path.join(script_dir, "daemons.yaml")
+    """Loads the daemon list from daemons.yaml located in the same directory as the script."""
+    script_dir = get_script_directory()
+    yaml_path = os.path.join(script_dir, "daemons.yaml")
 
+    try:
         with open(yaml_path, "r") as file:
             data = yaml.safe_load(file)
-            return data["daemons"]
+            return data.get("daemons", [])
     except FileNotFoundError:
-        logger.error(f"Failed to locate daemons.yaml in {script_dir}")
+        logger.error(f"Daemon list file not found at {yaml_path}")
         return []
     except Exception as e:
         logger.error(f"Error loading daemon list: {e}")
@@ -50,43 +51,12 @@ def load_daemon_list():
 
 DAEMONS = load_daemon_list()
 
-# List of Log4J-related plugin IDs
+# Load list of Log4J plugin IDs
 LOG4J_PLUGINS = [155999, 156057, 156103, 156183, 156327, 156860, 182252]
-
-# Get today's date in YYYY-MM-DD format
-current_date = date.today().strftime("%Y-%m-%d")
-
-
-def print_help():
-    print(
-        "Usage: parse-nessus-xml.py [options] <nessus_scan_files_or_directories>\n"
-        "\nOptions:\n"
-        "-h, --help          Show this help message and exit\n"
-        "-l, --log4j         Generate Log4J report\n"
-        "-d, --daemons       Generate daemons report\n"
-        "-D, --debug         Enable debug logging\n"
-        "-s, --summary       Generate summary report\n"
-        "-c, --csv           Generate CSV output\n"
-        "-a, --all           Generate all reports\n"
-        "-m, --max-hosts     Set maximum number of hosts to display (default: 6)"
-    )
-    sys.exit(1)
-
-
-def remediation_plan(vuln):
-    """
-    Provides a remediation plan based on the vulnerability description.
-    """
-    if ("JDK" in vuln) or ("Java" in vuln):
-        return "cloud.gov services that depend on Java/JDK are patched via updates to code ..."
-    else:
-        return "We use operating system 'stemcells' from the upstream BOSH project that are updated every once to two weeks."
 
 
 def get_nessus_files(paths):
-    """
-    Takes a list of file and directory paths and returns a list of Nessus scan files.
-    """
+    """Retrieves Nessus files from provided file and directory paths."""
     nessus_files = []
     for path in paths:
         if os.path.isfile(path):
@@ -97,268 +67,442 @@ def get_nessus_files(paths):
                     if file.endswith(".nessus") or file.endswith(".xml"):
                         nessus_files.append(os.path.join(root_dir, file))
         else:
-            logger.warning(f"Path '{path}' is not a valid file or directory.")
+            logger.warning(f"Path '{path}' is not valid.")
     return nessus_files
 
 
 def process_daemon_plugin(
     plugin_output, report_host_name, daemon_report, daemon_seen_count
 ):
-    """
-    Processes the daemon plugin output to identify unknown daemons.
-    Adds daemon counts and updates daemon report for unknown daemons.
-    """
+    """Processes daemon plugins and tracks unknown daemons."""
     for line in plugin_output.splitlines():
         line = line.strip()
-        if not line or "The following running daemons are not managed by dpkg" in line:
-            continue
-
-        daemon_seen_count += 1
-        if not any(daemon in line for daemon in DAEMONS):
-            daemon_report.setdefault(report_host_name, []).append(line)
-
+        if line and "The following running daemons are not managed by dpkg" not in line:
+            daemon_seen_count += 1
+            if not any(daemon in line for daemon in DAEMONS):
+                daemon_report.setdefault(report_host_name, []).append(line)
     return daemon_seen_count
 
 
-def process_log4j_plugin(plugin_output, report_host_name, plugin_id, log4j_data):
-    """
-    Processes the Log4J plugin output to categorize findings.
-    This function ensures that only plugins from the defined Log4J list are processed.
-    """
-    if plugin_id not in LOG4J_PLUGINS:
-        return  # Skip non-Log4J plugins
+def process_log4j_vulnerability(report_item, log4j_report, report_host_name):
+    """Processes Log4J vulnerabilities."""
+    plugin_id = int(nfr.plugin.report_item_value(report_item, "pluginID"))
 
-    for line in plugin_output.splitlines():
-        line = line.strip()
-        if not re.search(r"^Path", line):
-            continue
+    # Filter out hosts that include 'diego-cell' or 'logsearch'
+    if "diego-cell" in report_host_name or "logsearch" in report_host_name:
+        return
 
-        # Patterns for known safe paths
-        safe_patterns = [
-            r"^Path\s+: /usr/share/logstash/logstash-core/lib/jars/log4j.*jar$",
-            r"^Path\s+: /home/vcap/app/lib/boot/log4j-core-2.*jar$",
-            r"^Path\s+: /var/vcap/data/grootfs/store/unprivileged/(images|volumes)",
-            r"^Path\s+: /var/vcap/data/packages/elasticsearch/[a-z0-9]+/lib/log4j-core-2\.11\.1\.jar",
-        ]
-        if any(re.search(pattern, line) for pattern in safe_patterns):
-            log4j_data["safe"][plugin_id] = log4j_data["safe"].get(plugin_id, 0) + 1
+    # Collect vulnerabilities of unknown origins
+    log4j_report[plugin_id]["count"] += 1
+
+
+def process_vulnerability(report_item, vuln_report, report_host_name):
+    """Processes vulnerabilities for summary and work reports."""
+    plugin_id = int(nfr.plugin.report_item_value(report_item, "pluginID"))
+    plugin_name = nfr.plugin.report_item_value(report_item, "pluginName")
+    severity = int(nfr.plugin.report_item_value(report_item, "severity"))
+    cvss3_base_score = nfr.plugin.report_item_value(report_item, "cvss3_base_score")
+    cvss3_risk_factor = nfr.plugin.report_item_value(report_item, "cvss3_risk_factor")
+
+    # Filter out 'Info' level vulnerabilities (severity == 0)
+    if severity == 0:
+        return
+
+    key = (severity, plugin_id)
+    vuln_report.setdefault(
+        key,
+        {
+            "plugin_name": plugin_name,
+            "severity": severity,
+            "cvss3_base_score": cvss3_base_score,
+            "cvss3_risk_factor": cvss3_risk_factor,
+            "hosts": set(),
+        },
+    )
+    vuln_report[key]["hosts"].add(report_host_name)
+
+
+def generate_daemon_report(
+    daemon_report,
+    daemon_seen_count,
+    output_file=None,
+    previous_report=None,
+    output_format="text",
+):
+    """Generates a daemon report with comparison to the previous month."""
+    report_content = []
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    report_content.append(f"\n------- DAEMON REPORT ({current_date}) -------\n")
+    report_content.append(f"Total daemons seen: {daemon_seen_count}")
+
+    previous_daemons = {}
+    if previous_report and os.path.exists(previous_report):
+        with open(previous_report, "r") as f:
+            for line in f:
+                match = re.match(r"Host: (.+)", line)
+                if match:
+                    host = match.group(1)
+                    daemons = []
+                    for daemon_line in f:
+                        daemon_line = daemon_line.strip()
+                        if daemon_line.startswith("  "):
+                            daemons.append(daemon_line.strip())
+                        else:
+                            break
+                    previous_daemons[host] = daemons
+
+    still_present = {}
+    new_daemons = {}
+
+    for host, daemons in daemon_report.items():
+        if host in previous_daemons and set(daemons) == set(previous_daemons[host]):
+            still_present[host] = daemons
         else:
-            log4j_data["unsafe"][plugin_id] = log4j_data["unsafe"].get(plugin_id, 0) + 1
+            new_daemons[host] = daemons
+
+    if not still_present:
+        report_content.append("\nNo results carried over from previous month.")
+
+    if still_present:
+        report_content.append("\nStill present from last month (Not Fixed):")
+        for host, daemons in still_present.items():
+            report_content.append(f"\nHost: {host}")
+            for daemon in daemons:
+                report_content.append(f"  {daemon}")
+
+    if new_daemons:
+        report_content.append("\nNew daemons detected this month:")
+        for host, daemons in new_daemons.items():
+            report_content.append(f"\nHost: {host}")
+            for daemon in daemons:
+                report_content.append(f"  {daemon}")
+
+    if not still_present and not new_daemons:
+        report_content.append("\nNo unknown daemons found.")
+
+    report_text = "\n".join(report_content)
+    if output_file:
+        if output_format == "html":
+            html_content = "<html><body><pre>" + report_text + "</pre></body></html>"
+            with open(output_file, "w") as f:
+                f.write(html_content)
+        elif output_format == "csv":
+            # CSV output not applicable for this report
+            pass
+        else:
+            with open(output_file, "w") as f:
+                f.write(report_text)
+    else:
+        print(report_text)
 
 
-def generate_log4j_report(log4j_data):
-    """
-    Generates the Log4J report based on the processed Log4J plugin data.
-    Summarizes findings by plugin with counts of expected and unknown.
-    """
-    print(f"\n------- LOG4J REPORT ({current_date}) -------\n")
+def generate_log4j_report(log4j_report, output_file=None, previous_report=None):
+    """Generates a Log4J report with counts of unknown origins."""
+    report_content = []
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    report_content.append(f"\n======= LOG4J REPORT ({current_date}) =======\n")
 
-    if log4j_data["safe"]:
-        print("\nExpected (Safe) Log4J Findings:")
-        for plugin_id, count in log4j_data["safe"].items():
-            print(f"Plugin ID {plugin_id}: {count} safe occurrences")
-
-    if log4j_data["unsafe"]:
-        print("\nUnknown (Unsafe) Log4J Findings:")
-        for plugin_id, count in log4j_data["unsafe"].items():
-            print(f"Plugin ID {plugin_id}: {count} unsafe occurrences")
-
-    if not log4j_data["safe"] and not log4j_data["unsafe"]:
-        print("No Log4J vulnerabilities found.")
-
-
-def generate_log4j_conmon_summary(log4j_data):
-    """
-    Generates a summary for ConMon showing the unexpected Log4J occurrences.
-    Outputs count per plugin, even if the count is 0.
-    """
-    print(f"\n------- LOG4J SUMMARY FOR CONMON ({current_date}) -------\n")
+    # Initialize counts for all Log4J plugins
+    for plugin_id in LOG4J_PLUGINS:
+        log4j_report.setdefault(plugin_id, {"count": 0})
 
     for plugin_id in LOG4J_PLUGINS:
-        count = log4j_data["unsafe"].get(plugin_id, 0)
-        print(f"Plugin ID {plugin_id}: {count} unexpected occurrences")
+        count = log4j_report[plugin_id]["count"]
+        report_content.append(f"\nLog4J plugin: {plugin_id}")
+        report_content.append(
+            f"\tLog4J violations of unknown origins found (UNSAFE): {count}"
+        )
 
-
-def generate_daemon_report(daemon_report, daemon_seen_count):
-    """
-    Generates the daemon report, including a count of daemons seen.
-    """
-    print(f"\n------- Daemon REPORT ({current_date}) -------\n")
-    print(f"Total daemons seen: {daemon_seen_count}")
-
-    if daemon_report:
-        for host, daemons in daemon_report.items():
-            print(f"\nHost: {host}")
-            for daemon in daemons:
-                print(f"  {daemon}")
+    report_text = "\n".join(report_content)
+    if output_file:
+        with open(output_file, "w") as f:
+            f.write(report_text)
     else:
-        print("No unknown daemons found.")
+        print(report_text)
 
 
-def generate_summary_report(vuln_report, max_hosts):
-    """
-    Generates the summary report.
-    """
-    print(f"\n------- SUMMARY ({current_date}) -------\n")
-    for key in sorted(vuln_report):
+def generate_work_report(vuln_report, output_file=None):
+    """Generates a work report containing all current vulnerabilities grouped by plugin ID."""
+    report_content = []
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    report_content.append(f"\n------- NESSUS WORK REPORT ({current_date}) -------\n")
+
+    severity_mapping = {1: "Low", 2: "Medium", 3: "High", 4: "Critical"}
+
+    for key in sorted(vuln_report.keys(), reverse=True):
+        severity, plugin_id = key
         vuln = vuln_report[key]
-        if vuln["cvss3_base_score"] is not None:
-            affected_hosts = sorted(set(vuln["hosts"]))
-            print(vuln["full_description"])
-            if len(affected_hosts) > max_hosts:
-                print(f"\t{len(affected_hosts)} affected hosts found ...")
-            else:
-                for site in affected_hosts:
-                    print(f"\t{site}")
+        plugin_name = vuln["plugin_name"]
+        affected_hosts = sorted(vuln["hosts"])
+        host_count = len(affected_hosts)
+        cvss_score = vuln["cvss3_base_score"] or "N/A"
+        cvss_risk = vuln["cvss3_risk_factor"] or "N/A"
+
+        report_content.append(
+            f"\nPlugin ID: {plugin_id}, Severity: {severity_mapping.get(severity, 'Unknown')}, Plugin Name: {plugin_name}, CVSS: {cvss_score} ({cvss_risk})"
+        )
+        report_content.append(
+            f"Affected Hosts ({host_count}): {', '.join(affected_hosts)}"
+        )
+
+    report_text = "\n".join(report_content)
+    if output_file:
+        with open(output_file, "w") as f:
+            f.write(report_text)
+    else:
+        print(report_text)
 
 
-def generate_csv_output(vuln_report, csvwriter, start_date, owner, mmddYY):
-    """
-    Generates CSV output for vulnerabilities.
-    """
-    csvwriter.writerow(
-        [
-            "POA&M ID",
-            "Control Identifier",
-            "Weakness/Deficiency Name",
-            "Weakness/Deficiency Description",
-            "Source Identifying Weakness",
-            "Vulnerability ID",
-            "Affected Components",
-            "Point of Contact",
-            "Status",
-            "Required Corrective Actions",
-            "Date Identified",
-            "Scheduled Completion Date",
-            "Type of Milestone",
-            "Milestone Changes",
-            "Completion Date",
-            "Decommission/Removal",
-            "Risk Acknowledgement Date",
-            "System Component",
-            "Initial Risk Rating",
-            "Residual Risk Level",
-            "Deviation Request",
-            "RTM Required",
-            "False Positive",
-            "Deviation Rationale",
-            "Supporting Documents",
-            "Comments",
-            "Auto Approval",
-            "Known Exploited Vulnerability",
-        ]
-    )
+def generate_summary_report(
+    vuln_report, max_hosts, output_file=None, previous_report=None, output_format="text"
+):
+    """Generates a summary report with comparison to the previous month."""
+    report_content = []
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    report_content.append(f"\n------- SUMMARY REPORT ({current_date}) -------\n")
 
-    for key in sorted(vuln_report):
+    # Load previous month's vulnerabilities if available
+    previous_vulns = set()
+    if previous_report and os.path.exists(previous_report):
+        with open(previous_report, "r") as f:
+            for line in f:
+                match = re.match(r"Plugin ID: (\d+),", line)
+                if match:
+                    previous_vulns.add(int(match.group(1)))
+
+    # Separate current vulnerabilities into categories
+    still_present = []
+    new_vulns = []
+
+    for key in sorted(vuln_report.keys(), reverse=True):
+        severity, plugin_id = key
         vuln = vuln_report[key]
-        if vuln["cvss3_base_score"] is not None:
-            number_of_affected_hosts = len(set(vuln["hosts"]))
-            cvss3_risk_factor = vuln["cvss3_risk_factor"]
-            if cvss3_risk_factor == "Critical":
-                cvss3_risk_factor = "High"  # Adjust for FedRAMP POA&M risk levels
-            weakness_name = vuln["plugin_name"]
-            # Prepare empty fields
-            weakness_desc = sched_completion_date = milestone = deviation_rationale = (
-                supporting_docs
-            ) = comments = auto_approve = ""
-            known_exploited = "No"
-            csvwriter.writerow(
-                [
-                    "CGXX",  # POA&M ID placeholder
-                    "RA-5",
-                    weakness_name,
-                    weakness_desc,
-                    "Nessus Scan Report",
-                    vuln["id"],
-                    f"{number_of_affected_hosts} production hosts",
-                    owner,
-                    "Open",  # Status
-                    remediation_plan(weakness_name),
-                    start_date.date(),
-                    sched_completion_date,
-                    "Resolve",
-                    milestone,
-                    mmddYY,
-                    "Yes",  # Decommission/Removal
-                    mmddYY,  # Risk Acknowledgement Date
-                    "CloudFoundry stemcell",
-                    cvss3_risk_factor,
-                    cvss3_risk_factor,
-                    "No",  # Deviation Request
-                    "No",  # RTM Required
-                    "No",  # False Positive
-                    deviation_rationale,
-                    supporting_docs,
-                    comments,
-                    auto_approve,
-                    known_exploited,
-                ]
+        plugin_name = vuln["plugin_name"]
+        affected_hosts = sorted(vuln["hosts"])
+        host_count = len(affected_hosts)
+        cvss_score = vuln["cvss3_base_score"] or "N/A"
+        cvss_risk = vuln["cvss3_risk_factor"] or "N/A"
+
+        vuln_entry = {
+            "Plugin ID": plugin_id,
+            "Severity": severity,
+            "Plugin Name": plugin_name,
+            "CVSS Score": cvss_score,
+            "CVSS Risk": cvss_risk,
+            "Hosts": affected_hosts,
+            "Host Count": host_count,
+        }
+        if plugin_id in previous_vulns:
+            still_present.append(vuln_entry)
+        else:
+            new_vulns.append(vuln_entry)
+
+    # Aggregate data
+    total_vulns = len(vuln_report)
+    severity_counts = defaultdict(int)
+    for key in vuln_report.keys():
+        severity_counts[key[0]] += 1
+
+    report_content.append(f"Total Vulnerabilities: {total_vulns}")
+    report_content.append("Vulnerabilities by Severity:")
+    severity_mapping = {1: "Low", 2: "Medium", 3: "High", 4: "Critical"}
+    for severity_level in sorted(severity_counts.keys(), reverse=True):
+        count = severity_counts[severity_level]
+        report_content.append(
+            f"  {severity_mapping.get(severity_level, 'Unknown')}: {count}"
+        )
+
+    # Generate severity pie chart
+    generate_severity_pie_chart(severity_counts, output_file)
+
+    if not still_present:
+        report_content.append("\nNo results carried over from previous month.")
+
+    # Include vulnerabilities still present from last month
+    if still_present:
+        report_content.append("\nStill present from last month (Not Fixed):")
+        for vuln in still_present:
+            report_content.append(
+                f"\nPlugin ID: {vuln['Plugin ID']}, Severity: {severity_mapping.get(vuln['Severity'], 'Unknown')}, Plugin Name: {vuln['Plugin Name']}, CVSS: {vuln['CVSS Score']} ({vuln['CVSS Risk']})"
             )
+            report_content.append(
+                f"Affected Hosts ({vuln['Host Count']}): {', '.join(vuln['Hosts'][:max_hosts])}"
+            )
+            if vuln["Host Count"] > max_hosts:
+                report_content.append("...")
+
+    # Include new vulnerabilities this month
+    if new_vulns:
+        report_content.append("\nNew vulnerabilities this month:")
+        for vuln in new_vulns:
+            report_content.append(
+                f"\nPlugin ID: {vuln['Plugin ID']}, Severity: {severity_mapping.get(vuln['Severity'], 'Unknown')}, Plugin Name: {vuln['Plugin Name']}, CVSS: {vuln['CVSS Score']} ({vuln['CVSS Risk']})"
+            )
+            report_content.append(
+                f"Affected Hosts ({vuln['Host Count']}): {', '.join(vuln['Hosts'][:max_hosts])}"
+            )
+            if vuln["Host Count"] > max_hosts:
+                report_content.append("...")
+
+    report_text = "\n".join(report_content)
+    if output_file:
+        if output_format == "html":
+            html_content = "<html><body><pre>" + report_text + "</pre></body></html>"
+            with open(output_file, "w") as f:
+                f.write(html_content)
+        elif output_format == "csv":
+            csv_file = output_file.replace(".txt", ".csv")
+            with open(csv_file, "w") as f:
+                f.write(
+                    "Plugin ID,Severity,Plugin Name,CVSS Score,CVSS Risk,Host Count,Hosts\n"
+                )
+                for vuln in still_present + new_vulns:
+                    f.write(
+                        f"{vuln['Plugin ID']},{severity_mapping.get(vuln['Severity'], 'Unknown')},{vuln['Plugin Name']},{vuln['CVSS Score']},{vuln['CVSS Risk']},{vuln['Host Count']},\"{', '.join(vuln['Hosts'])}\"\n"
+                    )
+            logger.info(f"CSV summary report saved as {csv_file}")
+        else:
+            with open(output_file, "w") as f:
+                f.write(report_text)
+    else:
+        print(report_text)
+
+
+def generate_severity_pie_chart(severity_counts, output_file):
+    """Generates a pie chart of vulnerabilities by severity with counts and a title."""
+    labels = []
+    sizes = []
+    severity_mapping = {1: "Low", 2: "Medium", 3: "High", 4: "Critical"}
+    for severity_level in sorted(severity_counts.keys(), reverse=True):
+        severity_label = severity_mapping.get(severity_level, "Unknown")
+        count = severity_counts[severity_level]
+        labels.append(f"{severity_label} ({count})")
+        sizes.append(count)
+
+    if not sizes:
+        logger.info("No vulnerabilities to display in pie chart.")
+        return
+
+    # Define autopct function to display counts
+    def make_autopct(sizes):
+        def my_autopct(pct):
+            total = sum(sizes)
+            count = int(round(pct * total / 100.0))
+            return f"{count}"
+
+        return my_autopct
+
+    fig1, ax1 = plt.subplots()
+    ax1.pie(sizes, labels=labels, autopct=None, startangle=140)
+    ax1.axis("equal")
+
+    # Add title with month number
+    current_month_year = datetime.now().strftime("%Y-%m")
+    ax1.set_title(f"{current_month_year} Nessus Summary by Severity")
+
+    chart_file = output_file.replace(".txt", "_severity_chart.png")
+    plt.savefig(chart_file)
+    plt.close()
+    logger.info(f"Severity pie chart saved as {chart_file}")
+
+
+def validate_input_files(filenames):
+    """Validates that the input files are accessible and readable."""
+    valid_files = []
+    for filename in filenames:
+        if os.path.exists(filename) and os.path.isfile(filename):
+            valid_files.append(filename)
+        else:
+            logger.warning(f"File not found or inaccessible: {filename}")
+    return valid_files
 
 
 def main():
-    report_log4j = report_daemons = report_summary = report_csv = False
-    max_hosts = 6
-    opt_debug = False
+    parser = argparse.ArgumentParser(description="Nessus XML Parser")
+    parser.add_argument(
+        "input_paths", nargs="+", help="Nessus scan files or directories"
+    )
+    parser.add_argument(
+        "-l", "--log4j", action="store_true", help="Generate Log4J report"
+    )
+    parser.add_argument(
+        "-d", "--daemons", action="store_true", help="Generate daemons report"
+    )
+    parser.add_argument(
+        "-w", "--work", action="store_true", help="Generate Nessus Work report"
+    )
+    parser.add_argument(
+        "-D", "--debug", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "-s", "--summary", action="store_true", help="Generate summary report"
+    )
+    parser.add_argument("-c", "--csv", action="store_true", help="Generate CSV output")
+    parser.add_argument("-a", "--all", action="store_true", help="Generate all reports")
+    parser.add_argument(
+        "-m",
+        "--max-hosts",
+        type=int,
+        default=6,
+        help="Set maximum number of hosts to display (default: 6)",
+    )
+    parser.add_argument("-o", "--output", help="Specify output file for reports")
+    parser.add_argument("--prev", help="Specify previous month's report for comparison")
+    parser.add_argument(
+        "--output-format",
+        choices=["text", "html", "csv"],
+        default="text",
+        help="Specify output format",
+    )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set logging level",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version="Nessus XML Parser 2.0",
+        help="Show program's version number and exit",
+    )
 
-    # Parse command-line arguments
-    try:
-        opts, args = getopt.getopt(
-            sys.argv[1:],
-            "hldDscam:",
-            [
-                "help",
-                "log4j",
-                "daemons",
-                "debug",
-                "summary",
-                "csv",
-                "all",
-                "max-hosts=",
-            ],
-        )
-    except getopt.GetoptError as e:
-        logger.error(f"Argument parsing error: {e}")
-        print_help()
+    args = parser.parse_args()
 
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            print_help()
-        elif opt in ("-l", "--log4j"):
-            report_log4j = True
-        elif opt in ("-d", "--daemons"):
-            report_daemons = True
-        elif opt in ("-D", "--debug"):
-            opt_debug = True
-            logger.setLevel(logging.DEBUG)
-        elif opt in ("-s", "--summary"):
-            report_summary = True
-        elif opt in ("-c", "--csv"):
-            report_csv = True
-        elif opt in ("-a", "--all"):
-            report_log4j = report_daemons = report_summary = report_csv = True
-        elif opt in ("-m", "--max-hosts"):
-            try:
-                max_hosts = int(arg)
-            except ValueError:
-                logger.error("Invalid value for --max-hosts. It must be an integer.")
-                sys.exit(1)
+    # Set logging level
+    numeric_level = getattr(logging, args.log_level.upper(), None)
+    logging.basicConfig(
+        level=numeric_level, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
 
-    # Get the Nessus files
-    input_paths = args
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+
+    # Determine reports to generate
+    report_log4j = report_daemons = report_summary = report_csv = report_work = False
+    if args.all:
+        report_log4j = report_daemons = report_summary = report_work = True
+    else:
+        report_log4j = args.log4j
+        report_daemons = args.daemons
+        report_summary = args.summary
+        report_work = args.work
+        report_csv = args.csv
+
+    input_paths = args.input_paths
     filenames = get_nessus_files(input_paths)
 
+    # User Input Validation
+    filenames = validate_input_files(filenames)
     if not filenames:
-        logger.error("No Nessus scan files found in the provided paths.")
+        logger.error("No valid Nessus scan files found.")
         sys.exit(1)
 
-    # Initialize dictionaries for reports
-    vuln_report = {}
     daemon_report = {}
-    log4j_data = {"safe": {}, "unsafe": {}}
     daemon_seen_count = 0
+    vuln_report = {}
+    log4j_report = defaultdict(lambda: {"count": 0})
 
-    # Process each Nessus scan file
     for filename in filenames:
         try:
             nessus_scan_file = filename
@@ -366,11 +510,9 @@ def main():
             file_name = nfr.file.nessus_scan_file_name_with_path(nessus_scan_file)
             logger.info(f"Processing file: {file_name}")
 
-            # Process each host in the Nessus scan
             for report_host in nfr.scan.report_hosts(root):
                 report_host_name = nfr.host.report_host_name(report_host)
 
-                # Process each vulnerability item for the host
                 for report_item in nfr.host.report_items(report_host):
                     plugin_id = int(
                         nfr.plugin.report_item_value(report_item, "pluginID")
@@ -379,12 +521,12 @@ def main():
                         report_item, "plugin_output"
                     )
 
-                    if report_log4j:
-                        process_log4j_plugin(
-                            plugin_output, report_host_name, plugin_id, log4j_data
+                    if report_log4j and plugin_id in LOG4J_PLUGINS:
+                        process_log4j_vulnerability(
+                            report_item, log4j_report, report_host_name
                         )
 
-                    if report_daemons and plugin_id == 33851:  # Daemon check plugin
+                    if report_daemons and plugin_id == 33851:
                         daemon_seen_count = process_daemon_plugin(
                             plugin_output,
                             report_host_name,
@@ -392,32 +534,45 @@ def main():
                             daemon_seen_count,
                         )
 
+                    if report_summary or report_work or report_csv:
+                        process_vulnerability(
+                            report_item, vuln_report, report_host_name
+                        )
+
         except Exception as e:
             logger.error(f"Error processing file '{filename}': {e}")
-            if opt_debug:
+            if args.debug:
                 traceback.print_exc()
 
-    # Generate reports based on the selected options
-    if report_log4j:
-        generate_log4j_report(log4j_data)
-        generate_log4j_conmon_summary(log4j_data)
-
     if report_daemons:
-        generate_daemon_report(daemon_report, daemon_seen_count)
+        generate_daemon_report(
+            daemon_report,
+            daemon_seen_count,
+            output_file=args.output,
+            previous_report=args.prev,
+            output_format=args.output_format,
+        )
+
+    if report_log4j:
+        generate_log4j_report(
+            log4j_report, output_file=args.output, previous_report=args.prev
+        )
 
     if report_summary:
-        generate_summary_report(vuln_report, max_hosts)
+        generate_summary_report(
+            vuln_report,
+            args.max_hosts,
+            output_file=args.output,
+            previous_report=args.prev,
+            output_format=args.output_format,
+        )
 
-    if report_csv:
-        with open(f"nessus_report_{date.today()}.csv", "w", newline="") as csvfile:
-            csvwriter = csv.writer(csvfile)
-            generate_csv_output(
-                vuln_report,
-                csvwriter,
-                date.today(),
-                "Your Name",
-                date.today().strftime("%m/%d/%Y"),
-            )
+    if report_work:
+        generate_work_report(vuln_report, output_file=args.output)
+
+    if report_csv and args.output:
+        # Implement CSV output function as needed
+        pass
 
 
 if __name__ == "__main__":

@@ -63,6 +63,7 @@ daemons:
   - prom-scraper
   - prometheus
   - pushgateway
+  - python3.12
   - redis
   - redis-server
   - rep

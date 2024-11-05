@@ -5,6 +5,7 @@ jobs:
   plan:
   - in_parallel: 
     - get: credhub-scripts
+      trigger: true
     - get: master-bosh-root-cert
   - task: jumpbox
     file: credhub-scripts/credhub/scriptme.yml

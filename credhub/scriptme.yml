@@ -15,7 +15,7 @@ inputs:
 - name: master-bosh-root-cert
 
 run:
-  path: credhub-scripts/scriptme.sh
+  path: credhub-scripts/credhub/scriptme.sh
 
 params:
   CREDHUB_CA_CERT:

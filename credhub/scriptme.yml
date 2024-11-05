@@ -11,11 +11,11 @@ image_resource:
     tag: latest
 
 inputs:
-- name: blorp
+- name: credhub-scripts
 - name: master-bosh-root-cert
 
 run:
-  path: blorp/scriptme.sh
+  path: credhub-scripts/scriptme.sh
 
 params:
   CREDHUB_CA_CERT:

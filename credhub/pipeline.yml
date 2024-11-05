@@ -10,9 +10,9 @@ jobs:
     file: credhub-scripts/credhub/scriptme.yml
     params:
       CREDHUB_CA_CERT: master-bosh-root-cert/master-bosh.crt
-      CREDHUB_CLIENT: ((production-standalone-credhub.admin-client))
-      CREDHUB_SECRET: ((production-standalone-credhub.admin-secret))
-      CREDHUB_SERVER: ((production-standalone-credhub.api-server))
+      CREDHUB_CLIENT: ((jumpbox/production-standalone-credhub.admin-client))
+      CREDHUB_SECRET: ((jumpbox/production-standalone-credhub.admin-secret))
+      CREDHUB_SERVER: ((jumpbox/production-standalone-credhub.api-server))
 
 
 resources:
@@ -26,7 +26,7 @@ resources:
 - name: master-bosh-root-cert
   type: s3-iam
   source:
-    bucket: ((production-bucket-name))
+    bucket: ((jumpbox/production-bucket-name))
     region_name: ((aws-region))
     versioned_file: master-bosh.crt
 

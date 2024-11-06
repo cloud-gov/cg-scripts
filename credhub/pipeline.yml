@@ -16,6 +16,24 @@ jobs:
       CREDHUB_SERVER: ((jumpbox/production-standalone-credhub.api-server))
 
 
+- name: credhub-key-sync-slot-1
+  plan:
+  - in_parallel: 
+    - get: credhub-scripts
+      trigger: true
+    - get: master-bosh-root-cert
+  - task: jumpbox
+    file: credhub-scripts/credhub/credhub-key-sync.yml
+    params:
+      CREDHUB_CA_CERT: master-bosh-root-cert/master-bosh.crt
+      CREDHUB_CLIENT: ((jumpbox/production-standalone-credhub.admin-client))
+      CREDHUB_SECRET: ((jumpbox/production-standalone-credhub.admin-secret))
+      CREDHUB_SERVER: ((jumpbox/production-standalone-credhub.api-server))
+      SOURCE_KEY_PATH: /concourse/pages/com-waf-search-string-pages-slot-1
+      TARGET_KEY_PATH: /concourse/main/aws-admin/com-waf-search-string-pages-slot-1
+
+
+
 resources:
 - name: credhub-scripts
   type: git

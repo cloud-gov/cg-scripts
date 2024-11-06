@@ -2,10 +2,10 @@
 set -e -u
 
 # Load up current values
-echo "Looking up ${SOURCE_KEY_VALUE} value..."
+echo "Looking up ${SOURCE_KEY_PATH} value..."
 SOURCE_KEY_VALUE="$(credhub get -n ${SOURCE_KEY_PATH} -q)"
 
-echo "Looking up ${TARGET_KEY_VALUE} value..."
+echo "Looking up ${TARGET_KEY_PATH} value..."
 TARGET_KEY_VALUE="$(credhub get -n ${TARGET_KEY_PATH} -q)"
                
 # Compare variables

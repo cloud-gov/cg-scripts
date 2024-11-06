@@ -1,0 +1,26 @@
+---
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    aws_access_key_id: ((ecr_aws_key))
+    aws_secret_access_key: ((ecr_aws_secret))
+    repository: general-task
+    aws_region: us-gov-west-1
+    tag: latest
+
+inputs:
+- name: credhub-scripts
+- name: master-bosh-root-cert
+
+run:
+  path: credhub-scripts/credhub/credhub-key-sync.sh
+
+params:
+  CREDHUB_CA_CERT:
+  CREDHUB_CLIENT:
+  CREDHUB_SECRET:
+  CREDHUB_SERVER:
+  SOURCE_KEY_PATH:
+  TARGET_KEY_PATH:

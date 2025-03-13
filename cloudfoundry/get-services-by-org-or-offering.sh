@@ -37,8 +37,6 @@ while getopts ":hs:o:" opt; do
 done
 shift $((OPTIND -1))
 
-# set -x
-
 REQUEST_PATH="/v3/service_instances?per_page=5000"
 
 if [ -n "$ORGANIZATION_GUID" ]; then

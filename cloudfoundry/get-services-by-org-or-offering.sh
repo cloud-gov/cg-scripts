@@ -61,22 +61,18 @@ for result in $RESULTS; do
   instance_guid=$(echo "$result" | jq -r '.guid')
   space_guid=$(echo "$result" | jq -r '.space_guid')
   
-  existing_space_result=$(grep "$space_guid" "$lookup_results")
+  existing_space_result=$(grep "^$space_guid" "$lookup_results")
   if [ -n "$existing_space_result" ]; then
     space_name=$(echo "$existing_space_result" | awk -F ',' '{print $2}')
+    org_guid=$(echo "$existing_space_result" | awk -F ',' '{print $3}')
   else
     space_info=$(cf curl "/v3/spaces/$space_guid")
     space_name=$(echo "$space_info" | jq -r '.name')
-    echo "$space_guid,$space_name" >> "$lookup_results"
-  fi
-
-  if [ -n "$ORGANIZATION_GUID" ]; then
-    org_guid=$ORGANIZATION_GUID
-  else
     org_guid=$(echo "$space_info" | jq -r '.relationships.organization.data.guid')
+    echo "$space_guid,$space_name,$org_guid" >> "$lookup_results"
   fi
   
-  existing_org_result=$(grep "$org_guid" "$lookup_results")
+  existing_org_result=$(grep "^$org_guid" "$lookup_results")
   if [ -n "$existing_org_result" ]; then
     org_name=$(echo "$existing_org_result" | awk -F ',' '{print $2}')
   else    

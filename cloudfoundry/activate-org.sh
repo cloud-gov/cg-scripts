@@ -7,14 +7,14 @@
 
 set -e -x
 
-if [ "$#" -ne 1 ]; then
+usage() {
   echo
   echo "Usage:"
   echo "   ./activate-org.sh <org name>"
   echo
 
   exit 1
-fi
+}
 
 # Check to see if the person has at least version 7 of the cf CLI; if not, let
 # them know to upgrade and exit.

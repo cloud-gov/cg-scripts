@@ -3,14 +3,14 @@
 function usage {
 cat >&2 <<EOM
 
-Gets all service instances for the given organization GUID and/or service offering
+Gets all service instances for the given organization name and/or service offering
 
-usage: $0 -o [org guid value] -s [service offering name]
+usage: $0 -o [org name] -s [service offering name]
 
 Examples:
-  $0 -o org-guid-123 -s aws-elasticsearch
-  $0 -o org-guid-123 -s aws-rds
-  $0 -o org-guid-123 -s aws-elasticache-redis
+  $0 -o org-name -s aws-elasticsearch
+  $0 -o org-name -s aws-rds
+  $0 -o org-name -s aws-elasticache-redis
   $0 -s custom-domain
 
 EOM
@@ -23,7 +23,7 @@ while getopts ":hs:o:" opt; do
       exit 0
       ;;
     o )
-      ORGANIZATION_GUID=$OPTARG
+      ORGANIZATION_GUID=$(cf org "$OPTARG" --guid)
       ;;
     s )
       SERVICE_OFFERING=$OPTARG
@@ -36,6 +36,12 @@ while getopts ":hs:o:" opt; do
   esac
 done
 shift $((OPTIND -1))
+
+if [ -z "$SERVICE_OFFERING" ] && [ -z "$ORGANIZATION_GUID" ]; then
+  echo "either organization name or service offering (or both) are required option(s) for the script"
+  usage
+  exit 1
+fi
 
 REQUEST_PATH="/v3/service_instances?per_page=5000"
 

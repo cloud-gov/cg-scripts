@@ -3,20 +3,22 @@
 function usage {
 cat >&2 <<EOM
 
-Gets all service instances for the given organization name and/or service offering
+Gets all service instances for the given organization name, service offering name, or list of GUIDs.
+If a list of GUIDs is provided, the other two options will be ignored.
 
-usage: $0 -o [org name] -s [service offering name]
+usage: $0 -o [org name] -s [service offering name] -i [comma-delimited list of GUIDs]
 
 Examples:
   $0 -o org-name -s aws-elasticsearch
   $0 -o org-name -s aws-rds
   $0 -o org-name -s aws-elasticache-redis
   $0 -s custom-domain
+  $0 -i guid1,guid2,guid3
 
 EOM
 }
 
-while getopts ":hs:o:" opt; do
+while getopts ":hs:o:i:" opt; do
   case ${opt} in
     h )
       usage
@@ -28,6 +30,9 @@ while getopts ":hs:o:" opt; do
     s )
       SERVICE_OFFERING=$OPTARG
       ;;
+    i )
+      INSTANCE_GUIDS=$OPTARG
+      ;;
     * )
       echo "Invalid Option: $OPTARG"
       usage
@@ -37,29 +42,34 @@ while getopts ":hs:o:" opt; do
 done
 shift $((OPTIND -1))
 
-if [ -z "$SERVICE_OFFERING" ] && [ -z "$ORGANIZATION_GUID" ]; then
-  echo "either organization name or service offering (or both) are required option(s) for the script"
+if [ -z "$SERVICE_OFFERING" ] && [ -z "$ORGANIZATION_GUID" ] && [ -z "$INSTANCE_GUIDS" ]; then
+  echo "You must provide instance GUIDs, a service offering name, or organization name"
+  echo "as option(s) to the script. See the usage instructions below."
   usage
   exit 1
 fi
 
 REQUEST_PATH="/v3/service_instances?per_page=5000"
 
-if [ -n "$ORGANIZATION_GUID" ]; then
+if [ -n "$ORGANIZATION_GUID" ] && [ -z "$INSTANCE_GUIDS" ]; then
   ORG_GUIDS_FILTER="organization_guids=$ORGANIZATION_GUID"
   REQUEST_PATH="$REQUEST_PATH&$ORG_GUIDS_FILTER"
 fi
 
-if [ -n "$SERVICE_OFFERING" ]; then
+if [ -n "$SERVICE_OFFERING" ] && [ -z "$INSTANCE_GUIDS" ]; then
   SERVICE_PLAN_GUIDS=$(cf curl "/v3/service_plans?service_offering_names=$SERVICE_OFFERING" | jq -r '[.resources[].guid] | join(",")')
   REQUEST_PATH="${REQUEST_PATH}&service_plan_guids=$SERVICE_PLAN_GUIDS"
+fi
+
+if [ -n "$INSTANCE_GUIDS" ]; then
+  REQUEST_PATH="$REQUEST_PATH&guids=$INSTANCE_GUIDS"
 fi
 
 RESULTS=$(cf curl "$REQUEST_PATH" \
   | jq -c -r '.resources[] | {name: (.name), guid: (.guid), space_guid: (.relationships.space.data.guid)}')
 
 lookup_results=$(mktemp)
-echo "Service Instance Name,Service Instance GUID,Organization,Space"
+echo "Service Instance GUID,Service Instance Name,Organization,Space"
 for result in $RESULTS; do
   service_name=$(echo "$result" | jq -r '.name')
   instance_guid=$(echo "$result" | jq -r '.guid')
@@ -84,7 +94,7 @@ for result in $RESULTS; do
     echo "$org_guid,$org_name" >> "$lookup_results"
   fi      
   
-  echo "$service_name,$instance_guid,$org_name,$space_name"
+  echo "$instance_guid,$service_name,$org_name,$space_name"
 done
 
 rm "$lookup_results"

@@ -37,6 +37,9 @@ printf "Retrieving all org and space roles for user: %s\n\n" "$username"
 
 # get the user guid
 user_guid=$(cf curl "/v3/users?usernames=$username" | jq -r '.resources[].guid')
+if [[ -n "$user_guid" ]]; then
+  printf "guid: %s\n" "$user_guid"
+fi
 
 # get all user roles and orgs
 role_list=$(cf curl "/v3/roles?user_guids=${user_guid}&per_page=5000")
@@ -48,7 +51,7 @@ ORG_SPACE_RESULTS=$(echo "$role_list" | jq -r '
 
 for result in $ORG_SPACE_RESULTS; do
   role=$(echo "$result" | awk -F "," '{print $1}')
-  
+
   ORG_GUID=$(echo "$result" | awk -F "," '{print $2}')
   org_name=$(query_org_name "$ORG_GUID")
 

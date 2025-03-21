@@ -2,6 +2,7 @@
 
 # Periodically archive GSA "MY" sites to Drive for GSA retention purposes
 # for IDCDB: OGP IT Services Branch
+# Why "MY"? It's the GSA codes for: Office of Shared Solutions and Performance Improvement (OGP-MY)
 
 # This script uses `wget` to mirror the sites in question, 
 # and rewrites links so they're internally consistent

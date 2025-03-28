@@ -87,7 +87,7 @@ def print_db_instances_csv_lines(instances):
         else:
             free_space_gigabytes = "Unknown"
 
-        output = "{db_identifer},{engine},{engine_version},{storage_type},{storage_size},{free_space_gigabytes},{org_guid},{space_guid},{instance_guid},{org_name},{space_name},{instance_name},{instance_create_time}".format(
+        output = "{db_identifer},{engine},{engine_version},{storage_type},{storage_size},{free_space_gigabytes},{org_guid},{space_guid},{instance_guid},{org_name},{space_name},{instance_name},{instance_create_time},{preferred_maintenance_window},{auto_minor_version_upgrade}".format(
             db_identifer=db_instance["DBInstanceIdentifier"],
             engine=db_instance["Engine"],
             engine_version=db_instance["EngineVersion"],
@@ -101,6 +101,8 @@ def print_db_instances_csv_lines(instances):
             space_name=space_name,
             instance_name=instance_name,
             instance_create_time=db_instance["InstanceCreateTime"],
+            preferred_maintenance_window=db_instance["PreferredMaintenanceWindow"],
+            auto_minor_version_upgrade=db_instance["AutoMinorVersionUpgrade"],
         )
 
         print(output)
@@ -110,7 +112,7 @@ def print_rds_database_csv_header():
     if os.getenv("NO_HEADER"):
         return
     print(
-        "Database ID,Engine,Engine Version,Storage Type,Storage Size (in GB),Free storage (in GB),Organization GUID,Space GUID,Instance GUID,Org,Space,Instance,Created"
+        "Database ID,Engine,Engine Version,Storage Type,Storage Size (in GB),Free storage (in GB),Organization GUID,Space GUID,Instance GUID,Org,Space,Instance,Created,Maintenance window,Auto minor version upgrade"
     )
 
 

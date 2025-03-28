@@ -12,7 +12,7 @@ if [ "$#" -lt 1 ]; then
   echo
   exit 1;
 fi
-USER=$BASH_ARGV
+USER=$1
 REMOVE=false
 
 while getopts ":r" opt; do
@@ -33,13 +33,13 @@ fi
 
 declare -a admin_groups=("cloud_controller.global_auditor" "scim.read" "admin_ui.user")
 if $REMOVE; then
-  for group in ${admin_groups[@]}
+  for group in "${admin_groups[@]}"
   do
     echo -n "Removing user from group ${group}... "
     uaac member delete "${group}" "${USER}" || true
   done
 else
-  for group in ${admin_groups[@]}
+  for group in "${admin_groups[@]}"
   do
     echo -n "Adding user to group ${group}... "
     uaac member add "${group}" "${USER}" || true

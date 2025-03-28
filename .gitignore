@@ -17,6 +17,7 @@ my*.yml
 .vscode
 venv
 **/__pycache__
+*.txt
 
 # don't keep certbot stuff
 certbot/config/**

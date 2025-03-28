@@ -18,7 +18,7 @@ for instance in $log_groups; do
     TAGS_STRING=${TAGS_STRING// /}
 
     if [ -z "$RDS_TAGS" ]; then
-        echo "invalid tags for ${instance}"
+        echo "invalid tags for ${instance}, does it exist?"
     else
         aws logs tag-log-group --log-group-name "${instance}" --tags "$TAGS_STRING"
         echo "Success on ${instance}"

@@ -61,12 +61,16 @@ def print_s3_instances_csv_lines(instances):
         org_guid = tags.get("Organization ID", "")
         if org_guid == "":
             org_guid = tags.get("Organization GUID", "")
+            if org_guid == "organizationGuid":
+                org_guid = tags.get("organizationGuid","")
         org_name = get_cf_entity_name("organizations", org_guid) if org_guid else ""
 
         # Was Space GUID for RDS
         space_guid = tags.get("Space ID", "")
         if space_guid == "":
             space_guid = tags.get("Space GUID", "")
+            if space_guid == "":
+                space_guid = tags.get("spaceGuid", "")
         space_name = get_cf_entity_name("spaces", space_guid) if space_guid else ""
 
         # instance_guid = tags.get("Instance GUID", "")
@@ -105,7 +109,7 @@ def print_s3_instances_csv_lines(instances):
             else:
                 used_space = str(used_space_gigabytes) + " GB"
         else:
-            used_space = "Unknown"
+            used_space = "Might be Empty"
 
 
         output = "{s3_name},{storage_size},{org_guid},{space_guid},{org_name},{space_name}".format(

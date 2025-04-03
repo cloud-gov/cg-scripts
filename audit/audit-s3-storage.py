@@ -34,9 +34,6 @@ def print_all_s3_instances_csv_lines():
     buckets = s3_client.list_buckets()
     bucket_list=[bucket['Name'] for bucket in buckets['Buckets']]
     print_s3_instances_csv_lines(bucket_list)
-    # while "Marker" in rds_response:
-    #     rds_response = s3_client.describe_s3_instances(Marker=rds_response["Marker"])
-    #     print_s3_instances_csv_lines(buckets)
 
 
 def print_s3_instances_csv_lines(instances):
@@ -72,13 +69,6 @@ def print_s3_instances_csv_lines(instances):
             if space_guid == "":
                 space_guid = tags.get("spaceGuid", "")
         space_name = get_cf_entity_name("spaces", space_guid) if space_guid else ""
-
-        # instance_guid = tags.get("Instance GUID", "")
-        # instance_name = (
-        #     get_cf_entity_name("service_instances", instance_guid)
-        #     if instance_guid
-        #     else ""
-        # )
 
         now = datetime.datetime.now()
         s3_space_used = cloudwatch_client.get_metric_statistics(

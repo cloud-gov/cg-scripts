@@ -56,13 +56,17 @@ def print_s3_instances_csv_lines(instances):
             tag_list=s3_instance_tag_list.get('TagSet',[])
             tags = {tag.get("Key"): tag.get("Value") for tag in tag_list}
         except ClientError as e:
-            print("no tags")
+            tags={}
         # Was Organization GUID for RDS
         org_guid = tags.get("Organization ID", "")
+        if org_guid == "":
+            org_guid = tags.get("Organization GUID", "")
         org_name = get_cf_entity_name("organizations", org_guid) if org_guid else ""
 
         # Was Space GUID for RDS
         space_guid = tags.get("Space ID", "")
+        if space_guid == "":
+            space_guid = tags.get("Space GUID", "")
         space_name = get_cf_entity_name("spaces", space_guid) if space_guid else ""
 
         # instance_guid = tags.get("Instance GUID", "")
@@ -73,37 +77,40 @@ def print_s3_instances_csv_lines(instances):
         # )
 
         now = datetime.datetime.now()
-
-        print(s3_instance)
         s3_space_used = cloudwatch_client.get_metric_statistics(
-            Namespace='AWS/S3',
-            MetricName='BucketSizeBytes',
+            Namespace="AWS/S3",
+            MetricName="BucketSizeBytes",
             Dimensions=[
                 {
-                    'Name': 'BucketName',
-                    'Value': s3_instance
+                    "Name":"BucketName",
+                    "Value":s3_instance,
                 },
                 {
-                    'Name':'StorageType',
-                    'Value':'StandardStorage'
+                    "Name":"StorageType",
+                    "Value":"StandardStorage",
                 }
             ],
-            Statistics=['Average'],
-            Period=3600,
-            StartTime=now - datetime.timedelta(minutes=60),
-            EndTime=now
+            Statistics=["Average"],
+            Period=86400,
+            StartTime=now - datetime.timedelta(days=1),
+            EndTime=now,
+            Unit="Bytes",
         )
-        print(s3_space_used)
+
         if s3_space_used["Datapoints"]:
             used_space_bytes = s3_space_used["Datapoints"][0]["Average"]
             used_space_gigabytes = used_space_bytes / (10**9)
+            if used_space_gigabytes < 1:
+                used_space = str(used_space_bytes / (10**6)) + " MB"
+            else:
+                used_space = str(used_space_gigabytes) + " GB"
         else:
-            used_space_gigabytes = "Unknown"
+            used_space = "Unknown"
 
 
         output = "{s3_name},{storage_size},{org_guid},{space_guid},{org_name},{space_name}".format(
             s3_name=s3_instance,
-            storage_size=used_space_gigabytes,
+            storage_size=used_space,
             org_guid=org_guid,
             space_guid=space_guid,
             org_name=org_name,
@@ -117,7 +124,7 @@ def print_s3_database_csv_header():
     if os.getenv("NO_HEADER"):
         return
     print(
-        "S3 ID,Storage Size (in GB),Organization GUID,Space GUID,Org,Space"
+        "S3 ID,Storage Size,Organization GUID,Space GUID,Org,Space"
     )
 
 

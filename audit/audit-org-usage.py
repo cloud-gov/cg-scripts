@@ -53,12 +53,13 @@ class Organization:
                     'Values': [tag_value]
         
                 }
-            ]
+            ],
+            ResourceTypeFilters = ['rds:db']
         )
         for resource in response['ResourceTagMappingList']:
-            r = resource['ResourceARN']
-            # rds = Rds(response['ResourceARN'])
-            self.rds_instances.append(r)
+            # r = resource['ResourceARN']
+            rds = Rds(resource['ResourceARN'])
+            self.rds_instances.append(rds)
 
 #{ "ResourceTagMappingList": [ {
 #            "ResourceARN": "arn:aws-us-gov:rds:us-gov-west-1:135676904304:db:cg-aws-broker-prodme3mx7or6nhflbj",
@@ -99,7 +100,7 @@ def main():
     print(f"Organization memory quota: {org.get_quota_memory()}")
     print(f"Organization memory usage: {org.get_memory_usage()}")
     for r in org.rds_instances:
-        print(f"RDS ARN: {r}")
+        print(f"RDS ARN: {r.arn}")
 
 if __name__ == "__main__":
     main()

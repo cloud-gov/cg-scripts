@@ -122,14 +122,19 @@ def print_rds_database_audit_csv():
     print_all_db_instances_csv_lines()
 
 def test_authenticated():
-    try:
-        # Run the subprocess and check for errors
-        cmd='false'
-        result = subprocess.run([cmd], check=True)
-    except subprocess.CalledProcessError as e:
-    # Handle the error
-        print(f"Error: Command {cmd} failed, ensure AWS env is set up", file=sys.stderr)
-        sys.exit(1)  # Exit with non-zero status cod
+    '''
+    Try CF and AWS commands to ensure we're logged in to everything
+    '''
+    for cmd in ['cf oauth-token', 'aws sts get-caller-identity']:
+        try:
+            result = subprocess.run(
+                cmd.split(' '), 
+                check=True, 
+                stderr = subprocess.DEVNULL,
+                stdout = subprocess.DEVNULL)
+        except subprocess.CalledProcessError as e:
+            print(f"Error: Command \"{cmd}\" failed, are you sure you're authenticated?", file=sys.stderr)
+            sys.exit(1)  # Exit with non-zero status cod
 
 
 def main():

@@ -25,8 +25,9 @@ class Rds(AWSResource):
         super().__init__(arn, tags) 
         self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
         self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
-        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0] # This could change with `cf rename-service`
-        self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"]
+        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
+        # 'instance_name' could change with `cf rename-service`
+        self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"] 
 
     def get_db_instance(self, client):
         response = client.describe_db_instances(
@@ -169,7 +170,7 @@ def main():
         print(f" RDS service plan name: {r.service_plan_name}")
     for s in org.s3_buckets:
         print(f" S3 bucket: {s.bucket_name}")
-        print(f" S3 Usage (GB) {s.s3_usage/(1024*1024)}")
+        print(f" S3 Usage (GB): {s.s3_usage/(1024*1024):.2f}")
 
 if __name__ == "__main__":
     main()

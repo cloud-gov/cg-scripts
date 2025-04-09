@@ -26,7 +26,7 @@ class Rds(AWSResource):
         self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
         self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
         self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0] # This could change with `cf rename-service`
-        self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"][0]
+        self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"]
 
     def get_db_instance(self, client):
         response = client.describe_db_instances(
@@ -38,16 +38,17 @@ class Rds(AWSResource):
 class S3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags) 
+        self.bucket_name = self.instance_id
 
     def get_s3_usage(self, client):
         now = datetime.datetime.now()
-        self.s3_usage = client.get_metric_statistics(
+        response = client.get_metric_statistics(
             Namespace="AWS/S3",
             MetricName="BucketSizeBytes",
             Dimensions=[
                 {
                     "Name":"BucketName",
-                    "Value":self.arn
+                    "Value":self.bucket_name
                 },
                 {
                     "Name":"StorageType",
@@ -60,6 +61,10 @@ class S3(AWSResource):
             EndTime=now,
             Unit="Bytes",
         )
+        self.s3_usage = 0
+        datapoints = response['Datapoints']
+        if len(datapoints) > 0 :
+            self.s3_usage = datapoints[0]['Average']
 
 class Organization:
     def __init__(self, name):
@@ -143,11 +148,11 @@ def test_authenticated():
             print(f"Error: Command \"{cmd}\" failed, are you sure you're authenticated?", file=sys.stderr)
             sys.exit(1)  # Exit with non-zero status cod
 
-
 def main():
     test_authenticated()
-    #org = Organization(name="sandbox-gsa")
-    org = Organization(name="cloud-gov-operators")
+    # org = Organization(name="sandbox-gsa")
+    org = Organization(name="epa-avert")
+    #org = Organization(name="cloud-gov-operators")
     org.get_rds_instances(tags_client)
     for rds in org.rds_instances:
         rds.get_db_instance(rds_client)
@@ -163,8 +168,8 @@ def main():
         print(f" RDS allocation (GB): {r.allocated_storage}")
         print(f" RDS service plan name: {r.service_plan_name}")
     for s in org.s3_buckets:
-        print(f" S3 ARN: {s.arn}")
-        print(f" S3 Usage (GB) {s.s3_usage}")
+        print(f" S3 bucket: {s.bucket_name}")
+        print(f" S3 Usage (GB) {s.s3_usage/(1024*1024)}")
 
 if __name__ == "__main__":
     main()

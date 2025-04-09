@@ -6,6 +6,7 @@ import json
 import boto3
 
 tags_client = boto3.client('resourcegroupstaggingapi')
+rds_client = boto3.client('rds')
 
 class Rds:
     def __init__(self, arn, tags):
@@ -19,6 +20,13 @@ class Rds:
         self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
         self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
         self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"][0]
+
+    def get_db_instance(self, client):
+        response = client.describe_db_instances(
+            DBInstanceIdentifier = self.arn
+        )
+        instance_info = response['DBInstances'][0]
+        self.engine = instance_info['Engine']
 
 class Organization:
     def __init__(self, name):
@@ -90,6 +98,8 @@ def main():
     # test_authenticated()
     org = Organization(name="cloud-gov-operators")
     org.get_rds_instances(tags_client)
+    for rds in org.rds_instances:
+        rds.get_db_instance(rds_client)
 
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
@@ -97,9 +107,8 @@ def main():
     print(f"Organization memory usage: {org.get_memory_usage()}")
     for r in org.rds_instances:
         print(f" RDS ARN: {r.arn}")
-        print(f" RDS instance: {r.instance_name}")
-        print(f" RDS space: {r.space_name}")
         print(f" RDS space guid: {r.space_guid}")
+        print(f" RDS engine: {r.engine}")
 
 if __name__ == "__main__":
     main()

@@ -3,6 +3,13 @@
 
 import subprocess
 import sys
+import uuid
+
+# Option 1: Using a class
+class Organization:
+    def __init__(self, name, guid=None):
+        self.name = name
+        self.guid = guid if guid else str(uuid.uuid4())
 
 
 def test_authenticated():
@@ -23,8 +30,9 @@ def test_authenticated():
 
 def main():
     test_authenticated()
-    get_org_quota()
-#    print_rds_database_audit_csv()
+    org = Organization(name="sandbox-gsa")
+    print(f"Organization name: {org.name}")
+    print(f"Organization GUID: {org.guid}")
 
 
 if __name__ == "__main__":

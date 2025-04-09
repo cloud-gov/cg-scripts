@@ -4,10 +4,12 @@ import subprocess
 import sys
 import json
 import boto3
+import datetime
 
 tags_client = boto3.client('resourcegroupstaggingapi')
 rds_client = boto3.client('rds')
 s3_client = boto3.client('s3')
+cloudwatch_client = boto3.client('cloudwatch')
 
 class AWSResource:
     def __init__(self, arn, tags):
@@ -36,6 +38,28 @@ class Rds(AWSResource):
 class S3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags) 
+
+    def get_s3_usage(self, client):
+        now = datetime.datetime.now()
+        self.s3_usage = client.get_metric_statistics(
+            Namespace="AWS/S3",
+            MetricName="BucketSizeBytes",
+            Dimensions=[
+                {
+                    "Name":"BucketName",
+                    "Value":self.arn
+                },
+                {
+                    "Name":"StorageType",
+                    "Value":"StandardStorage",
+                }
+            ],
+            Statistics=["Average"],
+            Period=86400,
+            StartTime=now - datetime.timedelta(days=1),
+            EndTime=now,
+            Unit="Bytes",
+        )
 
 class Organization:
     def __init__(self, name):
@@ -121,12 +145,15 @@ def test_authenticated():
 
 
 def main():
-    # test_authenticated()
+    test_authenticated()
+    #org = Organization(name="sandbox-gsa")
     org = Organization(name="cloud-gov-operators")
     org.get_rds_instances(tags_client)
     for rds in org.rds_instances:
         rds.get_db_instance(rds_client)
     org.get_s3_buckets(tags_client)
+    for s3 in org.s3_buckets:
+        s3.get_s3_usage(cloudwatch_client)
 
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
@@ -137,7 +164,7 @@ def main():
         print(f" RDS service plan name: {r.service_plan_name}")
     for s in org.s3_buckets:
         print(f" S3 ARN: {s.arn}")
-
+        print(f" S3 Usage (GB) {s.s3_usage}")
 
 if __name__ == "__main__":
     main()

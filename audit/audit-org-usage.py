@@ -8,8 +8,17 @@ import boto3
 tags_client = boto3.client('resourcegroupstaggingapi')
 
 class Rds:
-    def __init__(self, arn):
+    def __init__(self, arn, tags):
         self.arn = arn
+        self.tags = tags
+        if ':' in arn: 
+            self.instance_id = arn.split(':')[-1] 
+        else:
+            self.instance_id = "Unknown"
+        self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"]
+        self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space guid"]
+        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"]
+        self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"][0]
 
 class Organization:
     def __init__(self, name):
@@ -58,21 +67,8 @@ class Organization:
         )
         for resource in response['ResourceTagMappingList']:
             # r = resource['ResourceARN']
-            rds = Rds(resource['ResourceARN'])
+            rds = Rds(resource['ResourceARN'], resource['Tags'])
             self.rds_instances.append(rds)
-
-#{ "ResourceTagMappingList": [ {
-#            "ResourceARN": "arn:aws-us-gov:rds:us-gov-west-1:135676904304:db:cg-aws-broker-prodme3mx7or6nhflbj",
-#            "Tags": [
-#                {
-#                    "Key": "Service offering name",
-#                    "Value": "aws-rds"
-#                },
-#                {
-#                    "Key": "Organization GUID",
-#                    "Value": "77fa4cb4-963d-491d-ac73-23b6de945edd"
-#                },
-
 
 def test_authenticated():
     '''
@@ -100,7 +96,8 @@ def main():
     print(f"Organization memory quota: {org.get_quota_memory()}")
     print(f"Organization memory usage: {org.get_memory_usage()}")
     for r in org.rds_instances:
-        print(f"RDS ARN: {r.arn}")
+        print(f" RDS ARN: {r.arn}")
+        print(f" RDS instance: {r.instance_name}")
 
 if __name__ == "__main__":
     main()

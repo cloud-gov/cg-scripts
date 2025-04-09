@@ -20,13 +20,21 @@ class Organization:
         )
         return json.loads(cf_json)['resources'][0]
     
-    def fetch_quota_memory(self):
+    def get_quota_memory(self):
         cf_json = subprocess.check_output(
             "cf curl /v3/organization_quotas/" + self.quota_guid,
             universal_newlines=True,
             shell=True,
         )
         return json.loads(cf_json)['apps']['total_memory_in_mb']
+
+    def get_memory_usage(self):
+        cf_json = subprocess.check_output(
+            "cf curl /v3/organizations/" + self.guid + "/usage_summary",
+            universal_newlines=True,
+            shell=True,
+        )
+        return json.loads(cf_json)['usage_summary']['memory_in_mb']
 
 
 def test_authenticated():
@@ -47,10 +55,11 @@ def test_authenticated():
 
 def main():
     # test_authenticated()
-    org = Organization(name="sandbox-gsa")
+    org = Organization(name="cloud-gov-operators")
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
-    print(f"Organization memory quota: {org.fetch_quota_memory()}")
+    print(f"Organization memory quota: {org.get_quota_memory()}")
+    print(f"Organization memory usage: {org.get_memory_usage()}")
 
 
 if __name__ == "__main__":

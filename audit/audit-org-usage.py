@@ -15,9 +15,9 @@ class Rds:
             self.instance_id = arn.split(':')[-1] 
         else:
             self.instance_id = "Unknown"
-        self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"]
-        self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space guid"]
-        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"]
+        self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
+        self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
+        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
         self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"][0]
 
 class Organization:
@@ -98,6 +98,8 @@ def main():
     for r in org.rds_instances:
         print(f" RDS ARN: {r.arn}")
         print(f" RDS instance: {r.instance_name}")
+        print(f" RDS space: {r.space_name}")
+        print(f" RDS space guid: {r.space_guid}")
 
 if __name__ == "__main__":
     main()

@@ -8,21 +8,25 @@ import json
 class Organization:
     def __init__(self, name):
         self.name = name
-        self.guid = self.fetch_guid()
+        self.data = self.get_data()
+        self.guid = self.data['guid']
+        self.quota_guid = self.data['relationships']['quota']['data']['guid']
 
-    def fetch_guid(self):
+    def get_data(self):
         cf_json = subprocess.check_output(
             "cf curl /v3/organizations/?names=" + self.name,
             universal_newlines=True,
             shell=True,
         )
-        cf_data = json.loads(cf_json)
-        return cf_data['resources'][0]['guid']
+        return json.loads(cf_json)['resources'][0]
     
-# Get the guid for the organization
-#guid=$(echo $org | jq -j '.resources[] | .guid')
-    
-
+    def fetch_quota_memory(self):
+        cf_json = subprocess.check_output(
+            "cf curl /v3/organization_quotas/" + self.quota_guid,
+            universal_newlines=True,
+            shell=True,
+        )
+        return json.loads(cf_json)['apps']['total_memory_in_mb']
 
 
 def test_authenticated():
@@ -46,6 +50,7 @@ def main():
     org = Organization(name="sandbox-gsa")
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
+    print(f"Organization memory quota: {org.fetch_quota_memory()}")
 
 
 if __name__ == "__main__":

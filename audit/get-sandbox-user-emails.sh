@@ -10,7 +10,7 @@ for org in "${orgs[@]}"
 do
     guid=$(cf org $org --guid)
 
-    emails=($(cf curl "/v2/organizations/$guid/users" | jq '.resources | .[].entity | .username'))
+    emails=($(cf curl "/v3/organizations/$guid/users" | jq '.resources | .[] | .username'))
     for email in "${emails[@]}"
     do
         echo "${email}, ${guid}"

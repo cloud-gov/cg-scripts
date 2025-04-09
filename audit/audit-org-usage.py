@@ -26,7 +26,7 @@ class Rds:
             DBInstanceIdentifier = self.arn
         )
         instance_info = response['DBInstances'][0]
-        self.engine = instance_info['Engine']
+        self.allocated_storage = instance_info['AllocatedStorage']
 
 class Organization:
     def __init__(self, name):
@@ -108,7 +108,7 @@ def main():
     for r in org.rds_instances:
         print(f" RDS ARN: {r.arn}")
         print(f" RDS space guid: {r.space_guid}")
-        print(f" RDS engine: {r.engine}")
+        print(f" RDS allocation: {r.allocated_storage}")
 
 if __name__ == "__main__":
     main()

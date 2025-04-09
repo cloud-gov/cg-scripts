@@ -7,8 +7,9 @@ import boto3
 
 tags_client = boto3.client('resourcegroupstaggingapi')
 rds_client = boto3.client('rds')
+s3_client = boto3.client('s3')
 
-class Rds:
+class AWSResource:
     def __init__(self, arn, tags):
         self.arn = arn
         self.tags = tags
@@ -16,9 +17,13 @@ class Rds:
             self.instance_id = arn.split(':')[-1] 
         else:
             self.instance_id = "Unknown"
+
+class Rds(AWSResource):
+    def __init__(self, arn, tags):
+        super().__init__(arn, tags) 
         self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
         self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
-        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
+        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0] # This could change with `cf rename-service`
         self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"][0]
 
     def get_db_instance(self, client):
@@ -28,6 +33,10 @@ class Rds:
         instance_info = response['DBInstances'][0]
         self.allocated_storage = instance_info['AllocatedStorage']
 
+class S3(AWSResource):
+    def __init__(self, arn, tags):
+        super().__init__(arn, tags) 
+
 class Organization:
     def __init__(self, name):
         self.name = name
@@ -35,6 +44,7 @@ class Organization:
         self.guid = self.data['guid']
         self.quota_guid = self.data['relationships']['quota']['data']['guid']
         self.rds_instances = []
+        self.s3_buckets = []
 
     def get_data(self):
         cf_json = subprocess.check_output(
@@ -78,6 +88,22 @@ class Organization:
             rds = Rds(resource['ResourceARN'], resource['Tags'])
             self.rds_instances.append(rds)
 
+    def get_s3_buckets(self, client):
+        tag_value = self.guid
+        for key_value in ["Organization GUID", "Organization ID", "organizationGuid"]:
+            response = client.get_resources(
+                TagFilters = [
+                    {
+                        'Key': key_value,
+                        'Values': [tag_value]
+                    }
+                ],
+                ResourceTypeFilters = ['s3:bucket']
+            )
+            for resource in response['ResourceTagMappingList']:
+                s3 = S3(resource['ResourceARN'], resource['Tags'])
+                self.s3_buckets.append(s3)
+
 def test_authenticated():
     '''
     Try CF and AWS commands to ensure we're logged in to everything
@@ -100,15 +126,18 @@ def main():
     org.get_rds_instances(tags_client)
     for rds in org.rds_instances:
         rds.get_db_instance(rds_client)
+    org.get_s3_buckets(tags_client)
 
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
     print(f"Organization memory quota: {org.get_quota_memory()}")
     print(f"Organization memory usage: {org.get_memory_usage()}")
     for r in org.rds_instances:
-        print(f" RDS ARN: {r.arn}")
-        print(f" RDS space guid: {r.space_guid}")
-        print(f" RDS allocation: {r.allocated_storage}")
+        print(f" RDS allocation (GB): {r.allocated_storage}")
+        print(f" RDS service plan name: {r.service_plan_name}")
+    for s in org.s3_buckets:
+        print(f" S3 ARN: {s.arn}")
+
 
 if __name__ == "__main__":
     main()

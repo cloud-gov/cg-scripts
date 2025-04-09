@@ -1,15 +1,28 @@
 #!/usr/bin/env python3
 
-
 import subprocess
 import sys
-import uuid
+import json
 
 # Option 1: Using a class
 class Organization:
-    def __init__(self, name, guid=None):
+    def __init__(self, name):
         self.name = name
-        self.guid = guid if guid else str(uuid.uuid4())
+        self.guid = self.fetch_guid()
+
+    def fetch_guid(self):
+        cf_json = subprocess.check_output(
+            "cf curl /v3/organizations/?names=" + self.name,
+            universal_newlines=True,
+            shell=True,
+        )
+        cf_data = json.loads(cf_json)
+        return cf_data['resources'][0]['guid']
+    
+# Get the guid for the organization
+#guid=$(echo $org | jq -j '.resources[] | .guid')
+    
+
 
 
 def test_authenticated():
@@ -29,7 +42,7 @@ def test_authenticated():
 
 
 def main():
-    test_authenticated()
+    # test_authenticated()
     org = Organization(name="sandbox-gsa")
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")

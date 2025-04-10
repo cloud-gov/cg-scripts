@@ -256,8 +256,8 @@ def main():
     org.get_s3_buckets(tags_client)
     for s3 in org.s3_buckets:
         s3.get_s3_usage(cloudwatch_client)
-#    org.get_redis_instances(tags_client)
-#    org.get_es_instances(tags_client)
+    org.get_redis_instances(tags_client)
+    org.get_es_instances(tags_client)
 
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
@@ -277,16 +277,18 @@ def main():
     redis_instance_plans = Counter()
     print("Redis:")
     for redis in org.redis_instances:
-        print(f" Redis service plan name: {redis.service_plan_name}")
         redis_instance_plans[redis.service_plan_name] += 1
     for key, value in redis_instance_plans.items():
         print(f" {key}: {value}")
 
 
+    es_instance_plans = Counter()
     print("ES")
     for es in org.es_instances:
-#        print(f" ES allocation (GB): {es.allocated_storage}")
-        print(f" ES service plan name: {es.service_plan_name}")
+        es_instance_plans[es.service_plan_name] += 1
+    for key, value in es_instance_plans.items():
+        print(f" {key}: {value}")
+
     print("S3")
     for s in org.s3_buckets:
         print(f" S3 bucket: {s.bucket_name}")

@@ -289,10 +289,11 @@ def main():
     for key, value in es_instance_plans.items():
         print(f" {key}: {value}")
 
+    s3_total_storage = 0
     print("S3")
     for s in org.s3_buckets:
-        print(f" S3 bucket: {s.bucket_name}")
-        print(f" S3 Usage (GB): {s.s3_usage/(1024*1024):.2f}")
+        s3_total_storage += s.s3_usage
+    print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024):.2f}")
 
 if __name__ == "__main__":
     main()

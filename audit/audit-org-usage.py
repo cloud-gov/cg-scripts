@@ -171,30 +171,34 @@ class Organization:
             shell=True,
         )
         return json.loads(cf_json)["usage_summary"]["memory_in_mb"]
-    
+
     def get_space_names(self):
+        # FIXME: Use python json instead of jq, but I was getting
+        # _all_ the spaces, not the filtered ones, oddly.
         cf_json = subprocess.check_output(
-            "cf curl '/v3/spaces?order_by=name&organization_guids=" + self.guid + "' | jq '[.resources[].name]'",
-            #"cf curl /v3/spaces?order_by=name&organization_guids=6bd8d843-2a5d-4011-b824-aa3db4d5bd22",
+            "cf curl '/v3/spaces?order_by=name&organization_guids="
+            + self.guid
+            + "' | jq '[.resources[].name]'",
             universal_newlines=True,
             shell=True,
         )
-        cf_data = json.loads(cf_json) 
-        #names = [resource['name'] for resource in cf_data['resources']]
+        cf_data = json.loads(cf_json)
+        # FIXME: This should have worked
+        # names = [resource['name'] for resource in cf_data['resources']]
         return cf_data
 
     def get_aws_instances(self, client, resource_type):
         resource_type_map = {
             "rds": "rds:db",
             "redis": "elasticache:replicationgroup",
-            "es": "es:domain"
+            "es": "es:domain",
         }
         resource_type_filter = [resource_type_map[resource_type]]
         tag_key = "Organization GUID"
         tag_value = self.guid
         response = client.get_resources(
             TagFilters=[{"Key": tag_key, "Values": [tag_value]}],
-            ResourceTypeFilters=resource_type_filter
+            ResourceTypeFilters=resource_type_filter,
         )
         return response
 

@@ -36,6 +36,15 @@ class Rds(AWSResource):
         instance_info = response['DBInstances'][0]
         self.allocated_storage = instance_info['AllocatedStorage']
 
+class Redis(AWSResource):
+    def __init__(self, arn, tags):
+        super().__init__(arn, tags) 
+        self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
+        self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
+        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
+        # 'instance_name' could change with `cf rename-service`
+        self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"] 
+
 class S3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags) 
@@ -74,6 +83,8 @@ class Organization:
         self.guid = self.data['guid']
         self.quota_guid = self.data['relationships']['quota']['data']['guid']
         self.rds_instances = []
+        self.redis_instances = []
+        self.es_instances = []
         self.s3_buckets = []
 
     def get_data(self):
@@ -114,9 +125,25 @@ class Organization:
             ResourceTypeFilters = ['rds:db']
         )
         for resource in response['ResourceTagMappingList']:
-            # r = resource['ResourceARN']
             rds = Rds(resource['ResourceARN'], resource['Tags'])
             self.rds_instances.append(rds)
+    
+    def get_redis_instances(self, client):
+        tag_key = "Organization GUID"
+        tag_value = self.guid
+        response = client.get_resources(
+            TagFilters = [
+                {
+                    'Key': tag_key,
+                    'Values': [tag_value]
+        
+                }
+            ],
+            ResourceTypeFilters = ['elasticache:replicationgroup']
+        )
+        for resource in response['ResourceTagMappingList']:
+            redis = Redis(resource['ResourceARN'], resource['Tags'])
+            self.redis_instances.append(redis)
 
     def get_s3_buckets(self, client):
         tag_value = self.guid
@@ -133,6 +160,9 @@ class Organization:
             for resource in response['ResourceTagMappingList']:
                 s3 = S3(resource['ResourceARN'], resource['Tags'])
                 self.s3_buckets.append(s3)
+    
+
+
 
 def test_authenticated():
     '''
@@ -160,14 +190,18 @@ def main():
     org.get_s3_buckets(tags_client)
     for s3 in org.s3_buckets:
         s3.get_s3_usage(cloudwatch_client)
+    org.get_redis_instances(tags_client)
 
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
     print(f"Organization memory quota: {org.get_quota_memory()}")
     print(f"Organization memory usage: {org.get_memory_usage()}")
-    for r in org.rds_instances:
-        print(f" RDS allocation (GB): {r.allocated_storage}")
-        print(f" RDS service plan name: {r.service_plan_name}")
+    for rds in org.rds_instances:
+        print(f" RDS allocation (GB): {rds.allocated_storage}")
+        print(f" RDS service plan name: {rds.service_plan_name}")
+    for redis in org.redis_instances:
+#        print(f" RDS allocation (GB): {redis.allocated_storage}")
+        print(f" Redis service plan name: {redis.service_plan_name}")
     for s in org.s3_buckets:
         print(f" S3 bucket: {s.bucket_name}")
         print(f" S3 Usage (GB): {s.s3_usage/(1024*1024):.2f}")

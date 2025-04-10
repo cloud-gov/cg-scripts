@@ -8,14 +8,10 @@ import datetime
 import functools
 from collections import Counter
 
-
 tags_client = boto3.client('resourcegroupstaggingapi')
 rds_client = boto3.client('rds')
 s3_client = boto3.client('s3')
 cloudwatch_client = boto3.client('cloudwatch')
-
-# cf curl "/v3/service_instances/92703ccc-4141-4a9c-9924-0a50ec65c29b?fields[service_plan.service_offering.service_broker]=name,guid&fields[service_plan.service_offering]=name&fields[service_plan]=name"
-# cf curl "/v3/service_instances/92703ccc-4141-4a9c-9924-0a50ec65c29b?fields[service_plan]=name"
 
 class AWSResource:
     def __init__(self, arn, tags):
@@ -73,7 +69,6 @@ class AWSNotS3(AWSResource):
         cf_data = json.loads(cf_json)
         # FIX: This will fail if the 'included' field is missing
         return cf_data.get("included", "N/A")['service_plans'][0]['name']
-
 
 class Rds(AWSNotS3):
     def __init__(self, arn, tags):
@@ -243,13 +238,14 @@ def test_authenticated():
             sys.exit(1)  # Exit with non-zero status cod
 
 def main():
-    print("Skip auth test")
-#    test_authenticated()
-    # org = Organization(name="sandbox-gsa")
-    # org = Organization(name="epa-avert")
-    # org = Organization(name="cloud-gov-operators")
-    # FAS Fedsim has all the types
-    org = Organization(name="gsa-fas-fedsim")
+    if len(sys.argv) == 1:
+        print('Provide an org name')
+        sys.exit(-1)
+    org_name = sys.argv[1]
+    org = Organization(name=org_name)
+
+    test_authenticated()
+
     org.get_rds_instances(tags_client)
     for rds in org.rds_instances:
         rds.get_db_instance(rds_client)

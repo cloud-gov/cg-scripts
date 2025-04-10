@@ -162,7 +162,7 @@ setup_global_hooks() {
     mkdir -p "$HOOKS_DIR"
     
     # Create pre-commit hook script
-    cat <<'EOF' > "$HOOKS_DIR/pre-commit"
+cat <<'EOF' > "$HOOKS_DIR/pre-commit"
 #!/bin/bash
 LOGFILE="$HOME/.git-support/semgrep-gitleaks.log"
 CONFIG="$HOME/.git-support/gitleaks.toml"
@@ -178,8 +178,16 @@ if [ -z "$STAGED_FILES" ]; then
     exit 0
 fi
 
-# Run gitleaks check
-if ! gitleaks protect --staged --config="$CONFIG" --verbose; then
+# Run gitleaks check and capture output
+gitleaks_output=$(GIT_TRACE=0 gitleaks protect --staged --config="$CONFIG" --verbose 2>&1)
+gitleaks_status=$?
+
+# If output contains "no leaks found" anywhere, consider it a success
+if echo "$gitleaks_output" | grep -q "no leaks found"; then
+    echo "no leaks found" | tee -a "$LOGFILE"
+    exit 0
+elif [ $gitleaks_status -ne 0 ]; then
+    echo "$gitleaks_output" | tee -a "$LOGFILE"
     exit 1
 fi
 

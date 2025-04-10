@@ -226,9 +226,6 @@ class Organization:
             for resource in response['ResourceTagMappingList']:
                 s3 = S3(resource['ResourceARN'], resource['Tags'])
                 self.s3_buckets.append(s3)
-    
-
-
 
 def test_authenticated():
     '''
@@ -266,18 +263,26 @@ def main():
     print(f"Organization GUID: {org.guid}")
     print(f"Organization memory quota: {org.get_quota_memory()}")
     print(f"Organization memory usage: {org.get_memory_usage()}")
+
     print("RDS:")
     rds_instance_plans = Counter()
+    rds_allocation = 0
     for rds in org.rds_instances:
         rds_instance_plans[rds.service_plan_name] += 1
-        print(f" RDS allocation (GB): {rds.allocated_storage}")
-        print(f" RDS service plan name: {rds.service_plan_name}")
+        rds_allocation += rds.allocated_storage
     for key, value in rds_instance_plans.items():
-        print(f"Service Plan: {key}; Count {value}")
+        print(f" {key}: {value}")
+    print(f" RDS allocation (GB): {rds_allocation}")
+
+    redis_instance_plans = Counter()
     print("Redis:")
     for redis in org.redis_instances:
-#        print(f" Redis allocation (GB): {redis.allocated_storage}")
         print(f" Redis service plan name: {redis.service_plan_name}")
+        redis_instance_plans[redis.service_plan_name] += 1
+    for key, value in redis_instance_plans.items():
+        print(f" {key}: {value}")
+
+
     print("ES")
     for es in org.es_instances:
 #        print(f" ES allocation (GB): {es.allocated_storage}")

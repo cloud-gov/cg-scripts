@@ -5,11 +5,15 @@ import sys
 import json
 import boto3
 import datetime
+import functools
 
 tags_client = boto3.client('resourcegroupstaggingapi')
 rds_client = boto3.client('rds')
 s3_client = boto3.client('s3')
 cloudwatch_client = boto3.client('cloudwatch')
+
+# cf curl "/v3/service_instances/92703ccc-4141-4a9c-9924-0a50ec65c29b?fields[service_plan.service_offering.service_broker]=name,guid&fields[service_plan.service_offering]=name&fields[service_plan]=name"
+# cf curl "/v3/service_instances/92703ccc-4141-4a9c-9924-0a50ec65c29b?fields[service_plan]=name"
 
 class AWSResource:
     def __init__(self, arn, tags):
@@ -23,20 +27,51 @@ class AWSResource:
 class AWSNotS3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags) 
+        self.instance_guid     = [ tag['Value'] for tag in tags if tag['Key'] == "Instance GUID"][0]
         self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
         try:
             self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
-        except: self.space_name = self.space_guid
+        except: 
+            self.space_name = self.get_cf_entity_name("spaces", self.space_guid)
+
         try:
             self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
         except: 
+            # Lookup the plan name from CF API
             try:
-                self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Plan GUID"][0]
+                self.service_plan_name = self.get_instance_plan_name(self.instance_guid)
             except: self.service_plan_name = "Not FOUND"
+
         # 'instance_name' could change with `cf rename-service`
         try:
             self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"][0]
         except: self.instance_name = "In Name tbd"
+
+    @functools.cache
+    def get_cf_entity_name(self, entity, guid):
+        """
+        Retrieves the name of a CF entity from a GUID.
+        """
+        if not guid:
+            return
+        cf_json = subprocess.check_output(
+            "cf curl /v3/" + entity + "/" + guid,
+            universal_newlines=True,
+            shell=True,
+        )
+        cf_data = json.loads(cf_json)
+        return cf_data.get("name", "N/A")
+
+    def get_instance_plan_name(self, instance_guid):
+        cf_json = subprocess.check_output(
+            "cf curl /v3/service_instances/" + instance_guid + "/?fields[service_plan]=name",
+            universal_newlines=True,
+            shell=True,
+        )
+        cf_data = json.loads(cf_json)
+        # FIX: This will fail if the 'included' field is missing
+        return cf_data.get("included", "N/A")['service_plans'][0]['name']
+
 
 class Rds(AWSNotS3):
     def __init__(self, arn, tags):

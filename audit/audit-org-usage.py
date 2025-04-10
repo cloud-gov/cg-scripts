@@ -34,6 +34,7 @@ class AWSNotS3(AWSResource):
         except: 
             self.space_name = self.get_cf_entity_name("spaces", self.space_guid)
 
+        # FIXME: Maybe we shouldn't trust the plan name in the tag, but it's faster
         try:
             self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
         except: 
@@ -262,15 +263,19 @@ def main():
     print(f"Organization GUID: {org.guid}")
     print(f"Organization memory quota: {org.get_quota_memory()}")
     print(f"Organization memory usage: {org.get_memory_usage()}")
+    print("RDS:")
     for rds in org.rds_instances:
         print(f" RDS allocation (GB): {rds.allocated_storage}")
         print(f" RDS service plan name: {rds.service_plan_name}")
+    print("Redis:")
     for redis in org.redis_instances:
-#        print(f" RDS allocation (GB): {redis.allocated_storage}")
+#        print(f" Redis allocation (GB): {redis.allocated_storage}")
         print(f" Redis service plan name: {redis.service_plan_name}")
+    print("ES")
     for es in org.es_instances:
-#        print(f" RDS allocation (GB): {redis.allocated_storage}")
-        print(f"ES service plan name: {es.service_plan_name}")
+#        print(f" ES allocation (GB): {es.allocated_storage}")
+        print(f" ES service plan name: {es.service_plan_name}")
+    print("S3")
     for s in org.s3_buckets:
         print(f" S3 bucket: {s.bucket_name}")
         print(f" S3 Usage (GB): {s.s3_usage/(1024*1024):.2f}")

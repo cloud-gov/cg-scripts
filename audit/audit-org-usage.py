@@ -20,14 +20,27 @@ class AWSResource:
         else:
             self.instance_id = "Unknown"
 
-class Rds(AWSResource):
+class AWSNotS3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags) 
-        self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
         self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
-        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
+        try:
+            self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
+        except: self.space_name = self.space_guid
+        try:
+            self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
+        except: 
+            try:
+                self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Plan GUID"][0]
+            except: self.service_plan_name = "Not FOUND"
         # 'instance_name' could change with `cf rename-service`
-        self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"] 
+        try:
+            self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"][0]
+        except: self.instance_name = "In Name tbd"
+
+class Rds(AWSNotS3):
+    def __init__(self, arn, tags):
+        super().__init__(arn, tags) 
 
     def get_db_instance(self, client):
         response = client.describe_db_instances(
@@ -36,14 +49,13 @@ class Rds(AWSResource):
         instance_info = response['DBInstances'][0]
         self.allocated_storage = instance_info['AllocatedStorage']
 
-class Redis(AWSResource):
+class Redis(AWSNotS3):
     def __init__(self, arn, tags):
         super().__init__(arn, tags) 
-        self.space_name         = [ tag['Value'] for tag in tags if tag['Key'] == "Space name"][0]
-        self.space_guid         = [ tag['Value'] for tag in tags if tag['Key'] == "Space GUID"][0]
-        self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
-        # 'instance_name' could change with `cf rename-service`
-        self.instance_name      = [ tag['Value'] for tag in tags if tag['Key'] == "Instance name"] 
+
+class Es(AWSNotS3):
+    def __init__(self, arn, tags):
+        super().__init__(arn, tags) 
 
 class S3(AWSResource):
     def __init__(self, arn, tags):
@@ -145,6 +157,23 @@ class Organization:
             redis = Redis(resource['ResourceARN'], resource['Tags'])
             self.redis_instances.append(redis)
 
+    def get_es_instances(self, client):
+        tag_key = "Organization GUID"
+        tag_value = self.guid
+        response = client.get_resources(
+            TagFilters = [
+                {
+                    'Key': tag_key,
+                    'Values': [tag_value]
+        
+                }
+            ],
+            ResourceTypeFilters = ['es:domain']
+        )
+        for resource in response['ResourceTagMappingList']:
+            es = Es(resource['ResourceARN'], resource['Tags'])
+            self.es_instances.append(es)
+
     def get_s3_buckets(self, client):
         tag_value = self.guid
         for key_value in ["Organization GUID", "Organization ID", "organizationGuid"]:
@@ -182,8 +211,9 @@ def test_authenticated():
 def main():
     test_authenticated()
     # org = Organization(name="sandbox-gsa")
-    org = Organization(name="epa-avert")
-    #org = Organization(name="cloud-gov-operators")
+    # org = Organization(name="epa-avert")
+    # org = Organization(name="cloud-gov-operators")
+    org = Organization(name="gsa-fas-fedsim")
     org.get_rds_instances(tags_client)
     for rds in org.rds_instances:
         rds.get_db_instance(rds_client)
@@ -191,6 +221,7 @@ def main():
     for s3 in org.s3_buckets:
         s3.get_s3_usage(cloudwatch_client)
     org.get_redis_instances(tags_client)
+    org.get_es_instances(tags_client)
 
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
@@ -202,6 +233,9 @@ def main():
     for redis in org.redis_instances:
 #        print(f" RDS allocation (GB): {redis.allocated_storage}")
         print(f" Redis service plan name: {redis.service_plan_name}")
+    for es in org.es_instances:
+#        print(f" RDS allocation (GB): {redis.allocated_storage}")
+        print(f"ES service plan name: {es.service_plan_name}")
     for s in org.s3_buckets:
         print(f" S3 bucket: {s.bucket_name}")
         print(f" S3 Usage (GB): {s.s3_usage/(1024*1024):.2f}")

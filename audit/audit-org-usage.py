@@ -6,6 +6,8 @@ import json
 import boto3
 import datetime
 import functools
+from collections import Counter
+
 
 tags_client = boto3.client('resourcegroupstaggingapi')
 rds_client = boto3.client('rds')
@@ -38,7 +40,6 @@ class AWSNotS3(AWSResource):
         try:
             self.service_plan_name  = [ tag['Value'] for tag in tags if tag['Key'] == "Service plan name"][0]
         except: 
-            # Lookup the plan name from CF API
             try:
                 self.service_plan_name = self.get_instance_plan_name(self.instance_guid)
             except: self.service_plan_name = "Not FOUND"
@@ -245,10 +246,12 @@ def test_authenticated():
             sys.exit(1)  # Exit with non-zero status cod
 
 def main():
-    test_authenticated()
+    print("Skip auth test")
+#    test_authenticated()
     # org = Organization(name="sandbox-gsa")
     # org = Organization(name="epa-avert")
     # org = Organization(name="cloud-gov-operators")
+    # FAS Fedsim has all the types
     org = Organization(name="gsa-fas-fedsim")
     org.get_rds_instances(tags_client)
     for rds in org.rds_instances:
@@ -256,17 +259,21 @@ def main():
     org.get_s3_buckets(tags_client)
     for s3 in org.s3_buckets:
         s3.get_s3_usage(cloudwatch_client)
-    org.get_redis_instances(tags_client)
-    org.get_es_instances(tags_client)
+#    org.get_redis_instances(tags_client)
+#    org.get_es_instances(tags_client)
 
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
     print(f"Organization memory quota: {org.get_quota_memory()}")
     print(f"Organization memory usage: {org.get_memory_usage()}")
     print("RDS:")
+    rds_instance_plans = Counter()
     for rds in org.rds_instances:
+        rds_instance_plans[rds.service_plan_name] += 1
         print(f" RDS allocation (GB): {rds.allocated_storage}")
         print(f" RDS service plan name: {rds.service_plan_name}")
+    for key, value in rds_instance_plans.items():
+        print(f"Service Plan: {key}; Count {value}")
     print("Redis:")
     for redis in org.redis_instances:
 #        print(f" Redis allocation (GB): {redis.allocated_storage}")

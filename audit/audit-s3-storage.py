@@ -12,8 +12,6 @@ s3_client = boto3.client("s3")
 cloudwatch_client = boto3.client("cloudwatch")
 
 PROD_S3_PREFIX = "cg-"
-# S3 ID,Storage Size,Organization GUID,Space GUID,Org,Space
-# cg-018c0680-39b1-4a7f-af37-5a150aa715b3,507.588725 MB,50807f74-fbc6-4a86-a8fb-80d42ac6ad3e,a1e19bd4-5066-40a7-8d53-fc9644c27e8e,gsa-18f-federalist,production
 
 
 @functools.cache
@@ -31,25 +29,16 @@ def get_cf_entity_name(entity, guid):
     cf_data = json.loads(cf_json)
     return cf_data.get("name", "N/A")
 
-def filter_bucket_list_by_org(bucket_list, org_guid):
-    '''
-    returns only the buckets that have been tagged
-    with Name: "Organization ID"
-    and Value: org_guid
-    '''
-    return ['cg-018c0680-39b1-4a7f-af37-5a150aa715b3'] # gsa-18f-federalist-bucket
 
-def print_all_s3_instances_csv_lines(org_guid=None):
+def print_all_s3_instances_csv_lines():
     buckets = s3_client.list_buckets()
     bucket_list=[bucket['Name'] for bucket in buckets['Buckets']]
-    if org_guid:
-        bucket_list = filter_bucket_list_by_org(org_guid)
     print_s3_instances_csv_lines(bucket_list)
 
 
 def print_s3_instances_csv_lines(instances):
     """
-    Prints info about each s3 bucket as a CSV (comma-separated) line
+    Prints info about each database as a CSV (comma-separated) line
     """
 
     for s3_instance in instances:
@@ -135,7 +124,7 @@ def print_s3_database_csv_header():
 
 def print_s3_database_audit_csv():
     print_s3_database_csv_header()
-    print_all_s3_instances_csv_lines('asdflkj')
+    print_all_s3_instances_csv_lines()
 
 
 def main():

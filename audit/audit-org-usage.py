@@ -146,6 +146,7 @@ class Organization:
         self.redis_instances = []
         self.es_instances = []
         self.s3_buckets = []
+        self.space_names = self.get_space_names()
 
     def get_data(self):
         cf_json = subprocess.check_output(
@@ -170,36 +171,47 @@ class Organization:
             shell=True,
         )
         return json.loads(cf_json)["usage_summary"]["memory_in_mb"]
+    
+    def get_space_names(self):
+        cf_json = subprocess.check_output(
+            "cf curl '/v3/spaces?order_by=name&organization_guids=" + self.guid + "' | jq '[.resources[].name]'",
+            #"cf curl /v3/spaces?order_by=name&organization_guids=6bd8d843-2a5d-4011-b824-aa3db4d5bd22",
+            universal_newlines=True,
+            shell=True,
+        )
+        cf_data = json.loads(cf_json) 
+        #names = [resource['name'] for resource in cf_data['resources']]
+        return cf_data
 
-    def get_rds_instances(self, client):
+    def get_aws_instances(self, client, resource_type):
+        resource_type_map = {
+            "rds": "rds:db",
+            "redis": "elasticache:replicationgroup",
+            "es": "es:domain"
+        }
+        resource_type_filter = [resource_type_map[resource_type]]
         tag_key = "Organization GUID"
         tag_value = self.guid
         response = client.get_resources(
             TagFilters=[{"Key": tag_key, "Values": [tag_value]}],
-            ResourceTypeFilters=["rds:db"],
+            ResourceTypeFilters=resource_type_filter
         )
+        return response
+
+    def get_rds_instances(self, client):
+        response = self.get_aws_instances(client, "rds")
         for resource in response["ResourceTagMappingList"]:
             rds = Rds(resource["ResourceARN"], resource["Tags"])
             self.rds_instances.append(rds)
 
     def get_redis_instances(self, client):
-        tag_key = "Organization GUID"
-        tag_value = self.guid
-        response = client.get_resources(
-            TagFilters=[{"Key": tag_key, "Values": [tag_value]}],
-            ResourceTypeFilters=["elasticache:replicationgroup"],
-        )
+        response = self.get_aws_instances(client, "redis")
         for resource in response["ResourceTagMappingList"]:
             redis = Redis(resource["ResourceARN"], resource["Tags"])
             self.redis_instances.append(redis)
 
     def get_es_instances(self, client):
-        tag_key = "Organization GUID"
-        tag_value = self.guid
-        response = client.get_resources(
-            TagFilters=[{"Key": tag_key, "Values": [tag_value]}],
-            ResourceTypeFilters=["es:domain"],
-        )
+        response = self.get_aws_instances(client, "es")
         for resource in response["ResourceTagMappingList"]:
             es = Es(resource["ResourceARN"], resource["Tags"])
             self.es_instances.append(es)
@@ -256,8 +268,11 @@ def main():
 
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
-    print(f"Organization memory quota: {org.get_quota_memory()}")
-    print(f"Organization memory usage: {org.get_memory_usage()}")
+    print(f"Organization memory quota (GB): {org.get_quota_memory()/1024:.2f}")
+    print(f"Organization memory usage (GB): {org.get_memory_usage()/1024:.2f}")
+    # FIXME: Some larger orgs would like usage data split out by space
+    # not sure how to best do that
+    # print(f"Organization spaces: {org.space_names}")
 
     print("RDS:")
     rds_instance_plans = Counter()
@@ -265,22 +280,22 @@ def main():
     for rds in org.rds_instances:
         rds_instance_plans[rds.service_plan_name] += 1
         rds_allocation += rds.allocated_storage
-    for key, value in rds_instance_plans.items():
-        print(f" {key}: {value}")
     print(f" RDS allocation (GB): {rds_allocation}")
+    for key, value in sorted(rds_instance_plans.items()):
+        print(f" {key}: {value}")
 
     redis_instance_plans = Counter()
     print("Redis:")
     for redis in org.redis_instances:
         redis_instance_plans[redis.service_plan_name] += 1
-    for key, value in redis_instance_plans.items():
+    for key, value in sorted(redis_instance_plans.items()):
         print(f" {key}: {value}")
 
     es_instance_plans = Counter()
     print("ES")
     for es in org.es_instances:
         es_instance_plans[es.service_plan_name] += 1
-    for key, value in es_instance_plans.items():
+    for key, value in sorted(es_instance_plans.items()):
         print(f" {key}: {value}")
 
     s3_total_storage = 0

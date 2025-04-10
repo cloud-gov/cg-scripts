@@ -287,7 +287,7 @@ def main():
     print("S3")
     for s in org.s3_buckets:
         s3_total_storage += s.s3_usage
-    print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024):.2f}")
+    print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
 
 
 if __name__ == "__main__":

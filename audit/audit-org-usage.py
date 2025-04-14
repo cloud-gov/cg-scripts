@@ -18,7 +18,6 @@ class AWSResource:
         else:
             self.instance_id = "Unknown"
 
-
 class AWSNotS3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags)
@@ -46,7 +45,7 @@ class AWSNotS3(AWSResource):
             except:
                 self.service_plan_name = "Not Found"
 
-        # 'instance_name' could change with `cf rename-service`
+        # NOTE: 'instance_name' could change with `cf rename-service`
         try:
             self.instance_name = [
                 tag["Value"] for tag in tags if tag["Key"] == "Instance name"
@@ -78,7 +77,6 @@ class AWSNotS3(AWSResource):
             shell=True,
         )
         cf_data = json.loads(cf_json)
-        # FIX: This will fail if the 'included' field is missing
         return cf_data.get("included", "N/A")["service_plans"][0]["name"]
 
 
@@ -148,7 +146,6 @@ class Organization:
         self.redis_instances = []
         self.es_instances = []
         self.s3_buckets = []
-        self.space_names = self.get_space_names()
 
     def get_data(self):
         cf_json = subprocess.check_output(
@@ -173,21 +170,6 @@ class Organization:
             shell=True,
         )
         return json.loads(cf_json)["usage_summary"]["memory_in_mb"]
-
-    def get_space_names(self):
-        # FIXME: Use python json instead of jq, but I was getting
-        # _all_ the spaces, not the filtered ones, oddly.
-        cf_json = subprocess.check_output(
-            "cf curl '/v3/spaces?order_by=name&organization_guids="
-            + self.guid
-            + "' | jq '[.resources[].name]'",
-            universal_newlines=True,
-            shell=True,
-        )
-        cf_data = json.loads(cf_json)
-        # FIXME: This should have worked
-        # names = [resource['name'] for resource in cf_data['resources']]
-        return cf_data
 
     def get_aws_instances(self, client, resource_type):
         resource_type_map = {

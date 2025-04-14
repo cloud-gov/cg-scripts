@@ -12,6 +12,7 @@ tags_client = boto3.client("resourcegroupstaggingapi")
 rds_client = boto3.client("rds")
 s3_client = boto3.client("s3")
 cloudwatch_client = boto3.client("cloudwatch")
+es_client = boto3.client("es")
 
 
 class AWSResource:
@@ -102,9 +103,16 @@ class Redis(AWSNotS3):
         super().__init__(arn, tags)
 
 
+
 class Es(AWSNotS3):
     def __init__(self, arn, tags):
         super().__init__(arn, tags)
+    def get_es_instance(self, client):
+        es_domain_name = self.arn.split('/')[1]
+        response = client.describe_elasticsearch_domain(DomainName=es_domain_name)
+        domain_status=response['DomainStatus']
+        ebs_options = domain_status.get('EBSOptions', {})
+        self.volume_size = ebs_options.get('VolumeSize',0)
 
 
 class S3(AWSResource):
@@ -261,15 +269,6 @@ def main():
 
     test_authenticated()
 
-    org.get_rds_instances(tags_client)
-    for rds in org.rds_instances:
-        rds.get_db_instance(rds_client)
-    org.get_s3_buckets(tags_client)
-    for s3 in org.s3_buckets:
-        s3.get_s3_usage(cloudwatch_client)
-    org.get_redis_instances(tags_client)
-    org.get_es_instances(tags_client)
-
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
     print(f"Organization memory quota (GB): {org.get_quota_memory()/1024:.2f}")
@@ -279,34 +278,43 @@ def main():
     # print(f"Organization spaces: {org.space_names}")
 
     print("RDS:")
+    org.get_rds_instances(tags_client)
+
     rds_instance_plans = Counter()
     rds_allocation = 0
     for rds in org.rds_instances:
+        rds.get_db_instance(rds_client)
         rds_instance_plans[rds.service_plan_name] += 1
         rds_allocation += rds.allocated_storage
     print(f" RDS allocation (GB): {rds_allocation}")
     for key, value in sorted(rds_instance_plans.items()):
         print(f" {key}: {value}")
 
+    print("S3")
+    org.get_s3_buckets(tags_client)
+    s3_total_storage = 0
+    for s3 in org.s3_buckets:
+        s3.get_s3_usage(cloudwatch_client)
+        s3_total_storage += s3.s3_usage
+    print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
+
     redis_instance_plans = Counter()
     print("Redis:")
+    org.get_redis_instances(tags_client)
     for redis in org.redis_instances:
         redis_instance_plans[redis.service_plan_name] += 1
     for key, value in sorted(redis_instance_plans.items()):
         print(f" {key}: {value}")
 
-    es_instance_plans = Counter()
     print("ES")
+    es_instance_plans = Counter()
+    org.get_es_instances(tags_client)
     for es in org.es_instances:
+        es.get_es_instance(es_client)
         es_instance_plans[es.service_plan_name] += 1
+        print(f"Es instance {es.arn}")
     for key, value in sorted(es_instance_plans.items()):
         print(f" {key}: {value}")
-
-    s3_total_storage = 0
-    print("S3")
-    for s in org.s3_buckets:
-        s3_total_storage += s.s3_usage
-    print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
 
 
 if __name__ == "__main__":

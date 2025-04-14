@@ -18,6 +18,7 @@ class AWSResource:
         else:
             self.instance_id = "Unknown"
 
+
 class AWSNotS3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags)
@@ -95,16 +96,16 @@ class Redis(AWSNotS3):
         super().__init__(arn, tags)
 
 
-
 class Es(AWSNotS3):
     def __init__(self, arn, tags):
         super().__init__(arn, tags)
+
     def get_es_instance(self, client):
-        es_domain_name = self.arn.split('/')[1]
+        es_domain_name = self.arn.split("/")[1]
         response = client.describe_elasticsearch_domain(DomainName=es_domain_name)
-        domain_status=response['DomainStatus']
-        ebs_options = domain_status.get('EBSOptions', {})
-        self.volume_size = ebs_options.get('VolumeSize',0)
+        domain_status = response["DomainStatus"]
+        ebs_options = domain_status.get("EBSOptions", {})
+        self.volume_size = ebs_options.get("VolumeSize", 0)
 
 
 class S3(AWSResource):
@@ -224,7 +225,7 @@ def test_authenticated(service):
         cmd = "aws sts get-caller-identity"
     elif service == "cf":
         cmd = "cf oauth-token"
-    else: 
+    else:
         raise ValueError("Invalid argument: must by 'cf' or 'aws'")
 
     try:
@@ -241,6 +242,7 @@ def test_authenticated(service):
         )
         sys.exit(1)  # Exit with non-zero status cod
 
+
 def report_org(org):
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
@@ -249,6 +251,7 @@ def report_org(org):
     # FIXME: Some larger orgs would like usage data split out by space
     # not sure how to best do that
     # print(f"Organization spaces: {org.space_names}")
+
 
 def report_rds(org, tags_client):
     print("RDS:")
@@ -266,6 +269,7 @@ def report_rds(org, tags_client):
     for key, value in sorted(rds_instance_plans.items()):
         print(f"  {key}: {value}")
 
+
 def report_s3(org, tags_client):
     print("S3")
     s3_total_storage = 0
@@ -277,6 +281,7 @@ def report_s3(org, tags_client):
         s3_total_storage += s3.s3_usage
     print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
 
+
 def report_redis(org, tags_client):
     print("Redis:")
     redis_instance_plans = Counter()
@@ -287,6 +292,7 @@ def report_redis(org, tags_client):
     print(f" Redis Plans")
     for key, value in sorted(redis_instance_plans.items()):
         print(f"  {key}: {value}")
+
 
 def report_es(org, tags_client):
     print("ES")
@@ -305,6 +311,7 @@ def report_es(org, tags_client):
     for key, value in sorted(es_instance_plans.items()):
         print(f"  {key}: {value}")
 
+
 def main():
     if len(sys.argv) == 1:
         print("Provide an org name")
@@ -312,16 +319,17 @@ def main():
     org_name = sys.argv[1]
     org = Organization(name=org_name)
 
-    test_authenticated('cf')
+    test_authenticated("cf")
     report_org(org)
 
-    test_authenticated('aws')
+    test_authenticated("aws")
     resource_tags_client = boto3.client("resourcegroupstaggingapi")
 
     report_rds(org, resource_tags_client)
     report_s3(org, resource_tags_client)
     report_redis(org, resource_tags_client)
     report_es(org, resource_tags_client)
+
 
 if __name__ == "__main__":
     main()

@@ -308,11 +308,14 @@ def main():
 
     print("ES")
     es_instance_plans = Counter()
+    es_volume_storage = 0
     org.get_es_instances(tags_client)
     for es in org.es_instances:
         es.get_es_instance(es_client)
         es_instance_plans[es.service_plan_name] += 1
-        print(f"Es instance {es.arn}")
+        es_volume_storage += es.volume_size
+    print(f" ES volume storage (GB): {es_volume_storage}")
+
     for key, value in sorted(es_instance_plans.items()):
         print(f" {key}: {value}")
 

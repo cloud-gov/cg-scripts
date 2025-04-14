@@ -50,7 +50,7 @@ class AWSNotS3(AWSResource):
             try:
                 self.service_plan_name = self.get_instance_plan_name(self.instance_guid)
             except:
-                self.service_plan_name = "Not FOUND"
+                self.service_plan_name = "Not Found"
 
         # 'instance_name' could change with `cf rename-service`
         try:
@@ -58,7 +58,7 @@ class AWSNotS3(AWSResource):
                 tag["Value"] for tag in tags if tag["Key"] == "Instance name"
             ][0]
         except:
-            self.instance_name = "In Name tbd"
+            self.instance_name = "Not Found"
 
     @functools.cache
     def get_cf_entity_name(self, entity, guid):
@@ -278,46 +278,52 @@ def main():
     # print(f"Organization spaces: {org.space_names}")
 
     print("RDS:")
-    org.get_rds_instances(tags_client)
-
     rds_instance_plans = Counter()
     rds_allocation = 0
+
+    org.get_rds_instances(tags_client)
     for rds in org.rds_instances:
         rds.get_db_instance(rds_client)
         rds_instance_plans[rds.service_plan_name] += 1
         rds_allocation += rds.allocated_storage
     print(f" RDS allocation (GB): {rds_allocation}")
+    print(f" RDS Plans")
     for key, value in sorted(rds_instance_plans.items()):
-        print(f" {key}: {value}")
+        print(f"  {key}: {value}")
 
     print("S3")
-    org.get_s3_buckets(tags_client)
     s3_total_storage = 0
+
+    org.get_s3_buckets(tags_client)
     for s3 in org.s3_buckets:
         s3.get_s3_usage(cloudwatch_client)
         s3_total_storage += s3.s3_usage
     print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
 
-    redis_instance_plans = Counter()
     print("Redis:")
+    redis_instance_plans = Counter()
+
     org.get_redis_instances(tags_client)
     for redis in org.redis_instances:
         redis_instance_plans[redis.service_plan_name] += 1
+    print(f" Redis Plans")
     for key, value in sorted(redis_instance_plans.items()):
-        print(f" {key}: {value}")
+        print(f"  {key}: {value}")
 
     print("ES")
     es_instance_plans = Counter()
     es_volume_storage = 0
+
     org.get_es_instances(tags_client)
     for es in org.es_instances:
         es.get_es_instance(es_client)
         es_instance_plans[es.service_plan_name] += 1
         es_volume_storage += es.volume_size
     print(f" ES volume storage (GB): {es_volume_storage}")
+    print(f" ES Plans")
 
     for key, value in sorted(es_instance_plans.items()):
-        print(f" {key}: {value}")
+        print(f"  {key}: {value}")
 
 
 if __name__ == "__main__":

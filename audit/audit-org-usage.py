@@ -8,12 +8,6 @@ import datetime
 import functools
 from collections import Counter
 
-tags_client = boto3.client("resourcegroupstaggingapi")
-rds_client = boto3.client("rds")
-s3_client = boto3.client("s3")
-cloudwatch_client = boto3.client("cloudwatch")
-es_client = boto3.client("es")
-
 
 class AWSResource:
     def __init__(self, arn, tags):
@@ -240,35 +234,32 @@ class Organization:
                 self.s3_buckets.append(s3)
 
 
-def test_authenticated():
+def test_authenticated(service):
     """
     Try CF and AWS commands to ensure we're logged in to everything
     """
-    for cmd in ["cf oauth-token", "aws sts get-caller-identity"]:
-        try:
-            result = subprocess.run(
-                cmd.split(" "),
-                check=True,
-                stderr=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-            )
-        except subprocess.CalledProcessError as e:
-            print(
-                f'Error: Command "{cmd}" failed, are you sure you\'re authenticated?',
-                file=sys.stderr,
-            )
-            sys.exit(1)  # Exit with non-zero status cod
+    if service == "aws":
+        cmd = "aws sts get-caller-identity"
+    elif service == "cf":
+        cmd = "cf oauth-token"
+    else: 
+        raise ValueError("Invalid argument: must by 'cf' or 'aws'")
 
+    try:
+        result = subprocess.run(
+            cmd.split(" "),
+            check=True,
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError as e:
+        print(
+            f'Error: Command "{cmd}" failed, are you sure you\'re authenticated?',
+            file=sys.stderr,
+        )
+        sys.exit(1)  # Exit with non-zero status cod
 
-def main():
-    if len(sys.argv) == 1:
-        print("Provide an org name")
-        sys.exit(-1)
-    org_name = sys.argv[1]
-    org = Organization(name=org_name)
-
-    test_authenticated()
-
+def report_org(org):
     print(f"Organization name: {org.name}")
     print(f"Organization GUID: {org.guid}")
     print(f"Organization memory quota (GB): {org.get_quota_memory()/1024:.2f}")
@@ -277,9 +268,11 @@ def main():
     # not sure how to best do that
     # print(f"Organization spaces: {org.space_names}")
 
+def report_rds(org, tags_client):
     print("RDS:")
     rds_instance_plans = Counter()
     rds_allocation = 0
+    rds_client = boto3.client("rds")
 
     org.get_rds_instances(tags_client)
     for rds in org.rds_instances:
@@ -291,8 +284,10 @@ def main():
     for key, value in sorted(rds_instance_plans.items()):
         print(f"  {key}: {value}")
 
+def report_s3(org, tags_client):
     print("S3")
     s3_total_storage = 0
+    cloudwatch_client = boto3.client("cloudwatch")
 
     org.get_s3_buckets(tags_client)
     for s3 in org.s3_buckets:
@@ -300,6 +295,7 @@ def main():
         s3_total_storage += s3.s3_usage
     print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
 
+def report_redis(org, tags_client):
     print("Redis:")
     redis_instance_plans = Counter()
 
@@ -310,7 +306,9 @@ def main():
     for key, value in sorted(redis_instance_plans.items()):
         print(f"  {key}: {value}")
 
+def report_es(org, tags_client):
     print("ES")
+    es_client = boto3.client("es")
     es_instance_plans = Counter()
     es_volume_storage = 0
 
@@ -325,6 +323,23 @@ def main():
     for key, value in sorted(es_instance_plans.items()):
         print(f"  {key}: {value}")
 
+def main():
+    if len(sys.argv) == 1:
+        print("Provide an org name")
+        sys.exit(-1)
+    org_name = sys.argv[1]
+    org = Organization(name=org_name)
+
+    test_authenticated('cf')
+    report_org(org)
+
+    test_authenticated('aws')
+    resource_tags_client = boto3.client("resourcegroupstaggingapi")
+
+    report_rds(org, resource_tags_client)
+    report_s3(org, resource_tags_client)
+    report_redis(org, resource_tags_client)
+    report_es(org, resource_tags_client)
 
 if __name__ == "__main__":
     main()

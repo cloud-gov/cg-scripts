@@ -230,19 +230,19 @@ class Organization:
         # print(f"Organization spaces: {org.space_names}")
 
     def report_rds(self, tags_client):
-        print("RDS:")
-        rds_instance_plans = Counter()
-   
+        self.rds_instance_plans = Counter()
         rds_client = boto3.client("rds")
 
         self.get_rds_instances(tags_client)
         for rds in self.rds_instances:
             rds.get_db_instance(rds_client)
-            rds_instance_plans[rds.service_plan_name] += 1
+            self.rds_instance_plans[rds.service_plan_name] += 1
             self.rds_allocation += rds.allocated_storage
+
+        print("RDS:")
         print(f" RDS allocation (GB): {self.rds_allocation}")
         print(f" RDS Plans")
-        for key, value in sorted(rds_instance_plans.items()):
+        for key, value in sorted(self.rds_instance_plans.items()):
             print(f"  {key}: {value}")
 
 
@@ -322,6 +322,7 @@ class Account:
         self.rds_total_allocation = 0
         self.s3_total_storage = 0
         self.resource_tags_client = boto3.client("resourcegroupstaggingapi")
+        self.rds_total_instance_plans = Counter()
 
     def report_orgs(self):
         for org_name in self.org_names:
@@ -332,6 +333,8 @@ class Account:
             self.memory_usage += org.memory_usage
 
             org.report_rds(self.resource_tags_client)
+            for key, value in org.rds_instance_plans.items():
+                self.rds_total_instance_plans[key] += value
             self.rds_total_allocation += org.rds_allocation
 
             org.report_s3(self.resource_tags_client)
@@ -343,6 +346,9 @@ class Account:
     def report_summary(self):
         print(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")
         print(f"Account RDS Total Alloc (GB): {self.rds_total_allocation:.2f}")
+        print(f"Account RDS Plans")
+        for key, value in sorted(self.rds_total_instance_plans.items()):
+            print(f"  {key}: {value}")
 
 
 
@@ -358,7 +364,8 @@ def main():
 
     acct = Account(orgs=org_names)
     acct.report_orgs()
-    acct.report_summary()
+    if len(org_names) > 1:
+        acct.report_summary()
 
 
 if __name__ == "__main__":

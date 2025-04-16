@@ -260,31 +260,31 @@ class Organization:
 
     def report_redis(self, tags_client):
         print("Redis:")
-        redis_instance_plans = Counter()
+        self.redis_instance_plans = Counter()
 
         self.get_redis_instances(tags_client)
         for redis in self.redis_instances:
-            redis_instance_plans[redis.service_plan_name] += 1
+            self.redis_instance_plans[redis.service_plan_name] += 1
         print(f" Redis Plans")
-        for key, value in sorted(redis_instance_plans.items()):
+        for key, value in sorted(self.redis_instance_plans.items()):
             print(f"  {key}: {value}")
 
 
     def report_es(self, tags_client):
         print("ES")
         es_client = boto3.client("es")
-        es_instance_plans = Counter()
-        es_volume_storage = 0
+        self.es_instance_plans = Counter()
+        self.es_volume_storage = 0
 
         self.get_es_instances(tags_client)
         for es in self.es_instances:
             es.get_es_instance(es_client)
-            es_instance_plans[es.service_plan_name] += 1
-            es_volume_storage += es.volume_size
-        print(f" ES volume storage (GB): {es_volume_storage}")
+            self.es_instance_plans[es.service_plan_name] += 1
+            self.es_volume_storage += es.volume_size
+        print(f" ES volume storage (GB): {self.es_volume_storage}")
         print(f" ES Plans")
 
-        for key, value in sorted(es_instance_plans.items()):
+        for key, value in sorted(self.es_instance_plans.items()):
             print(f"  {key}: {value}")
 
 
@@ -317,12 +317,17 @@ def test_authenticated(service):
 class Account:
     def __init__(self, orgs):
         self.org_names = orgs
+        self.resource_tags_client = boto3.client("resourcegroupstaggingapi")
+
         self.memory_quota = 0
         self.memory_usage = 0
         self.rds_total_allocation = 0
         self.s3_total_storage = 0
-        self.resource_tags_client = boto3.client("resourcegroupstaggingapi")
+        self.es_total_volume_storage = 0
+
         self.rds_total_instance_plans = Counter()
+        self.redis_total_instance_plans = Counter()
+        self.es_total_instance_plans = Counter()
 
     def report_orgs(self):
         for org_name in self.org_names:
@@ -341,7 +346,13 @@ class Account:
             self.s3_total_storage += org.s3_total_storage
 
             org.report_redis(self.resource_tags_client)
+            for key, value in org.redis_instance_plans.items():
+                self.redis_total_instance_plans[key] += value
+
             org.report_es(self.resource_tags_client)
+            for key, value in org.es_instance_plans.items():
+                self.es_total_instance_plans[key] += value
+            self.es_total_volume_storage += org.es_volume_storage
     
     def report_summary(self):
         print(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")

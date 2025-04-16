@@ -310,25 +310,19 @@ def test_authenticated(service):
         sys.exit(1)  # Exit with non-zero status cod
 
 
-
-
-
-
-
 class Account:
     def __init__(self, orgs):
-        self.orgs = orgs
+        self.org_names = orgs
+        self.resource_tags_client = boto3.client("resourcegroupstaggingapi")
 
-    def report_memory(org):
-        print(f"Organization name: {org.name}")
-        print(f"Organization GUID: {org.guid}")
-        print(f"Organization memory quota (GB): {org.get_quota_memory()/1024:.2f}")
-        print(f"Organization memory usage (GB): {org.get_memory_usage()/1024:.2f}")
-    # FIXME: Some larger orgs would like usage data split out by space
-    # not sure how to best do that
-    # print(f"Organization spaces: {org.space_names}")
-
-
+    def report_orgs(self):
+        for org_name in self.org_names:
+            org = Organization(name=org_name)    
+            org.report_memory()
+            org.report_rds(self.resource_tags_client)
+            org.report_s3(self.resource_tags_client)
+            org.report_redis(self.resource_tags_client)
+            org.report_es(self.resource_tags_client)
 
 
 def main():
@@ -336,23 +330,13 @@ def main():
         print("Provide an org name")
         sys.exit(-1)
 
-    org_name = sys.argv[1]
-    org = Organization(name=org_name)    
     test_authenticated("cf")
     test_authenticated("aws")
 
+    org_names = sys.argv[1:]
 
-#    org_names = sys.argv[1:]
-#    acct = Account(orgs=org_names)
-#    acct.report_memory()
-
-    resource_tags_client = boto3.client("resourcegroupstaggingapi")
-
-    org.report_memory()
-    org.report_rds(resource_tags_client)
-    org.report_s3(resource_tags_client)
-    org.report_redis(resource_tags_client)
-    org.report_es(resource_tags_client)
+    acct = Account(orgs=org_names)
+    acct.report_orgs()
 
 
 if __name__ == "__main__":

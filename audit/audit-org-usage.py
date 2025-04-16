@@ -143,10 +143,14 @@ class Organization:
         self.data = self.get_data()
         self.guid = self.data["guid"]
         self.quota_guid = self.data["relationships"]["quota"]["data"]["guid"]
+        self.memory_quota = self.get_memory_quota()
+        self.memory_usage = self.get_memory_usage()
         self.rds_instances = []
         self.redis_instances = []
         self.es_instances = []
         self.s3_buckets = []
+        self.rds_allocation = 0
+        self.s3_storage = 0
 
     def get_data(self):
         cf_json = subprocess.check_output(
@@ -156,7 +160,7 @@ class Organization:
         )
         return json.loads(cf_json)["resources"][0]
 
-    def get_quota_memory(self):
+    def get_memory_quota(self):
         cf_json = subprocess.check_output(
             "cf curl /v3/organization_quotas/" + self.quota_guid,
             universal_newlines=True,
@@ -219,8 +223,8 @@ class Organization:
     def report_memory(self):
         print(f"Organization name: {self.name}")
         print(f"Organization GUID: {self.guid}")
-        print(f"Organization memory quota (GB): {self.get_quota_memory()/1024:.2f}")
-        print(f"Organization memory usage (GB): {self.get_memory_usage()/1024:.2f}")
+        print(f"Organization memory quota (GB): {self.memory_quota/1024:.2f}")
+        print(f"Organization memory usage (GB): {self.memory_usage/1024:.2f}")
         # FIXME: Some larger orgs would like usage data split out by space
         # not sure how to best do that
         # print(f"Organization spaces: {org.space_names}")
@@ -228,15 +232,15 @@ class Organization:
     def report_rds(self, tags_client):
         print("RDS:")
         rds_instance_plans = Counter()
-        rds_allocation = 0
+   
         rds_client = boto3.client("rds")
 
         self.get_rds_instances(tags_client)
         for rds in self.rds_instances:
             rds.get_db_instance(rds_client)
             rds_instance_plans[rds.service_plan_name] += 1
-            rds_allocation += rds.allocated_storage
-        print(f" RDS allocation (GB): {rds_allocation}")
+            self.rds_allocation += rds.allocated_storage
+        print(f" RDS allocation (GB): {self.rds_allocation}")
         print(f" RDS Plans")
         for key, value in sorted(rds_instance_plans.items()):
             print(f"  {key}: {value}")
@@ -244,14 +248,14 @@ class Organization:
 
     def report_s3(self, tags_client):
         print("S3")
-        s3_total_storage = 0
+        self.s3_total_storage = 0
         cloudwatch_client = boto3.client("cloudwatch")
 
         self.get_s3_buckets(tags_client)
         for s3 in self.s3_buckets:
             s3.get_s3_usage(cloudwatch_client)
-            s3_total_storage += s3.s3_usage
-        print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
+            self.s3_total_storage += s3.s3_usage
+        print(f" S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")
 
 
     def report_redis(self, tags_client):
@@ -313,16 +317,33 @@ def test_authenticated(service):
 class Account:
     def __init__(self, orgs):
         self.org_names = orgs
+        self.memory_quota = 0
+        self.memory_usage = 0
+        self.rds_total_allocation = 0
+        self.s3_total_storage = 0
         self.resource_tags_client = boto3.client("resourcegroupstaggingapi")
 
     def report_orgs(self):
         for org_name in self.org_names:
             org = Organization(name=org_name)    
+            print("-----------------------------")
             org.report_memory()
+            self.memory_quota += org.memory_quota
+            self.memory_usage += org.memory_usage
+
             org.report_rds(self.resource_tags_client)
+            self.rds_total_allocation += org.rds_allocation
+
             org.report_s3(self.resource_tags_client)
+            self.s3_total_storage += org.s3_total_storage
+
             org.report_redis(self.resource_tags_client)
             org.report_es(self.resource_tags_client)
+    
+    def report_summary(self):
+        print(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")
+        print(f"Account RDS Total Alloc (GB): {self.rds_total_allocation:.2f}")
+
 
 
 def main():
@@ -337,6 +358,7 @@ def main():
 
     acct = Account(orgs=org_names)
     acct.report_orgs()
+    acct.report_summary()
 
 
 if __name__ == "__main__":

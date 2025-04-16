@@ -355,10 +355,17 @@ class Account:
             self.es_total_volume_storage += org.es_volume_storage
     
     def report_summary(self):
+        print("=============================")
         print(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")
         print(f"Account RDS Total Alloc (GB): {self.rds_total_allocation:.2f}")
         print(f"Account RDS Plans")
         for key, value in sorted(self.rds_total_instance_plans.items()):
+            print(f"  {key}: {value}")
+        print(f"Account Redis Plans")
+        for key, value in sorted(self.redis_total_instance_plans.items()):
+            print(f"  {key}: {value}")
+        print(f"Account ES Plans")
+        for key, value in sorted(self.es_total_instance_plans.items()):
             print(f"  {key}: {value}")
 
 

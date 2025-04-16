@@ -31,7 +31,7 @@ if [ "$cf_version" -lt "$min_cf_version" ]; then
   exit 1
 fi
 
-username=$1
+username=$(echo "$1" | jq -Rr @uri)
 
 printf "Retrieving all org and space roles for user: %s\n\n" "$username"
 

@@ -216,6 +216,73 @@ class Organization:
                 s3 = S3(resource["ResourceARN"], resource["Tags"])
                 self.s3_buckets.append(s3)
 
+    def report_memory(self):
+        print(f"Organization name: {self.name}")
+        print(f"Organization GUID: {self.guid}")
+        print(f"Organization memory quota (GB): {self.get_quota_memory()/1024:.2f}")
+        print(f"Organization memory usage (GB): {self.get_memory_usage()/1024:.2f}")
+        # FIXME: Some larger orgs would like usage data split out by space
+        # not sure how to best do that
+        # print(f"Organization spaces: {org.space_names}")
+
+    def report_rds(self, tags_client):
+        print("RDS:")
+        rds_instance_plans = Counter()
+        rds_allocation = 0
+        rds_client = boto3.client("rds")
+
+        self.get_rds_instances(tags_client)
+        for rds in self.rds_instances:
+            rds.get_db_instance(rds_client)
+            rds_instance_plans[rds.service_plan_name] += 1
+            rds_allocation += rds.allocated_storage
+        print(f" RDS allocation (GB): {rds_allocation}")
+        print(f" RDS Plans")
+        for key, value in sorted(rds_instance_plans.items()):
+            print(f"  {key}: {value}")
+
+
+    def report_s3(self, tags_client):
+        print("S3")
+        s3_total_storage = 0
+        cloudwatch_client = boto3.client("cloudwatch")
+
+        self.get_s3_buckets(tags_client)
+        for s3 in self.s3_buckets:
+            s3.get_s3_usage(cloudwatch_client)
+            s3_total_storage += s3.s3_usage
+        print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
+
+
+    def report_redis(self, tags_client):
+        print("Redis:")
+        redis_instance_plans = Counter()
+
+        self.get_redis_instances(tags_client)
+        for redis in self.redis_instances:
+            redis_instance_plans[redis.service_plan_name] += 1
+        print(f" Redis Plans")
+        for key, value in sorted(redis_instance_plans.items()):
+            print(f"  {key}: {value}")
+
+
+    def report_es(self, tags_client):
+        print("ES")
+        es_client = boto3.client("es")
+        es_instance_plans = Counter()
+        es_volume_storage = 0
+
+        self.get_es_instances(tags_client)
+        for es in self.es_instances:
+            es.get_es_instance(es_client)
+            es_instance_plans[es.service_plan_name] += 1
+            es_volume_storage += es.volume_size
+        print(f" ES volume storage (GB): {es_volume_storage}")
+        print(f" ES Plans")
+
+        for key, value in sorted(es_instance_plans.items()):
+            print(f"  {key}: {value}")
+
 
 def test_authenticated(service):
     """
@@ -243,92 +310,49 @@ def test_authenticated(service):
         sys.exit(1)  # Exit with non-zero status cod
 
 
-def report_org(org):
-    print(f"Organization name: {org.name}")
-    print(f"Organization GUID: {org.guid}")
-    print(f"Organization memory quota (GB): {org.get_quota_memory()/1024:.2f}")
-    print(f"Organization memory usage (GB): {org.get_memory_usage()/1024:.2f}")
+
+
+
+
+
+class Account:
+    def __init__(self, orgs):
+        self.orgs = orgs
+
+    def report_memory(org):
+        print(f"Organization name: {org.name}")
+        print(f"Organization GUID: {org.guid}")
+        print(f"Organization memory quota (GB): {org.get_quota_memory()/1024:.2f}")
+        print(f"Organization memory usage (GB): {org.get_memory_usage()/1024:.2f}")
     # FIXME: Some larger orgs would like usage data split out by space
     # not sure how to best do that
     # print(f"Organization spaces: {org.space_names}")
 
 
-def report_rds(org, tags_client):
-    print("RDS:")
-    rds_instance_plans = Counter()
-    rds_allocation = 0
-    rds_client = boto3.client("rds")
-
-    org.get_rds_instances(tags_client)
-    for rds in org.rds_instances:
-        rds.get_db_instance(rds_client)
-        rds_instance_plans[rds.service_plan_name] += 1
-        rds_allocation += rds.allocated_storage
-    print(f" RDS allocation (GB): {rds_allocation}")
-    print(f" RDS Plans")
-    for key, value in sorted(rds_instance_plans.items()):
-        print(f"  {key}: {value}")
-
-
-def report_s3(org, tags_client):
-    print("S3")
-    s3_total_storage = 0
-    cloudwatch_client = boto3.client("cloudwatch")
-
-    org.get_s3_buckets(tags_client)
-    for s3 in org.s3_buckets:
-        s3.get_s3_usage(cloudwatch_client)
-        s3_total_storage += s3.s3_usage
-    print(f" S3 Total Usage (GB): {s3_total_storage/(1024*1024*1024):.2f}")
-
-
-def report_redis(org, tags_client):
-    print("Redis:")
-    redis_instance_plans = Counter()
-
-    org.get_redis_instances(tags_client)
-    for redis in org.redis_instances:
-        redis_instance_plans[redis.service_plan_name] += 1
-    print(f" Redis Plans")
-    for key, value in sorted(redis_instance_plans.items()):
-        print(f"  {key}: {value}")
-
-
-def report_es(org, tags_client):
-    print("ES")
-    es_client = boto3.client("es")
-    es_instance_plans = Counter()
-    es_volume_storage = 0
-
-    org.get_es_instances(tags_client)
-    for es in org.es_instances:
-        es.get_es_instance(es_client)
-        es_instance_plans[es.service_plan_name] += 1
-        es_volume_storage += es.volume_size
-    print(f" ES volume storage (GB): {es_volume_storage}")
-    print(f" ES Plans")
-
-    for key, value in sorted(es_instance_plans.items()):
-        print(f"  {key}: {value}")
 
 
 def main():
     if len(sys.argv) == 1:
         print("Provide an org name")
         sys.exit(-1)
+
     org_name = sys.argv[1]
-    org = Organization(name=org_name)
-
+    org = Organization(name=org_name)    
     test_authenticated("cf")
-    report_org(org)
-
     test_authenticated("aws")
+
+
+#    org_names = sys.argv[1:]
+#    acct = Account(orgs=org_names)
+#    acct.report_memory()
+
     resource_tags_client = boto3.client("resourcegroupstaggingapi")
 
-    report_rds(org, resource_tags_client)
-    report_s3(org, resource_tags_client)
-    report_redis(org, resource_tags_client)
-    report_es(org, resource_tags_client)
+    org.report_memory()
+    org.report_rds(resource_tags_client)
+    org.report_s3(resource_tags_client)
+    org.report_redis(resource_tags_client)
+    org.report_es(resource_tags_client)
 
 
 if __name__ == "__main__":

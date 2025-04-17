@@ -6,6 +6,7 @@ import json
 import boto3
 import datetime
 import functools
+import urllib.parse
 from collections import Counter
 
 
@@ -317,6 +318,7 @@ def test_authenticated(service):
 class Account:
     def __init__(self, orgs):
         self.org_names = orgs
+
         self.resource_tags_client = boto3.client("resourcegroupstaggingapi")
 
         self.memory_quota = 0
@@ -331,6 +333,9 @@ class Account:
 
     def report_orgs(self):
         for org_name in self.org_names:
+            # urlencode name to ensure that names with possible URL escape 
+            # characters (e.g. +) will be handled properly when querying the CF API
+            org_name = urllib.parse.quote_plus(org_name)
             org = Organization(name=org_name)    
             print("-----------------------------")
             org.report_memory()
@@ -356,11 +361,13 @@ class Account:
     
     def report_summary(self):
         print("=============================")
-        print(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")
-        print(f"Account RDS Total Alloc (GB): {self.rds_total_allocation:.2f}")
+        print(f"Account Total Mem Quota (GB): {self.memory_quota/1024:.0f}")
+        print(f"Account Total Mem Usage (GB): {self.memory_usage/1024:.0f}")
+        print(f"Account RDS Total Alloc (GB): {self.rds_total_allocation:.0f}")
         print(f"Account RDS Plans")
         for key, value in sorted(self.rds_total_instance_plans.items()):
             print(f"  {key}: {value}")
+        print(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.0f}")
         print(f"Account Redis Plans")
         for key, value in sorted(self.redis_total_instance_plans.items()):
             print(f"  {key}: {value}")

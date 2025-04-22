@@ -23,18 +23,14 @@ SERVICE_PLAN_NAME=$4
 
 # FYI: doesn't handle pagination
 ORGS=$(cf curl "/v3/organizations?names=$ORG_NAMES&per_page=5000" | jq '[.resources[] | {guid, name}]')
-TMP_FILE=$(mktemp)
-cat > "${TMP_FILE}" << EOF
-{
-  "type": "organization",
-  "organizations": $ORGS
-}
-EOF
 
 for plan_guid in $(cf curl "/v3/service_plans?service_broker_names=$BROKER_NAME&service_offering_names=$SERVICE_OFFERING_NAME" | jq --arg service_plan_name "$SERVICE_PLAN_NAME" -r '.resources[] | select(.name==$service_plan_name) | .guid'); do
   cf curl "/v3/service_plans/$plan_guid/visibility" \
     -X PATCH \
-    -d "@$TMP_FILE"
+    -d "
+      {
+        \"type\": \"organization\",
+        \"organizations\": $ORGS
+      }
+    "
 done
-
-rm "$TMP_FILE"

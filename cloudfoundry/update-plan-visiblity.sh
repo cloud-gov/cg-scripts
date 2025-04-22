@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 if [ "$#" -ne 4 ]; then
   echo
   echo "Usage:"
@@ -17,8 +19,8 @@ if [ "$#" -ne 4 ]; then
 fi
 
 ORG_NAMES=$1
-BROKER_NAME=$2
-SERVICE_OFFERING_NAME=$3
+BROKER_NAME=$(echo "$2" | jq -Rr @uri)
+SERVICE_OFFERING_NAME=$(echo "$3" | jq -Rr @uri)
 SERVICE_PLAN_NAME=$4
 
 # FYI: doesn't handle pagination

@@ -99,6 +99,8 @@ ADMIN=$(cf target | grep -i user | awk '{print $2}')
 
 # Step 3: Create the org
 cf create-org "$ORG_NAME" -q "$HASHED_QUOTA_NAME"
+cf set-label org "$ORG_NAME" org-type=customer
+
 # creator added by default, which is usually not desirable
 cf unset-org-role "$ADMIN" "$ORG_NAME" OrgManager
 cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager ${ORIGIN_FLAG:+"$ORIGIN_FLAG"}

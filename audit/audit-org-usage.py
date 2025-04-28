@@ -377,13 +377,79 @@ class Account:
             print(f"  {key}: {value}")
 
     def generate_cost_estimate(self):
+        estimate_map = {
+            # Usage
+            "memory_quota": "B10",
+            "rds_total_allocation": "J10",
+            "s3_total_storage": "R10",
+            "es_total_volume_storage": "R15",
+            # Plans
+            "micro-psql": "J14",
+            "micro-psql-redundant": "J15",
+            "small-psql": "J16",
+            "small-psql-redundant": "J17",
+            "medium-psql": "J18",
+            "medium-psql-redundant": "J19",
+            "medium-gp-psql": "J20",
+            "medium-gp-psql-redundant": "J21",
+            "large-gp-psql": "J22",
+            "large-gp-psql-redundant": "J23",
+            "xlarge-gp-psql": "J24",
+            "xlarge-gp-psql-redundant": "J25",
+            "2xlarge-gp-psql": "J26",
+            "2xlarge-gp-psql-redundant": "J27",
+            "xlarge-gp-psql-m6": "J28",
+            "xlarge-gp-psql-m6-redundant": "J29",
+            "micro-mysql": "J30",
+            "micro-mysql-redundant": "J31",
+            "small-mysql": "J32",
+            "small-mysql-redundant": "J33",
+            "medium-mysql": "J34",
+            "medium-mysql-redundant": "J35",
+            "medium-gp-mysql": "J36",
+            "medium-gp-mysql-redundant": "J37",
+            "large-gp-mysql": "J38",
+            "large-gp-mysql-redundant": "J39",
+            "xlarge-gp-mysql": "J40",
+            "xlarge-gp-mysql-redundant": "J41",
+            "medium-oracle-se2": "J42",
+            "large-gp-sqlserver-se": "J43",
+            "es-dev": "R19",
+            "es-medium": "R20",
+            "es-medium-ha": "R21",
+            "es-large": "R22",
+            "es-large-ha": "R23",
+            "es-xlarge": "R24",
+            "es-xlarge-ha": "R25",
+            "es-2xlarge-gp": "R26",
+            "es-2xlarge-gp-ha": "R27",
+            "es-4xlarge-gp": "R28",
+            "es-4xlarge-gp-ha": "R29",
+            "redis-dev": "R33",
+            "redis-3node": "R34",
+            "redis-5node": "R35",
+            "redis-3node-large": "R36",
+            "redis-5node-large": "R37"
+        }
 
         from openpyxl import load_workbook
-        self.worksheet_file = "cloud-gov-cost-estimator.xlsx"
-        workbook = load_workbook(filename=self.worksheet_file)
-        sheet = workbook.active
-        sheet["A1"] = "Full Name"
-        workbook.save(filename=self.worksheet_file)
+        self.input_workbook_file = "cloud-gov-cost-estimator.xlsx"
+        self.output_workbook_file = "out.xlsx"
+        workbook = load_workbook(filename=self.input_workbook_file)
+        worksheet = workbook.active
+        # Usage
+        worksheet[estimate_map['memory_quota']] = self.memory_quota/1024
+        worksheet[estimate_map['rds_total_allocation']] = self.rds_total_allocation
+        worksheet[estimate_map["s3_total_storage"]] = self.s3_total_storage/(1024*1024*1024)
+        worksheet[estimate_map["es_total_volume_storage"]] = self.es_total_volume_storage
+        # Plans
+        for key, value in sorted(self.rds_total_instance_plans.items()):
+            worksheet[estimate_map[key]] = value
+        for key, value in sorted(self.redis_total_instance_plans.items()):
+            worksheet[estimate_map[key]] = value
+        for key, value in sorted(self.es_total_instance_plans.items()):
+            worksheet[estimate_map[key]] = value
+        workbook.save(filename=self.output_workbook_file)
 
 def main():
     if len(sys.argv) == 1:

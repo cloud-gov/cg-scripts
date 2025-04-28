@@ -330,6 +330,7 @@ class Account:
         self.rds_total_instance_plans = Counter()
         self.redis_total_instance_plans = Counter()
         self.es_total_instance_plans = Counter()
+        self.worksheet_file = None
 
     def report_orgs(self):
         for org_name in self.org_names:
@@ -375,7 +376,14 @@ class Account:
         for key, value in sorted(self.es_total_instance_plans.items()):
             print(f"  {key}: {value}")
 
+    def generate_cost_estimate(self):
 
+        from openpyxl import load_workbook
+        self.worksheet_file = "cloud-gov-cost-estimator.xlsx"
+        workbook = load_workbook(filename=self.worksheet_file)
+        sheet = workbook.active
+        sheet["A1"] = "Full Name"
+        workbook.save(filename=self.worksheet_file)
 
 def main():
     if len(sys.argv) == 1:
@@ -391,6 +399,7 @@ def main():
     acct.report_orgs()
     if len(org_names) > 1:
         acct.report_summary()
+    acct.generate_cost_estimate()
 
 
 if __name__ == "__main__":

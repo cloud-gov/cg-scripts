@@ -8,6 +8,9 @@ import datetime
 import functools
 import urllib.parse
 from collections import Counter
+from openpyxl import load_workbook
+import argparse
+
 
 
 class AWSResource:
@@ -432,11 +435,10 @@ class Account:
             "redis-5node-large": "R37"
         }
 
-        from openpyxl import load_workbook
-        self.input_workbook_file = "cloud-gov-cost-estimator.xlsx"
-        self.output_workbook_file = "out.xlsx"
         workbook = load_workbook(filename=self.input_workbook_file)
         worksheet = workbook.active
+
+        worksheet["A1"] = f'Cost estimate for org: {self.org_names}'
         # Usage
         worksheet[estimate_map['memory_quota']] = self.memory_quota/1024
         worksheet[estimate_map['rds_total_allocation']] = self.rds_total_allocation
@@ -450,23 +452,38 @@ class Account:
         for key, value in sorted(self.es_total_instance_plans.items()):
             worksheet[estimate_map[key]] = value
         workbook.save(filename=self.output_workbook_file)
+        print(f'Saved cost estimate to: {self.output_workbook_file}')
 
 def main():
-    if len(sys.argv) == 1:
-        print("Provide an org name")
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Generate Cloud.gov cost estimate from organization data.')
+    parser.add_argument('-i', '--input-excel-cost-estimator-file', dest='input_file', help='Input file path')
+    parser.add_argument('-o', '--output-excel-cost-estimator-file', dest='output_file', help='Output file path')
+    parser.add_argument('orgs', nargs='*', help='Organization names')
+    
+    # Parse arguments
+    args = parser.parse_args()
+    
+    # Check if any organizations were provided
+    if not args.orgs: 
+        print("Error: Provide at least one org name")
         sys.exit(-1)
+    
+    # Process input file if provided
+    org_names = args.orgs
 
     test_authenticated("cf")
     test_authenticated("aws")
-
-    org_names = sys.argv[1:]
 
     acct = Account(orgs=org_names)
     acct.report_orgs()
     if len(org_names) > 1:
         acct.report_summary()
-    acct.generate_cost_estimate()
-
+    
+    if args.input_file and args.output_file:
+        acct.input_workbook_file = args.input_file
+        acct.output_workbook_file = args.output_file
+        acct.generate_cost_estimate()
 
 if __name__ == "__main__":
     main()

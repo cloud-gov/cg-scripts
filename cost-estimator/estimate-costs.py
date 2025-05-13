@@ -2,6 +2,8 @@
 
 import subprocess
 import sys
+import os.path
+import requests
 import json
 import boto3
 import datetime
@@ -10,7 +12,6 @@ import urllib.parse
 from collections import Counter
 from openpyxl import load_workbook
 import argparse
-
 
 
 class AWSResource:
@@ -454,36 +455,86 @@ class Account:
         workbook.save(filename=self.output_workbook_file)
         print(f'Saved cost estimate to: {self.output_workbook_file}')
 
+def download_file(url, output_filename):
+    """
+    Download a file from a URL and save it to the specified filename
+    """
+    print(f"Downloading from {url}...")
+    
+    # Make a GET request to the URL
+    response = requests.get(url, stream=True)
+    
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Write the content to a file
+        with open(output_filename, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+        print(f"Successfully downloaded and saved to {output_filename}")
+        return True
+    else:
+        print(f"Failed to download. Status code: {response.status_code}")
+        return False
+
+'''
+- No args - Help
+- One arg - assumed an <org>, generates <org>-estimate.xlsx
+- Multiple args - requires -a <account>
+- -a account name
+'''
 def main():
+    cost_estimate_file='cloud-gov-cost-estimator.xlsx'
+    cost_estimate_url='https://cloud.gov/assets/documents/cloud-gov-cost-estimator.xlsx'
+    output_file = "generated-cost-estimate.xlsx"
+
     # Set up argument parser
-    parser = argparse.ArgumentParser(description='Generate Cloud.gov cost estimate from organization data.')
-    parser.add_argument('-i', '--input-excel-cost-estimator-file', dest='input_file', help='Input file path')
-    parser.add_argument('-o', '--output-excel-cost-estimator-file', dest='output_file', help='Output file path')
-    parser.add_argument('orgs', nargs='*', help='Organization names')
+    parser = argparse.ArgumentParser(
+        prog="estimate-costs.py",
+        description='Generate Cloud.gov cost estimate from organization data.',
+        epilog=f"""
+Example:
+  estimate-costs.py -a agency org1 org2 org3
+        
+Notes:
+  - Assumes the input file, {cost_estimate_file}, is in current directory
+  - Downloads cost estimator, {cost_estimate_file}, if missing
+  - Uses --account_name for output file name, if provided, otherwise
+    uses name of the last provided organization name
+  - At least one organization name is required
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('-a', '--account_name', help='name of the account to summarize')
+    parser.add_argument('orgs', nargs='+', help='organization names')
     
     # Parse arguments
     args = parser.parse_args()
-    
-    # Check if any organizations were provided
-    if not args.orgs: 
-        print("Error: Provide at least one org name")
-        sys.exit(-1)
-    
-    # Process input file if provided
     org_names = args.orgs
+
+    if args.account_name:
+        output_file = args.account_name
+    else:
+        output_file = org_names[-1] + ".xlxs"
+
+    if not os.path.exists(cost_estimate_file):
+        print(f'Info: Missing input file, "{cost_estimate_file}", downloading...', file=sys.stderr)
+        download_file(cost_estimate_url, cost_estimate_file)
+
+    print(f'Info: Using output file, "{output_file}"', file=sys.stderr)
 
     test_authenticated("cf")
     test_authenticated("aws")
+
+    print(f'Info: Authenticated, starting...', file=sys.stderr)
 
     acct = Account(orgs=org_names)
     acct.report_orgs()
     if len(org_names) > 1:
         acct.report_summary()
     
-    if args.input_file and args.output_file:
-        acct.input_workbook_file = args.input_file
-        acct.output_workbook_file = args.output_file
-        acct.generate_cost_estimate()
+    acct.input_workbook_file = cost_estimate_file
+    acct.output_workbook_file = output_file
+    acct.generate_cost_estimate()
 
 if __name__ == "__main__":
     main()

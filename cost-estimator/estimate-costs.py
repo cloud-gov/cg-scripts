@@ -225,16 +225,16 @@ class Organization:
                 s3 = S3(resource["ResourceARN"], resource["Tags"])
                 self.s3_buckets.append(s3)
 
-    def report_memory(self):
-        print(f"Organization name: {self.name}")
-        print(f"Organization GUID: {self.guid}")
-        print(f"Organization memory quota (GB): {self.memory_quota/1024:.2f}")
-        print(f"Organization memory usage (GB): {self.memory_usage/1024:.2f}")
+    def report_memory(self, reporter):
+        reporter.log(f"Organization name: {self.name}")
+        reporter.log(f"Organization GUID: {self.guid}")
+        reporter.log(f"Organization memory quota (GB): {self.memory_quota/1024:.2f}")
+        reporter.log(f"Organization memory usage (GB): {self.memory_usage/1024:.2f}")
         # FIXME: Some larger orgs would like usage data split out by space
         # not sure how to best do that
         # print(f"Organization spaces: {org.space_names}")
 
-    def report_rds(self, tags_client):
+    def report_rds(self, tags_client, reporter):
         self.rds_instance_plans = Counter()
         rds_client = boto3.client("rds")
 
@@ -244,15 +244,15 @@ class Organization:
             self.rds_instance_plans[rds.service_plan_name] += 1
             self.rds_allocation += rds.allocated_storage
 
-        print("RDS:")
-        print(f" RDS allocation (GB): {self.rds_allocation}")
-        print(f" RDS Plans")
+        reporter.log("RDS:")
+        reporter.log(f" RDS allocation (GB): {self.rds_allocation}")
+        reporter.log(f" RDS Plans")
         for key, value in sorted(self.rds_instance_plans.items()):
-            print(f"  {key}: {value}")
+            reporter.log(f"  {key}: {value}")
 
 
-    def report_s3(self, tags_client):
-        print("S3")
+    def report_s3(self, tags_client, reporter):
+        reporter.log("S3")
         self.s3_total_storage = 0
         cloudwatch_client = boto3.client("cloudwatch")
 
@@ -260,23 +260,23 @@ class Organization:
         for s3 in self.s3_buckets:
             s3.get_s3_usage(cloudwatch_client)
             self.s3_total_storage += s3.s3_usage
-        print(f" S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")
+        reporter.log(f" S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")
 
 
-    def report_redis(self, tags_client):
-        print("Redis:")
+    def report_redis(self, tags_client, reporter):
+        reporter.log("Redis:")
         self.redis_instance_plans = Counter()
 
         self.get_redis_instances(tags_client)
         for redis in self.redis_instances:
             self.redis_instance_plans[redis.service_plan_name] += 1
-        print(f" Redis Plans")
+        reporter.log(f" Redis Plans")
         for key, value in sorted(self.redis_instance_plans.items()):
-            print(f"  {key}: {value}")
+            reporter.log(f"  {key}: {value}")
 
 
-    def report_es(self, tags_client):
-        print("ES")
+    def report_es(self, tags_client, reporter):
+        reporter.log("ES")
         es_client = boto3.client("es")
         self.es_instance_plans = Counter()
         self.es_volume_storage = 0
@@ -286,11 +286,11 @@ class Organization:
             es.get_es_instance(es_client)
             self.es_instance_plans[es.service_plan_name] += 1
             self.es_volume_storage += es.volume_size
-        print(f" ES volume storage (GB): {self.es_volume_storage}")
-        print(f" ES Plans")
+        reporter.log(f" ES volume storage (GB): {self.es_volume_storage}")
+        reporter.log(f" ES Plans")
 
         for key, value in sorted(self.es_instance_plans.items()):
-            print(f"  {key}: {value}")
+            reporter.log(f"  {key}: {value}")
 
 
 def test_authenticated(service):
@@ -334,7 +334,9 @@ class Account:
         self.rds_total_instance_plans = Counter()
         self.redis_total_instance_plans = Counter()
         self.es_total_instance_plans = Counter()
-        self.worksheet_file = None
+        self.input_workbook_file = None
+        self.output_workbook_file = None
+        self.reporter = Reporter()
 
     def report_orgs(self):
         for org_name in self.org_names:
@@ -342,45 +344,45 @@ class Account:
             # characters (e.g. +) will be handled properly when querying the CF API
             org_name = urllib.parse.quote_plus(org_name)
             org = Organization(name=org_name)    
-            print("-----------------------------")
-            org.report_memory()
+            self.reporter.log("-----------------------------")
+            org.report_memory(self.reporter)
             self.memory_quota += org.memory_quota
             self.memory_usage += org.memory_usage
 
-            org.report_rds(self.resource_tags_client)
+            org.report_rds(self.resource_tags_client, self.reporter)
             for key, value in org.rds_instance_plans.items():
                 self.rds_total_instance_plans[key] += value
             self.rds_total_allocation += org.rds_allocation
 
-            org.report_s3(self.resource_tags_client)
+            org.report_s3(self.resource_tags_client, self.reporter)
             self.s3_total_storage += org.s3_total_storage
 
-            org.report_redis(self.resource_tags_client)
+            org.report_redis(self.resource_tags_client, self.reporter)
             for key, value in org.redis_instance_plans.items():
                 self.redis_total_instance_plans[key] += value
 
-            org.report_es(self.resource_tags_client)
+            org.report_es(self.resource_tags_client, self.reporter)
             for key, value in org.es_instance_plans.items():
                 self.es_total_instance_plans[key] += value
             self.es_total_volume_storage += org.es_volume_storage
     
-    def report_summary(self):
-        print("=============================")
-        print(f"Account Total Mem Quota (GB): {self.memory_quota/1024:.0f}")
-        print(f"Account Total Mem Usage (GB): {self.memory_usage/1024:.0f}")
-        print(f"Account RDS Total Alloc (GB): {self.rds_total_allocation:.0f}")
-        print(f"Account RDS Plans")
+    def report_summary(self, reporter):
+        reporter.log("-===========================-")
+        reporter.log(f"Account Total Mem Quota (GB): {self.memory_quota/1024:.0f}")
+        reporter.log(f"Account Total Mem Usage (GB): {self.memory_usage/1024:.0f}")
+        reporter.log(f"Account RDS Total Alloc (GB): {self.rds_total_allocation:.0f}")
+        reporter.log(f"Account RDS Plans")
         for key, value in sorted(self.rds_total_instance_plans.items()):
-            print(f"  {key}: {value}")
-        print(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.0f}")
-        print(f"Account Redis Plans")
+            reporter.log(f"  {key}: {value}")
+        reporter.log(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.0f}")
+        reporter.log(f"Account Redis Plans")
         for key, value in sorted(self.redis_total_instance_plans.items()):
-            print(f"  {key}: {value}")
-        print(f"Account ES Plans")
+            reporter.log(f"  {key}: {value}")
+        reporter.log(f"Account ES Plans")
         for key, value in sorted(self.es_total_instance_plans.items()):
-            print(f"  {key}: {value}")
+            reporter.log(f"  {key}: {value}")
 
-    def generate_cost_estimate(self):
+    def generate_cost_estimate(self, reporter):
         estimate_map = {
             # Usage
             "memory_quota": "B10",
@@ -440,6 +442,7 @@ class Account:
         worksheet = workbook.active
 
         worksheet["A1"] = f'Cost estimate for org: {self.org_names}'
+        reporter.report(worksheet, "A", 50)
         # Usage
         worksheet[estimate_map['memory_quota']] = self.memory_quota/1024
         worksheet[estimate_map['rds_total_allocation']] = self.rds_total_allocation
@@ -454,6 +457,24 @@ class Account:
             worksheet[estimate_map[key]] = value
         workbook.save(filename=self.output_workbook_file)
         print(f'Saved cost estimate to: {self.output_workbook_file}')
+
+class Reporter:
+    '''
+    Spit out progress report, but save it all for writing to
+    the XLSX file at the end
+    '''
+    def __init__(self):
+        self.outputs = []
+
+    def log(self, message):
+        print(message)
+        self.outputs.append(message)
+
+    def report(self, worksheet, column, row):
+        worksheet[column + str(row)] = "ACCOUNT USAGE REPORT"
+        for output in self.outputs:
+            row += 1
+            worksheet[column + str(row)] = output
 
 def download_file(url, output_filename):
     """
@@ -512,9 +533,9 @@ Notes:
     org_names = args.orgs
 
     if args.account_name:
-        output_file = args.account_name
+        output_file = args.account_name + ".xlsx"
     else:
-        output_file = org_names[-1] + ".xlxs"
+        output_file = org_names[-1] + ".xlsx"
 
     if not os.path.exists(cost_estimate_file):
         print(f'Info: Missing input file, "{cost_estimate_file}", downloading...', file=sys.stderr)
@@ -530,11 +551,11 @@ Notes:
     acct = Account(orgs=org_names)
     acct.report_orgs()
     if len(org_names) > 1:
-        acct.report_summary()
+        acct.report_summary(acct.reporter)
     
-    acct.input_workbook_file = cost_estimate_file
+    acct.input_workbook_file  = cost_estimate_file
     acct.output_workbook_file = output_file
-    acct.generate_cost_estimate()
+    acct.generate_cost_estimate(acct.reporter)
 
 if __name__ == "__main__":
     main()

@@ -42,6 +42,7 @@ class AWSNotS3(AWSResource):
 
         # FIXME: Maybe we shouldn't trust the plan name in the tag, but it's faster
         try:
+            
             self.service_plan_name = [
                 tag["Value"] for tag in tags if tag["Key"] == "Service plan name"
             ][0]
@@ -49,7 +50,7 @@ class AWSNotS3(AWSResource):
             try:
                 self.service_plan_name = self.get_instance_plan_name(self.instance_guid)
             except:
-                self.service_plan_name = "Not Found"
+                self.service_plan_name = "Not_Found"
 
         # NOTE: 'instance_name' could change with `cf rename-service`
         try:
@@ -57,7 +58,9 @@ class AWSNotS3(AWSResource):
                 tag["Value"] for tag in tags if tag["Key"] == "Instance name"
             ][0]
         except:
-            self.instance_name = "Not Found"
+            self.instance_name = "Not_Found"
+            print(f'WARN: Instance {self.instance_guid} Not Found' )
+            print(f' ARN: {self.arn}' )
 
     @functools.cache
     def get_cf_entity_name(self, entity, guid):
@@ -435,7 +438,8 @@ class Account:
             "redis-3node": "R34",
             "redis-5node": "R35",
             "redis-3node-large": "R36",
-            "redis-5node-large": "R37"
+            "redis-5node-large": "R37",
+            "Not_Found": "C50"
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)

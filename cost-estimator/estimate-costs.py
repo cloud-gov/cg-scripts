@@ -42,7 +42,7 @@ class AWSNotS3(AWSResource):
 
         # FIXME: Maybe we shouldn't trust the plan name in the tag, but it's faster
         try:
-            
+
             self.service_plan_name = [
                 tag["Value"] for tag in tags if tag["Key"] == "Service plan name"
             ][0]
@@ -59,8 +59,8 @@ class AWSNotS3(AWSResource):
             ][0]
         except:
             self.instance_name = "Not_Found"
-            print(f'WARN: Instance {self.instance_guid} Not Found' )
-            print(f' ARN: {self.arn}' )
+            print(f"WARN: Instance {self.instance_guid} Not Found")
+            print(f" ARN: {self.arn}")
 
     @functools.cache
     def get_cf_entity_name(self, entity, guid):
@@ -146,12 +146,15 @@ class S3(AWSResource):
 
 
 class Organization:
-    def __init__(self, name):
+    def __init__(self, name, space_names=[]):
         self.name = name
+        self.space_names = space_names
         self.data = self.get_data()
         self.guid = self.data["guid"]
+        self.space_guids = self.get_space_guids()
         self.quota_guid = self.data["relationships"]["quota"]["data"]["guid"]
         self.memory_quota = self.get_memory_quota()
+        self.memory_usage_by_space = []
         self.memory_usage = self.get_memory_usage()
         self.rds_instances = []
         self.redis_instances = []
@@ -159,6 +162,20 @@ class Organization:
         self.s3_buckets = []
         self.rds_allocation = 0
         self.s3_storage = 0
+
+    def get_space_guids(self):
+        if len(self.space_names) == 0:
+            return {}
+        cf_json = subprocess.check_output(
+            f"cf curl \"/v3/spaces?organization_guids={self.guid}&names={','.join(self.space_names)}\"",
+            universal_newlines=True,
+            shell=True,
+        )
+        response = json.loads(cf_json)
+        space_guids = {}
+        for resource in response["resources"]:
+            space_guids[resource["name"]] = resource["guid"]
+        return space_guids
 
     def get_data(self):
         cf_json = subprocess.check_output(
@@ -177,12 +194,34 @@ class Organization:
         return json.loads(cf_json)["apps"]["total_memory_in_mb"]
 
     def get_memory_usage(self):
-        cf_json = subprocess.check_output(
-            "cf curl /v3/organizations/" + self.guid + "/usage_summary",
-            universal_newlines=True,
-            shell=True,
-        )
-        return json.loads(cf_json)["usage_summary"]["memory_in_mb"]
+        if len(self.space_names) == 0:
+            cf_json = subprocess.check_output(
+                "cf curl /v3/organizations/" + self.guid + "/usage_summary",
+                universal_newlines=True,
+                shell=True,
+            )
+            return json.loads(cf_json)["usage_summary"]["memory_in_mb"]
+        else:
+            total_memory = 0
+            for space_name in self.space_names:
+                space_guid = self.space_guids[space_name]
+                cf_json = subprocess.check_output(
+                    f'cf curl "/v3/processes?organization_guids={self.guid}&space_guids={space_guid}"',
+                    universal_newlines=True,
+                    shell=True,
+                )
+                response = json.loads(cf_json)
+                total_space_memory = 0
+                for resource in response["resources"]:
+                    num_instances = resource["instances"]
+                    memory_per_instance = resource["memory_in_mb"]
+                    process_memory = num_instances * memory_per_instance
+                    total_space_memory += process_memory
+                self.memory_usage_by_space.append(
+                    {"space_name": space_name, "memory_usage": total_space_memory}
+                )
+                total_memory += total_space_memory
+            return total_memory
 
     def get_aws_instances(self, client, resource_type):
         resource_type_map = {
@@ -232,10 +271,17 @@ class Organization:
         reporter.log(f"Organization name: {self.name}")
         reporter.log(f"Organization GUID: {self.guid}")
         reporter.log(f"Organization memory quota (GB): {self.memory_quota/1024:.2f}")
-        reporter.log(f"Organization memory usage (GB): {self.memory_usage/1024:.2f}")
-        # FIXME: Some larger orgs would like usage data split out by space
-        # not sure how to best do that
-        # print(f"Organization spaces: {org.space_names}")
+        if len(self.memory_usage_by_space) == 0:
+            reporter.log(
+                f"Organization memory usage (GB): {self.memory_usage/1024:.2f}"
+            )
+        else:
+            for space_info in self.memory_usage_by_space:
+                space_name = space_info["space_name"]
+                memory_usage = space_info["memory_usage"]
+                reporter.log(
+                    f"Memory usage for space {space_name} (GB): {memory_usage/1024:.2f}"
+                )
 
     def report_rds(self, tags_client, reporter):
         self.rds_instance_plans = Counter()
@@ -253,7 +299,6 @@ class Organization:
         for key, value in sorted(self.rds_instance_plans.items()):
             reporter.log(f"  {key}: {value}")
 
-
     def report_s3(self, tags_client, reporter):
         reporter.log("S3")
         self.s3_total_storage = 0
@@ -263,8 +308,9 @@ class Organization:
         for s3 in self.s3_buckets:
             s3.get_s3_usage(cloudwatch_client)
             self.s3_total_storage += s3.s3_usage
-        reporter.log(f" S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}")
-
+        reporter.log(
+            f" S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}"
+        )
 
     def report_redis(self, tags_client, reporter):
         reporter.log("Redis:")
@@ -276,7 +322,6 @@ class Organization:
         reporter.log(f" Redis Plans")
         for key, value in sorted(self.redis_instance_plans.items()):
             reporter.log(f"  {key}: {value}")
-
 
     def report_es(self, tags_client, reporter):
         reporter.log("ES")
@@ -323,8 +368,9 @@ def test_authenticated(service):
 
 
 class Account:
-    def __init__(self, orgs):
+    def __init__(self, orgs, space_names):
         self.org_names = orgs
+        self.space_names = space_names
 
         self.resource_tags_client = boto3.client("resourcegroupstaggingapi")
 
@@ -343,10 +389,13 @@ class Account:
 
     def report_orgs(self):
         for org_name in self.org_names:
-            # urlencode name to ensure that names with possible URL escape 
+            # urlencode name to ensure that names with possible URL escape
             # characters (e.g. +) will be handled properly when querying the CF API
             org_name = urllib.parse.quote_plus(org_name)
-            org = Organization(name=org_name)    
+            # We have a check in main() to ensure that the script cannot be executed
+            # with space names when specifying multiple org names, since space names
+            # are not unique across orgs
+            org = Organization(name=org_name, space_names=self.space_names)
             self.reporter.log("-----------------------------")
             org.report_memory(self.reporter)
             self.memory_quota += org.memory_quota
@@ -368,7 +417,7 @@ class Account:
             for key, value in org.es_instance_plans.items():
                 self.es_total_instance_plans[key] += value
             self.es_total_volume_storage += org.es_volume_storage
-    
+
     def report_summary(self, reporter):
         reporter.log("-===========================-")
         reporter.log(f"Account Total Mem Quota (GB): {self.memory_quota/1024:.0f}")
@@ -377,7 +426,9 @@ class Account:
         reporter.log(f"Account RDS Plans")
         for key, value in sorted(self.rds_total_instance_plans.items()):
             reporter.log(f"  {key}: {value}")
-        reporter.log(f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.0f}")
+        reporter.log(
+            f"Account S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.0f}"
+        )
         reporter.log(f"Account Redis Plans")
         for key, value in sorted(self.redis_total_instance_plans.items()):
             reporter.log(f"  {key}: {value}")
@@ -439,19 +490,23 @@ class Account:
             "redis-5node": "R35",
             "redis-3node-large": "R36",
             "redis-5node-large": "R37",
-            "Not_Found": "C50"
+            "Not_Found": "C50",
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)
         worksheet = workbook.active
 
-        worksheet["A1"] = f'Cost estimate for org: {self.org_names}'
+        worksheet["A1"] = f"Cost estimate for org: {self.org_names}"
         reporter.report(worksheet, "A", 50)
         # Usage
-        worksheet[estimate_map['memory_quota']] = self.memory_quota/1024
-        worksheet[estimate_map['rds_total_allocation']] = self.rds_total_allocation
-        worksheet[estimate_map["s3_total_storage"]] = self.s3_total_storage/(1024*1024*1024)
-        worksheet[estimate_map["es_total_volume_storage"]] = self.es_total_volume_storage
+        worksheet[estimate_map["memory_quota"]] = self.memory_quota / 1024
+        worksheet[estimate_map["rds_total_allocation"]] = self.rds_total_allocation
+        worksheet[estimate_map["s3_total_storage"]] = self.s3_total_storage / (
+            1024 * 1024 * 1024
+        )
+        worksheet[estimate_map["es_total_volume_storage"]] = (
+            self.es_total_volume_storage
+        )
         # Plans
         for key, value in sorted(self.rds_total_instance_plans.items()):
             worksheet[estimate_map[key]] = value
@@ -460,13 +515,15 @@ class Account:
         for key, value in sorted(self.es_total_instance_plans.items()):
             worksheet[estimate_map[key]] = value
         workbook.save(filename=self.output_workbook_file)
-        print(f'Saved cost estimate to: {self.output_workbook_file}')
+        print(f"Saved cost estimate to: {self.output_workbook_file}")
+
 
 class Reporter:
-    '''
+    """
     Spit out progress report, but save it all for writing to
     the XLSX file at the end
-    '''
+    """
+
     def __init__(self):
         self.outputs = []
 
@@ -480,19 +537,20 @@ class Reporter:
             row += 1
             worksheet[column + str(row)] = output
 
+
 def download_file(url, output_filename):
     """
     Download a file from a URL and save it to the specified filename
     """
     print(f"Downloading from {url}...")
-    
+
     # Make a GET request to the URL
     response = requests.get(url, stream=True)
-    
+
     # Check if the request was successful
     if response.status_code == 200:
         # Write the content to a file
-        with open(output_filename, 'wb') as file:
+        with open(output_filename, "wb") as file:
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
         print(f"Successfully downloaded and saved to {output_filename}")
@@ -501,25 +559,30 @@ def download_file(url, output_filename):
         print(f"Failed to download. Status code: {response.status_code}")
         return False
 
-'''
+
+"""
 - No args - Help
 - One arg - assumed an <org>, generates <org>-estimate.xlsx
 - Multiple args - requires -a <account>
 - -a account name
-'''
+"""
+
+
 def main():
-    cost_estimate_file='cloud-gov-cost-estimator.xlsx'
-    cost_estimate_url='https://cloud.gov/assets/documents/cloud-gov-cost-estimator.xlsx'
+    cost_estimate_file = "cloud-gov-cost-estimator.xlsx"
+    cost_estimate_url = (
+        "https://cloud.gov/assets/documents/cloud-gov-cost-estimator.xlsx"
+    )
     output_file = "generated-cost-estimate.xlsx"
 
     # Set up argument parser
     parser = argparse.ArgumentParser(
         prog="estimate-costs.py",
-        description='Generate Cloud.gov cost estimate from organization data.',
+        description="Generate Cloud.gov cost estimate from organization data.",
         epilog=f"""
 Example:
-  estimate-costs.py -a agency org1 org2 org3
-        
+  estimate-costs.py org1 org2 org3 -a agency [-s space1 space2]
+
 Notes:
   - Assumes the input file, {cost_estimate_file}, is in current directory
   - Downloads cost estimator, {cost_estimate_file}, if missing
@@ -527,14 +590,25 @@ Notes:
     uses name of the last provided organization name
   - At least one organization name is required
 """,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument('-a', '--account_name', help='name of the account to summarize')
-    parser.add_argument('orgs', nargs='+', help='organization names')
-    
+    parser.add_argument("-a", "--account_name", help="name of the account to summarize")
+    parser.add_argument(
+        "-s",
+        "--spaces",
+        nargs="*",
+        help="space names. only allowed for a single organization name",
+    )
+    parser.add_argument("orgs", nargs="+", help="organization names")
+
     # Parse arguments
     args = parser.parse_args()
     org_names = args.orgs
+    space_names = args.spaces
+
+    if len(org_names) > 1 and len(space_names) > 0:
+        print("space names only allowed when specifying a single organization")
+        exit(1)
 
     if args.account_name:
         output_file = args.account_name + ".xlsx"
@@ -542,7 +616,10 @@ Notes:
         output_file = org_names[-1] + ".xlsx"
 
     if not os.path.exists(cost_estimate_file):
-        print(f'Info: Missing input file, "{cost_estimate_file}", downloading...', file=sys.stderr)
+        print(
+            f'Info: Missing input file, "{cost_estimate_file}", downloading...',
+            file=sys.stderr,
+        )
         download_file(cost_estimate_url, cost_estimate_file)
 
     print(f'Info: Using output file, "{output_file}"', file=sys.stderr)
@@ -550,16 +627,17 @@ Notes:
     test_authenticated("cf")
     test_authenticated("aws")
 
-    print(f'Info: Authenticated, starting...', file=sys.stderr)
+    print(f"Info: Authenticated, starting...", file=sys.stderr)
 
-    acct = Account(orgs=org_names)
+    acct = Account(orgs=org_names, space_names=space_names)
     acct.report_orgs()
     if len(org_names) > 1:
         acct.report_summary(acct.reporter)
-    
-    acct.input_workbook_file  = cost_estimate_file
+
+    acct.input_workbook_file = cost_estimate_file
     acct.output_workbook_file = output_file
     acct.generate_cost_estimate(acct.reporter)
+
 
 if __name__ == "__main__":
     main()

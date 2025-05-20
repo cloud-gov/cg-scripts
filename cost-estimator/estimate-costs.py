@@ -209,11 +209,14 @@ class Organization:
                 space_guid = self.space_guid_map[space_name]
 
                 started_app_memory_usage = self.get_started_app_memory_usage(space_guid)
-                total_space_memory += started_app_memory_usage
-
                 running_task_memory_usage = self.get_running_task_memory_usage(
                     space_guid
                 )
+
+                # memory usage for an org and/or space is:
+                #   memory for started applications + memory for running tasks
+                # see https://github.com/cloudfoundry/cloud_controller_ng/blob/a5c0d35b4b59566617ebae8a79a14687e6d9b3b6/app/models/runtime/organization.rb#L231
+                total_space_memory += started_app_memory_usage
                 total_space_memory += running_task_memory_usage
 
                 self.memory_usage_by_space.append(

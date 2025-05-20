@@ -205,24 +205,69 @@ class Organization:
         else:
             total_memory = 0
             for space_name in self.space_names:
-                space_guid = self.space_guid_map[space_name]
-                cf_json = subprocess.check_output(
-                    f'cf curl "/v3/processes?organization_guids={self.guid}&space_guids={space_guid}"',
-                    universal_newlines=True,
-                    shell=True,
-                )
-                response = json.loads(cf_json)
                 total_space_memory = 0
-                for resource in response["resources"]:
-                    num_instances = resource["instances"]
-                    memory_per_instance = resource["memory_in_mb"]
-                    process_memory = num_instances * memory_per_instance
-                    total_space_memory += process_memory
-                self.memory_usage_by_space.append(
-                    {"space_name": space_name, "memory_usage": total_space_memory}
+                space_guid = self.space_guid_map[space_name]
+
+                started_app_memory_usage = self.get_started_app_memory_usage(space_guid)
+                total_space_memory += started_app_memory_usage
+
+                running_task_memory_usage = self.get_running_task_memory_usage(
+                    space_guid
                 )
+                total_space_memory += running_task_memory_usage
+
+                self.memory_usage_by_space.append(
+                    {"space_name": space_name, "memory_usage_in_mb": total_space_memory}
+                )
+
                 total_memory += total_space_memory
             return total_memory
+
+    def get_started_app_memory_usage(self, space_guid):
+        total_started_app_memory_usage = 0
+
+        cf_json = subprocess.check_output(
+            f'cf curl "/v3/apps?organization_guids={self.guid}&space_guids={space_guid}"',
+            universal_newlines=True,
+            shell=True,
+        )
+        response = json.loads(cf_json)
+        started_app_instance_guids = [
+            resource["guid"]
+            for resource in response["resources"]
+            if resource["state"] == "STARTED"
+        ]
+
+        if len(started_app_instance_guids) == 0:
+            return 0
+
+        app_guids_filter = ",".join(started_app_instance_guids)
+        cf_json = subprocess.check_output(
+            f'cf curl "/v3/processes?organization_guids={self.guid}&space_guids={space_guid}&app_guids={app_guids_filter}"',
+            universal_newlines=True,
+            shell=True,
+        )
+        response = json.loads(cf_json)
+
+        for resource in response["resources"]:
+            num_instances = resource["instances"]
+            memory_per_instance = resource["memory_in_mb"]
+            process_memory = num_instances * memory_per_instance
+            total_started_app_memory_usage += process_memory
+
+        return total_started_app_memory_usage
+
+    def get_running_task_memory_usage(self, space_guid):
+        total_task_memory = 0
+        cf_json = subprocess.check_output(
+            f'cf curl "/v3/tasks?organization_guids={self.guid}&space_guids={space_guid}&states=RUNNING"',
+            universal_newlines=True,
+            shell=True,
+        )
+        response = json.loads(cf_json)
+        for resource in response["resources"]:
+            total_task_memory += resource["memory_in_mb"]
+        return total_task_memory
 
     def get_aws_instances(self, client, resource_type):
         resource_type_map = {
@@ -285,7 +330,7 @@ class Organization:
         else:
             for space_info in self.memory_usage_by_space:
                 space_name = space_info["space_name"]
-                memory_usage = space_info["memory_usage"]
+                memory_usage = space_info["memory_usage_in_mb"]
                 reporter.log(
                     f"Memory usage for space {space_name} (GB): {memory_usage/1024:.2f}"
                 )
@@ -503,7 +548,10 @@ class Account:
         workbook = load_workbook(filename=self.input_workbook_file)
         worksheet = workbook.active
 
-        worksheet["A1"] = f"Cost estimate for org: {self.org_names}"
+        headline = f"Cost estimate for org: {self.org_names}"
+        if len(self.space_names) > 0:
+            headline += f", spaces: {self.space_names}"
+        worksheet["A1"] = headline
         reporter.report(worksheet, "A", 50)
         # Usage
         worksheet[estimate_map["memory_quota"]] = self.memory_quota / 1024

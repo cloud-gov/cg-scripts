@@ -312,15 +312,30 @@ class Organization:
             self.es_instances.append(es)
 
     def get_s3_buckets(self, client):
-        tag_value = self.guid
-        for key_value in ["Organization GUID", "Organization ID", "organizationGuid"]:
+        def _get_s3_buckets(client, tag_filters):
             response = client.get_resources(
-                TagFilters=[{"Key": key_value, "Values": [tag_value]}],
+                TagFilters=tag_filters,
                 ResourceTypeFilters=["s3:bucket"],
             )
-            for resource in response["ResourceTagMappingList"]:
-                s3 = S3(resource["ResourceARN"], resource["Tags"])
-                self.s3_buckets.append(s3)
+            return response["ResourceTagMappingList"]
+
+        resources = []
+
+        for key_value in ["Organization GUID", "Organization ID", "organizationGuid"]:
+            tag_filters = [{"Key": key_value, "Values": [self.guid]}]
+            if len(self.space_guids) == 0:
+                s3_bucket_resources = _get_s3_buckets(client, tag_filters)
+                resources = resources + s3_bucket_resources
+            else:
+                for key in ["Space GUID", "Space ID", "spaceGuid"]:
+                    space_tag_filters = tag_filters.copy()
+                    space_tag_filters.append({"Key": key, "Values": self.space_guids})
+                    s3_bucket_resources = _get_s3_buckets(client, space_tag_filters)
+                    resources = resources + s3_bucket_resources
+
+        for resource in resources:
+            s3 = S3(resource["ResourceARN"], resource["Tags"])
+            self.s3_buckets.append(s3)
 
     def report_memory(self, reporter):
         reporter.log(f"Organization name: {self.name}")

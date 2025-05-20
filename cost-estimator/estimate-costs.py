@@ -146,12 +146,13 @@ class S3(AWSResource):
 
 
 class Organization:
-    def __init__(self, name, space_names=[]):
+    def __init__(self, name, space_names):
         self.name = name
         self.space_names = space_names
         self.data = self.get_data()
         self.guid = self.data["guid"]
-        self.space_guids = self.get_space_guids()
+        self.space_guid_map = self.get_space_guid_map()
+        self.space_guids = list(self.space_guid_map.values())
         self.quota_guid = self.data["relationships"]["quota"]["data"]["guid"]
         self.memory_quota = self.get_memory_quota()
         self.memory_usage_by_space = []
@@ -163,7 +164,7 @@ class Organization:
         self.rds_allocation = 0
         self.s3_storage = 0
 
-    def get_space_guids(self):
+    def get_space_guid_map(self):
         if len(self.space_names) == 0:
             return {}
         cf_json = subprocess.check_output(
@@ -172,10 +173,10 @@ class Organization:
             shell=True,
         )
         response = json.loads(cf_json)
-        space_guids = {}
+        space_guid_map = {}
         for resource in response["resources"]:
-            space_guids[resource["name"]] = resource["guid"]
-        return space_guids
+            space_guid_map[resource["name"]] = resource["guid"]
+        return space_guid_map
 
     def get_data(self):
         cf_json = subprocess.check_output(
@@ -204,7 +205,7 @@ class Organization:
         else:
             total_memory = 0
             for space_name in self.space_names:
-                space_guid = self.space_guids[space_name]
+                space_guid = self.space_guid_map[space_name]
                 cf_json = subprocess.check_output(
                     f'cf curl "/v3/processes?organization_guids={self.guid}&space_guids={space_guid}"',
                     universal_newlines=True,
@@ -230,10 +231,16 @@ class Organization:
             "es": "es:domain",
         }
         resource_type_filter = [resource_type_map[resource_type]]
-        tag_key = "Organization GUID"
-        tag_value = self.guid
+        tag_filters = [{"Key": "Organization GUID", "Values": [self.guid]}]
+        if len(self.space_guids) > 0:
+            tag_filters.append(
+                {
+                    "Key": "Space GUID",
+                    "Values": self.space_guids,
+                }
+            )
         response = client.get_resources(
-            TagFilters=[{"Key": tag_key, "Values": [tag_value]}],
+            TagFilters=tag_filters,
             ResourceTypeFilters=resource_type_filter,
         )
         return response
@@ -370,7 +377,7 @@ def test_authenticated(service):
 class Account:
     def __init__(self, orgs, space_names):
         self.org_names = orgs
-        self.space_names = space_names
+        self.space_names = space_names if space_names else []
 
         self.resource_tags_client = boto3.client("resourcegroupstaggingapi")
 

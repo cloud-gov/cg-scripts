@@ -94,7 +94,7 @@ delete_idp() {
     updated_keys=$(cat updated-uaa-saml-providers.json | jq -r '. | keys | .[]')
     echo "Updated Keys: $updated_keys"
     if [[ $expected_length != $length_after ]] ||  [[ " ${updated_keys[@]} " =~ " ${idp} " ]]; then
-      echo "An error occured updating the json."
+      echo "An error occurred updating the json."
       echo "The IDP has not been deleted and credhub has not been updated."
       echo "Aborting..."
       exit 1

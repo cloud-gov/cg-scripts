@@ -16,7 +16,7 @@ import os
 #   where {environment} is production or tooling and container-number is the number from the first step.
 
 # goal: produce a CSV with lines of:
-# `Unique Asset Identifier` - can be any arbirtary name - we use the VM name with BOSH ID
+# `Unique Asset Identifier` - can be any arbitrary name - we use the VM name with BOSH ID
 # IPv4 - hopefully obvious what this means
 # IPv6 - we don't currently include this
 # DNS name - not currently included

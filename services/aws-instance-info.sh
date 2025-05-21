@@ -182,7 +182,7 @@ service_key_guid=$(cf curl /v3/service_credential_bindings?names=${key_name} | j
 
 # get key details
 echo_green "Getting temporary service key details" >&3
-# the broker may take a second or two to finsh the async credential creation so poll
+# the broker may take a second or two to finish the async credential creation so poll
 service_key_details="null"
 while [ "${service_key_details}" == "null" ]; do
   service_key_details=$(cf curl /v3/service_credential_bindings/${service_key_guid}/details | jq -r .credentials)

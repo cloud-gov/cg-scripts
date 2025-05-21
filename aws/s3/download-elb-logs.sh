@@ -2,7 +2,7 @@
 
 function usage {
   echo -e "
-  ./$( basename "$0" ) <bucket_name> <date> <load_balancer_name> <zulu_time> <output directry>
+  ./$( basename "$0" ) <bucket_name> <date> <load_balancer_name> <zulu_time> <output directory>
 
   Download load balancer logs from S3 for the given date, load balancer, and timestamp (in Zulu time).
 

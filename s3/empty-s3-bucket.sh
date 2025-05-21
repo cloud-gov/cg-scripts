@@ -45,7 +45,7 @@ export AWS_DEFAULT_REGION
 AWS_DEFAULT_REGION=$(echo "$S3_CREDENTIALS" | jq -r '.credentials.region')
 
 # it takes time for the new creds to propagate in AWS so
-# we have to while here for abit or this script fails almost everytime.
+# we have to while here for abit or this script fails almost every time.
 x=0
 set +e
 while [ $x -lt 5 ]; do

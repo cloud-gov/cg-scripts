@@ -14,7 +14,7 @@ then
   echo -e "
   ./$( basename "$0" ) [--help, -h]
 
-  Get all unique GitHub respositories referenced by pipelines on a Concourse server.
+  Get all unique GitHub repositories referenced by pipelines on a Concourse server.
 
   Optional environment variable ${YELLOW}\$CI_URL${NC} matching your Concourse URL.
   eg, ${PURPLE}CI_URL=https://ci.fr.cloud.gov ./$( basename "$0" ) --verbose${NC}

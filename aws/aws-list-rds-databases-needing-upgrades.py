@@ -111,7 +111,7 @@ def determine_action(db_engine, db_engine_version, family_name, db_instance_name
             )
         elif db_instance_name.startswith("cg-aws-broker-stage"):
             action = (
-                "Give to platform, needs intance upgrade, is AWS broker staging broker"
+                "Give to platform, needs instance upgrade, is AWS broker staging broker"
             )
         elif db_instance_name.startswith("development-"):
             action = "Give to platform, needs instance upgrade, likely terraform created in cg-provision main stack for development"

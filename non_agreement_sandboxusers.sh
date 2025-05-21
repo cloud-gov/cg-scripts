@@ -28,7 +28,7 @@ SANDBOX_ORG_IDS=$(cf curl '/v3/organizations?per_page=5000'| jq -r '.resources |
 
 for SAORG_ID in $SANDBOX_ORG_IDS; do
 
-    # Getting users for evey sandbox org
+    # Getting users for every sandbox org
     ORG_USERS=$(cf curl "/v3/roles?organization_guids=$SAORG_ID" | jq -r '.resources[] | .relationships.user.data.guid')
 
     for ORG_USER in $ORG_USERS; do 
@@ -59,5 +59,5 @@ for SAORG_ID in $SANDBOX_ORG_IDS; do
 done
 
 # Removing file with non sandbox orgs user guids 
-echo "script executed sucessfully, removing temp file "
+echo "script executed successfully, removing temp file "
 rm -f non_sandbox_org_users.txt 

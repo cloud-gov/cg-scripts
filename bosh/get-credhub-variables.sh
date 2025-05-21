@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# This script takes in a BOSH deployment name and then queries BOSH for Credhub variables assoicated with the deployment.
+# This script takes in a BOSH deployment name and then queries BOSH for Credhub variables associated with the deployment.
 # It then queries Credhub for the value and latest version created at date
 # Finally it sorts the output with the newest/updated items at the top of the output
 

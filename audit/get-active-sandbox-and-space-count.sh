@@ -49,7 +49,7 @@ additional sandbox space count to the date range provided with both dates.
 EOF
 }
 
-# Initialize sript variables.
+# Initialize script variables.
 start_date=""
 end_date=""
 extra_params=""
@@ -108,14 +108,14 @@ echo "Getting total counts of active sandboxes and sandbox spaces..."
 # date and after, starting at the very beginning of the day.
 if [ $start_date ]; then
     extra_params="${extra_params}&created_ats[gte]=${start_date}T00:00:00Z"
-    echo "    [Perfoming extra search for sandbox spaces only created on ${start_date} (00:00:00) and after]"
+    echo "    [Performing extra search for sandbox spaces only created on ${start_date} (00:00:00) and after]"
 fi
 
 # If an end date was given, filter for sandbox spaces created before the very
 # end of the day given and before.
 if [ $end_date ]; then
     extra_params="${extra_params}&created_ats[lte]=${end_date}T23:59:59Z"
-    echo "    [Perfoming extra search for sandbox spaces only created on ${end_date} (23:59:59) and before]"
+    echo "    [Performing extra search for sandbox spaces only created on ${end_date} (23:59:59) and before]"
 fi
 
 echo

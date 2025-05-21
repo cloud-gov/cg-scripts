@@ -60,7 +60,7 @@ def main():
         else:
             print("Please run 'python3 ./asg-tool --help'")
     except Exception as e:
-        print(f"An error occurred while runing `python3 ./asg-tool {args.command}`")
+        print(f"An error occurred while running `python3 ./asg-tool {args.command}`")
         print(str(e))
         print("Please revise your and try again.")
     finally:

@@ -43,7 +43,7 @@ def get_commit(owner, repo, path, auth):
 
     Returns:
         tuple(str, str): The url to the submodule repo, and the sha of the
-        commmit
+        commit
     """
     github_api_url = "https://api.github.com/repos/{0}/{1}/contents/{2}"
     github_api_url = github_api_url.format(owner, repo, path)
@@ -105,7 +105,7 @@ def find_submodules(source, auth):
 
 
 def get_lang(source, auth):
-    """Use the github API to find out which languages a paricular source use
+    """Use the github API to find out which languages a particular source use
 
     Args:
         source(tuple(repo, branch)) - The repo and branch to find the
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     if FLY_TARGET is None:
         parser.error("Could not find fly target for {0}; ensure it appears in `fly targets`".format(args.concourse_url))
 
-    # STEP 1: extract all sourcees from all pipelines in concourse
+    # STEP 1: extract all sources from all pipelines in concourse
     sources = []
     try:
         for pipeline in subprocess.check_output(['fly', '-t', FLY_TARGET, 'pipelines']).decode('utf-8').split("\n"):

@@ -62,7 +62,7 @@ It requires that the name of the bucket holding the secret credentials is set
 in the \$CONCOURSE_CREDENTIALS_BUCKET environment variable.
 
 If you omit pipeline-name, then the name of the root git directory is used as
-a best guess (ommitting the cg- prefix).
+a best guess (omitting the cg- prefix).
 
 This script assumes that "do-not-commit" is configured in the project
 .gitignore (or your global excludesfile).  See the documentation on

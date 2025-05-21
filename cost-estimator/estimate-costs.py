@@ -13,6 +13,7 @@ from collections import Counter
 from openpyxl import load_workbook
 import argparse
 import math
+import re
 
 
 class AWSResource:
@@ -125,7 +126,8 @@ class S3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags)
         self.bucket_name = self.instance_id
-        self.service_plan_name = super().get_service_plan_name(self.instance_id)
+        self.instance_guid = re.sub(r"^cg-", "", self.bucket_name)
+        self.service_plan_name = super().get_service_plan_name(self.instance_guid)
 
     def get_s3_usage(self, client):
         now = datetime.datetime.now()

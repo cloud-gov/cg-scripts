@@ -373,9 +373,11 @@ class Organization:
 
         reporter.log("RDS:")
         reporter.log(f" RDS allocation (GB): {self.rds_allocation}")
-        reporter.log(f" RDS Plans")
-        for key, value in sorted(self.rds_instance_plans.items()):
-            reporter.log(f"  {key}: {value}")
+
+        if self.rds_instance_plans.total() > 0:
+            reporter.log(f" RDS Plans")
+            for key, value in sorted(self.rds_instance_plans.items()):
+                reporter.log(f"  {key}: {value}")
 
     def report_s3(self, tags_client, reporter):
         self.s3_instance_plans = Counter()
@@ -393,37 +395,50 @@ class Organization:
         reporter.log(
             f" S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}"
         )
-        reporter.log(f" S3 Plans")
-        for key, value in sorted(self.s3_instance_plans.items()):
-            reporter.log(f"  {key}: {value}")
+
+        if self.s3_instance_plans.total() > 0:
+            reporter.log(f" S3 Plans")
+            for key, value in sorted(self.s3_instance_plans.items()):
+                reporter.log(f"  {key}: {value}")
 
     def report_redis(self, tags_client, reporter):
-        reporter.log("Redis:")
         self.redis_instance_plans = Counter()
-
         self.get_redis_instances(tags_client)
+
+        if len(self.redis_instances) == 0:
+            return
+
+        reporter.log("Redis:")
+
         for redis in self.redis_instances:
             self.redis_instance_plans[redis.service_plan_name] += 1
-        reporter.log(f" Redis Plans")
-        for key, value in sorted(self.redis_instance_plans.items()):
-            reporter.log(f"  {key}: {value}")
+
+        if self.redis_instance_plans.total() > 0:
+            reporter.log(f" Redis Plans")
+            for key, value in sorted(self.redis_instance_plans.items()):
+                reporter.log(f"  {key}: {value}")
 
     def report_es(self, tags_client, reporter):
-        reporter.log("ES")
-        es_client = boto3.client("es")
         self.es_instance_plans = Counter()
+        self.get_es_instances(tags_client)
         self.es_volume_storage = 0
 
-        self.get_es_instances(tags_client)
+        if len(self.es_instances) == 0:
+            return
+
+        reporter.log("ES")
+        es_client = boto3.client("es")
+
         for es in self.es_instances:
             es.get_es_instance(es_client)
             self.es_instance_plans[es.service_plan_name] += 1
             self.es_volume_storage += es.volume_size
         reporter.log(f" ES volume storage (GB): {self.es_volume_storage}")
-        reporter.log(f" ES Plans")
 
-        for key, value in sorted(self.es_instance_plans.items()):
-            reporter.log(f"  {key}: {value}")
+        if self.es_instance_plans.total() > 0:
+            reporter.log(f" ES Plans")
+            for key, value in sorted(self.es_instance_plans.items()):
+                reporter.log(f"  {key}: {value}")
 
 
 def test_authenticated(service):

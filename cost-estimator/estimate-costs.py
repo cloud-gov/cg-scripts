@@ -24,6 +24,31 @@ class AWSResource:
         else:
             self.instance_id = "Unknown"
 
+    def get_instance_plan_name(self, instance_guid):
+        cf_json = subprocess.check_output(
+            "cf curl /v3/service_instances/"
+            + instance_guid
+            + "/?fields[service_plan]=name",
+            universal_newlines=True,
+            shell=True,
+        )
+        cf_data = json.loads(cf_json)
+        return cf_data.get("included", "N/A")["service_plans"][0]["name"]
+
+    def get_service_plan_name(self, instance_guid):
+        # FIXME: Maybe we shouldn't trust the plan name in the tag, but it's faster
+        service_plan_name = "Not_Found"
+        try:
+            service_plan_name = [
+                tag["Value"] for tag in self.tags if tag["Key"] == "Service plan name"
+            ][0]
+        except:
+            try:
+                service_plan_name = self.get_instance_plan_name(instance_guid)
+            except:
+                service_plan_name = "Not_Found"
+        return service_plan_name
+
 
 class AWSNotS3(AWSResource):
     def __init__(self, arn, tags):
@@ -41,17 +66,7 @@ class AWSNotS3(AWSResource):
         except:
             self.space_name = self.get_cf_entity_name("spaces", self.space_guid)
 
-        # FIXME: Maybe we shouldn't trust the plan name in the tag, but it's faster
-        try:
-
-            self.service_plan_name = [
-                tag["Value"] for tag in tags if tag["Key"] == "Service plan name"
-            ][0]
-        except:
-            try:
-                self.service_plan_name = self.get_instance_plan_name(self.instance_guid)
-            except:
-                self.service_plan_name = "Not_Found"
+        self.service_plan_name = super().get_service_plan_name(self.instance_guid)
 
         # NOTE: 'instance_name' could change with `cf rename-service`
         try:
@@ -77,17 +92,6 @@ class AWSNotS3(AWSResource):
         )
         cf_data = json.loads(cf_json)
         return cf_data.get("name", "N/A")
-
-    def get_instance_plan_name(self, instance_guid):
-        cf_json = subprocess.check_output(
-            "cf curl /v3/service_instances/"
-            + instance_guid
-            + "/?fields[service_plan]=name",
-            universal_newlines=True,
-            shell=True,
-        )
-        cf_data = json.loads(cf_json)
-        return cf_data.get("included", "N/A")["service_plans"][0]["name"]
 
 
 class Rds(AWSNotS3):
@@ -121,6 +125,7 @@ class S3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags)
         self.bucket_name = self.instance_id
+        self.service_plan_name = super().get_service_plan_name(self.instance_id)
 
     def get_s3_usage(self, client):
         now = datetime.datetime.now()
@@ -371,17 +376,24 @@ class Organization:
             reporter.log(f"  {key}: {value}")
 
     def report_s3(self, tags_client, reporter):
-        reporter.log("S3")
+        self.s3_instance_plans = Counter()
+
         self.s3_total_storage = 0
         cloudwatch_client = boto3.client("cloudwatch")
 
         self.get_s3_buckets(tags_client)
         for s3 in self.s3_buckets:
             s3.get_s3_usage(cloudwatch_client)
+            self.s3_instance_plans[s3.service_plan_name] += 1
             self.s3_total_storage += s3.s3_usage
+
+        reporter.log("S3")
         reporter.log(
             f" S3 Total Usage (GB): {self.s3_total_storage/(1024*1024*1024):.2f}"
         )
+        reporter.log(f" S3 Plans")
+        for key, value in sorted(self.s3_instance_plans.items()):
+            reporter.log(f"  {key}: {value}")
 
     def report_redis(self, tags_client, reporter):
         reporter.log("Redis:")

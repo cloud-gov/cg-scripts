@@ -3,47 +3,47 @@
 import random
 
 # Need emoji:
-# Anna
-# Banessa
-# Weibel
-# Jason
-# Joe
-# Katherine
-# Kudeha
-# Nicole
-# Sean
-# William
-# Zachary
-# --
-# Cathy
-# Marjorie
-# David K
-# David S
-# Arantxa
+#   Anna
+#   Banessa
+#   Weibel
+#   Jason
+#   Joe
+#   Katherine
+#   Kudeha
+#   Nicole
+#   Sean
+#   William
+#   Zachary
+#   --
+#   Cathy
+#   Marjorie
+#   David K
+#   David S
+#   Arantxa
 
 team = [
-  :andrew-burnes:,
-  :annep:,
-  :arsalan-haider:,
-  :bhurst:,
-  :carlo:,
-  :chris-mcgowan:,
-  :david-anderson:,
-  :eleni:,
-  :ephraim-gross:,
-  :james-hochadel:,
-  :kelsey-foley:,
-  :mark-boyd:,
-  :matt-henry:,
-  :pauldoomgov:,
-  :peterb:,
-  :robert-gottlieb:,
-  :ryanahearn:,
-  :sarah-rudder:,
-  :steve-greenberg:,
-  :sven:,
-  :van-nguyen:,
-  :yuda:
+  ":andrew-burnes:",
+  ":annep:",
+  ":arsalan-haider:",
+  ":bhurst:",
+  ":carlo:",
+  ":chris-mcgowan:",
+  ":david-anderson:",
+  ":eleni:",
+  ":ephraim-gross:",
+  ":james-hochadel:",
+  ":kelsey-foley:",
+  ":mark-boyd:",
+  ":matt-henry:",
+  ":pauldoomgov:",
+  ":peterb:",
+  ":robert-gottlieb:",
+  ":ryanahearn:",
+  ":sarah-rudder:",
+  ":steve-greenberg:",
+  ":sven:",
+  ":van-nguyen:",
+  ":yuda"
 ]
 # randomize the input list, t,
 # then print samples with spacing n

@@ -2,23 +2,48 @@
 
 import random
 
+# Need emoji:
+# Anna
+# Banessa
+# Weibel
+# Jason
+# Joe
+# Katherine
+# Kudeha
+# Nicole
+# Sean
+# William
+# Zachary
+# --
+# Cathy
+# Marjorie
+# David K
+# David S
+# Arantxa
+
 team = [
-    ":andrew-burnes:",
-    ":arsalan-haider:",
-    ":bhurst:",
-    ":chiaka-opara:",
-    ":chris-mcgowan:",
-    ":david-anderson:",
-    ":drew-bollinger:",
-    ":ephraim-gross:",
-    ":james-hochadel:",
-    ":kelley:",
-    ":mark-boyd:",
-    ":melanie:",
-    ":peterb:",
-    ":rian-bogle:",
-    ":robert-gottlieb:",
-    ":van-nguyen:",
+  :andrew-burnes:,
+  :annep:,
+  :arsalan-haider:,
+  :bhurst:,
+  :carlo:,
+  :chris-mcgowan:,
+  :david-anderson:,
+  :eleni:,
+  :ephraim-gross:,
+  :james-hochadel:,
+  :kelsey-foley:,
+  :mark-boyd:,
+  :matt-henry:,
+  :pauldoomgov:,
+  :peterb:,
+  :robert-gottlieb:,
+  :ryanahearn:,
+  :sarah-rudder:,
+  :steve-greenberg:,
+  :sven:,
+  :van-nguyen:,
+  :yuda:
 ]
 # randomize the input list, t,
 # then print samples with spacing n

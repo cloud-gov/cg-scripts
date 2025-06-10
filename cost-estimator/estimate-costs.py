@@ -711,6 +711,7 @@ Notes:
         "-s",
         "--spaces",
         nargs="*",
+        default=[],
         help="space names. only allowed for a single organization name",
     )
     parser.add_argument("orgs", nargs="+", help="organization names")

@@ -5,7 +5,7 @@ set -e
 if [ "$#" -lt 1 ]; then
   echo
   echo "Usage:"
-  echo "  $ ./make-ops-admin.sh [-r] <EMAIL_ADDRESS>"
+  echo "  $ ./make-concourse-admin.sh [-r] <EMAIL_ADDRESS>"
   echo
   echo "  Options:"
   echo "     -r    :    Remove the user instead of add"

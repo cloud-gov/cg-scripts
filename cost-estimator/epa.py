@@ -15,8 +15,10 @@ with open('EPA.csv', 'r') as csv_file:
 
     
 # Print the unique EPA programs
-print("Unique EPA Programs:")
 for program in sorted(program_spaces.keys()):
     spaces = " ".join(list(program_spaces[program]))
-    org = "epa-foo"
-    print(f"./estimate-costs {org} -a {program} -s {spaces}")
+    org = program.split('--')[0]
+    if (spaces =='*'):
+        print(f"./estimate-costs {org} -a {program}")
+    else:
+        print(f"./estimate-costs {org} -a {program} -s {spaces}")

@@ -1,7 +1,7 @@
 import csv
+from collections import defaultdict
 
-# Read from the CSV file
-unique_programs = set()
+program_spaces = defaultdict(set)
 
 with open('EPA.csv', 'r') as csv_file:
     # Use csv.DictReader to parse the CSV
@@ -9,9 +9,14 @@ with open('EPA.csv', 'r') as csv_file:
     
     # Collect unique EPA programs
     for row in csv_reader:
-        unique_programs.add(row['EPA program'])
+        program = row['EPA Program']
+        space = row['EPA Space']
+        program_spaces[program].add(space)
+
     
-    # Print the unique EPA programs
-    print("Unique EPA Programs:")
-    for program in sorted(unique_programs):
-        print(program)
+# Print the unique EPA programs
+print("Unique EPA Programs:")
+for program in sorted(program_spaces.keys()):
+    spaces = " ".join(list(program_spaces[program]))
+    org = "epa-foo"
+    print(f"./estimate-costs {org} -a {program} -s {spaces}")

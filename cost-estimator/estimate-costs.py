@@ -540,18 +540,17 @@ class Account:
         for key, value in sorted(self.es_total_instance_plans.items()):
             reporter.log(f"  {key}: {value}")
 
-    def upload_airtable_report(self, airtable, account_name):
+    def upload_airtable_estimate(self, airtable, account_name):
         headline = f"Cost estimate for org: {self.org_names}"
         if len(self.space_names) > 0:
             headline += f", spaces: {self.space_names}"
+
+        price_lookup= airtable.price_dict()
+        print(f"Fetched {len(price_lookup)} Price Records from AirTable")
         
         summary_record_id = airtable.summary_table.create(
             {"Source": "cost-estimator", "Account": account_name, "Description": headline}
         )['id']
-        print("Created AT Summary Record: ", summary_record_id)
-
-        price_lookup= airtable.price_dict()
-        print("Fetched AT Price Records: ", len(price_lookup))
 
         airtable_batch = []
 
@@ -601,9 +600,24 @@ class Account:
                     "Resource Pricelist": [price_lookup[plan]],
                     "Units":  units
                 })
+        # redis-plans
+        if len(self.redis_total_instance_plans) > 0:
+            for plan, units in sorted(self.redis_total_instance_plans.items()):
+                airtable_batch.append({
+                    "Resource Summary": [summary_record_id],
+                    "Resource Pricelist": [price_lookup[plan]],
+                    "Units":  units
+                })
+        # es-plans
+        if len(self.es_total_instance_plans) > 0: 
+            for plan, units in sorted(self.es_total_instance_plans.items()):
+                airtable_batch.append({
+                    "Resource Summary": [summary_record_id],
+                    "Resource Pricelist": [price_lookup[plan]],
+                    "Units":  units
+                })
         result = airtable.resource_table.batch_create(airtable_batch)
-        print("AT batch result", result)
-
+        print(f"Created {len(result)} AirTable records")
 
 
     def generate_cost_estimate(self, reporter):
@@ -840,8 +854,8 @@ Notes:
 
     acct.input_workbook_file = cost_estimate_file
     acct.output_workbook_file = output_file
-#    acct.generate_cost_estimate(acct.reporter)
-    acct.upload_airtable_report(acct.airtable, acct.name)
+    acct.generate_cost_estimate(acct.reporter)
+    acct.upload_airtable_estimate(acct.airtable, acct.name)
 
 
 if __name__ == "__main__":

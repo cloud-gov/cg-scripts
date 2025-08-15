@@ -14,6 +14,7 @@ from openpyxl import load_workbook
 import argparse
 import math
 import re
+import pyairtable
 
 
 class AWSResource:
@@ -468,7 +469,8 @@ def test_authenticated(service):
 
 
 class Account:
-    def __init__(self, orgs, space_names):
+    def __init__(self, name, orgs, space_names):
+        self.name = name
         self.org_names = orgs
         self.space_names = space_names if space_names else []
 
@@ -486,6 +488,7 @@ class Account:
         self.input_workbook_file = None
         self.output_workbook_file = None
         self.reporter = Reporter()
+        self.airtable = Airtable()
 
     def report_orgs(self):
         for org_name in self.org_names:
@@ -535,6 +538,15 @@ class Account:
         reporter.log(f"Account ES Plans")
         for key, value in sorted(self.es_total_instance_plans.items()):
             reporter.log(f"  {key}: {value}")
+
+    def upload_airtable_report(self, airtable, account_name):
+        headline = f"Cost estimate for org: {self.org_names}"
+        if len(self.space_names) > 0:
+            headline += f", spaces: {self.space_names}"
+        
+        airtable.summary_table.create(
+            {"Source": "cost-estimator", "Account": account_name, "Description": headline}
+        )
 
     def generate_cost_estimate(self, reporter):
         estimate_map = {
@@ -631,6 +643,18 @@ class Account:
         workbook.save(filename=self.output_workbook_file)
         print(f"Saved cost estimate to: {self.output_workbook_file}")
 
+class Airtable:
+    QUOTE_BASE_ID='appprdUNzFPO9avLd'
+    RESOURCE_ENTRY_TABLE_ID='tbl5fX9qzivwgMnD2'
+    RESOURCE_PRICING_TABLE_ID='tblr5evoP1pKGcUxl'
+    RESOURCE_SUMMARY_TABLE_ID='tblCj7JYRsYlqtruU'
+
+    def __init__(self):
+        self.api = pyairtable.Api(os.environ['AIRTABLE_API_KEY'])
+        self.summary_table = self.api.table(self.QUOTE_BASE_ID, self.RESOURCE_SUMMARY_TABLE_ID)
+    
+
+
 
 class Reporter:
     """
@@ -725,10 +749,11 @@ Notes:
         print("space names only allowed when specifying a single organization")
         exit(1)
 
+    account_name = org_names[-1]
     if args.account_name:
-        output_file = args.account_name + ".xlsx"
-    else:
-        output_file = org_names[-1] + ".xlsx"
+        account_name = args.account_name
+    output_file = account_name + ".xlsx"
+
 
     if not os.path.exists(cost_estimate_file):
         print(
@@ -744,7 +769,7 @@ Notes:
 
     print(f"Info: Authenticated, starting...", file=sys.stderr)
 
-    acct = Account(orgs=org_names, space_names=space_names)
+    acct = Account(name=account_name,orgs=org_names, space_names=space_names)
     acct.report_orgs()
     if len(org_names) > 1:
         acct.report_summary(acct.reporter)
@@ -752,6 +777,7 @@ Notes:
     acct.input_workbook_file = cost_estimate_file
     acct.output_workbook_file = output_file
     acct.generate_cost_estimate(acct.reporter)
+    acct.upload_airtable_report(acct.airtable, acct.name)
 
 
 if __name__ == "__main__":

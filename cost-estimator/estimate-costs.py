@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import pprint
 import subprocess
 import sys
 import os.path
@@ -544,9 +545,64 @@ class Account:
         if len(self.space_names) > 0:
             headline += f", spaces: {self.space_names}"
         
-        airtable.summary_table.create(
+        summary_record_id = airtable.summary_table.create(
             {"Source": "cost-estimator", "Account": account_name, "Description": headline}
-        )
+        )['id']
+        print("Created AT Summary Record: ", summary_record_id)
+
+        price_lookup= airtable.price_dict()
+        print("Fetched AT Price Records: ", len(price_lookup))
+
+        airtable_batch = []
+
+        # memory-quota
+        if len(self.space_names) == 0:
+            at_memory_quota = self.memory_quota / 1024
+        else:
+            # If we are producing an estimate for a set of space(s), then the memory usage is
+            # whatever memory is used by those spaces. Round up the memory usage to the nearest
+            # integer because we charge for memory on a per GB basis, so any partial use of a GB
+            # should be treated as a whole GB for accounting purposes
+            at_memory_quota = math.ceil(
+                self.memory_usage / 1024
+            )
+        airtable_batch.append({ 
+                "Resource Summary": [summary_record_id],
+                "Resource Pricelist": [price_lookup['memory-quota']],
+                "Units": at_memory_quota
+             })
+        # rds-storage
+        if self.rds_total_allocation > 0:
+            airtable_batch.append({ 
+                    "Resource Summary": [summary_record_id],
+                    "Resource Pricelist": [price_lookup['rds-storage']],
+                    "Units":  math.ceil(self.rds_total_allocation)
+            })
+        # s3-storage
+        if self.s3_total_storage > 0:
+            airtable_batch.append({ 
+                    "Resource Summary": [summary_record_id],
+                    "Resource Pricelist": [price_lookup['s3-storage']],
+                    "Units":  math.ceil(self.s3_total_storage / ( 1024 * 1024 * 1024 ))
+            })
+
+        # es-storage
+        if self.es_total_volume_storage > 0:
+            airtable_batch.append({ 
+                    "Resource Summary": [summary_record_id],
+                    "Resource Pricelist": [price_lookup['es-storage']],
+                    "Units":  math.ceil(self.es_total_volume_storage)
+            })
+        # rds-plans
+        if len(self.rds_total_instance_plans) > 0:
+            for plan, units in sorted(self.rds_total_instance_plans.items()):
+                airtable_batch.append({
+                    "Resource Summary": [summary_record_id],
+                    "Resource Pricelist": [price_lookup[plan]],
+                    "Units":  units
+                })
+
+        pprint.pp(airtable_batch)
 
     def generate_cost_estimate(self, reporter):
         estimate_map = {
@@ -652,8 +708,14 @@ class Airtable:
     def __init__(self):
         self.api = pyairtable.Api(os.environ['AIRTABLE_API_KEY'])
         self.summary_table = self.api.table(self.QUOTE_BASE_ID, self.RESOURCE_SUMMARY_TABLE_ID)
-    
+        self.pricing_table = self.api.table(self.QUOTE_BASE_ID, self.RESOURCE_PRICING_TABLE_ID)
+        self.record_table = self.api.table(self.QUOTE_BASE_ID, self.RESOURCE_ENTRY_TABLE_ID)
 
+    def price_dict(self):
+        price_dict = {}
+        for rp in self.pricing_table.all(fields=['Name']):
+            price_dict[rp['fields']['Name']] = (rp['id'])
+        return price_dict
 
 
 class Reporter:
@@ -776,7 +838,7 @@ Notes:
 
     acct.input_workbook_file = cost_estimate_file
     acct.output_workbook_file = output_file
-    acct.generate_cost_estimate(acct.reporter)
+#    acct.generate_cost_estimate(acct.reporter)
     acct.upload_airtable_report(acct.airtable, acct.name)
 
 

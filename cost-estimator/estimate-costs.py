@@ -601,8 +601,10 @@ class Account:
                     "Resource Pricelist": [price_lookup[plan]],
                     "Units":  units
                 })
+        result = airtable.resource_table.batch_create(airtable_batch)
+        print("AT batch result", result)
 
-        pprint.pp(airtable_batch)
+
 
     def generate_cost_estimate(self, reporter):
         estimate_map = {
@@ -709,7 +711,7 @@ class Airtable:
         self.api = pyairtable.Api(os.environ['AIRTABLE_API_KEY'])
         self.summary_table = self.api.table(self.QUOTE_BASE_ID, self.RESOURCE_SUMMARY_TABLE_ID)
         self.pricing_table = self.api.table(self.QUOTE_BASE_ID, self.RESOURCE_PRICING_TABLE_ID)
-        self.record_table = self.api.table(self.QUOTE_BASE_ID, self.RESOURCE_ENTRY_TABLE_ID)
+        self.resource_table = self.api.table(self.QUOTE_BASE_ID, self.RESOURCE_ENTRY_TABLE_ID)
 
     def price_dict(self):
         price_dict = {}

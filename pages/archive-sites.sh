@@ -41,7 +41,16 @@ TIMESTAMP=$(date "+%Y%m%d")
 PREFIX="$TARGET/$TIMESTAMP" 
 mkdir -p "$PREFIX" || fail "Unable to create the target directory $PREFIX"
 
-for S in cdo.gov cfo.gov paymentaccuracy.gov cio.gov coffa.gov evaluation.gov fpc.gov statspolicy.gov fcsm.gov; do 
+for S in ussm.gov \
+    cdo.gov \
+    cfo.gov \
+    paymentaccuracy.gov \
+    cio.gov \
+    coffa.gov \
+    evaluation.gov \
+    fpc.gov \
+    statspolicy.gov \
+    fcsm.gov; do 
   echo "=============="
   echo "STARTING SITE: $S"
   echo "=============="

@@ -23,7 +23,7 @@ function PrintRecordsApp() {
     const globalConfig = useGlobalConfig();
 
     // We want to render the list of records in this table.
-    const table = base.getTableByName('Collections');
+    const table = base.getTableByName('Quotes');
 
     // The view ID is stored in globalConfig using ViewPickerSynced.
     const viewId = globalConfig.get(GlobalConfigKeys.VIEW_ID);
@@ -80,17 +80,16 @@ function Report({view}) {
     );
 }
 
-// Renders a single record from the Collections table with each
-// of its linked Artists records.
+// Renders a single record from the Quotes table 
 function Record({record}) {
     const base = useBase();
 
-    // Each record in the "Collections" table is linked to records
-    // in the "Artists" table. We want to show the Artists for
-    // each collection.
-    const linkedTable = base.getTableByName('Artists');
+    // Each record in the "Quotes" table will have linked
+    // Resource Summaries for which we'll want the Description 
+    // and Monthly Credit Cost
+    const linkedTable = base.getTableByName('Resource Summaries');
     const linkedRecords = useRecords(
-        record.selectLinkedRecordsFromCell('Artists', {
+        record.selectLinkedRecordsFromCell('Resource Summaries', {
             // Keep the linked records sorted by their primary field.
             sorts: [{field: linkedTable.primaryField, direction: 'asc'}],
         }),
@@ -102,57 +101,35 @@ function Record({record}) {
             <table style={{borderCollapse: 'collapse', width: '100%'}}>
                 <thead>
                     <tr>
-                        <td
-                            style={{
-                                whiteSpace: 'nowrap',
-                                verticalAlign: 'bottom',
-                            }}
-                        >
+                        <td style={{ whiteSpace: 'nowrap', verticalAlign: 'bottom', }} >
                             <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
-                                On display?
+                                Named
                             </Heading>
                         </td>
                         <td style={{width: '50%', verticalAlign: 'bottom'}}>
                             <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
-                                Artist name
+                                Description
                             </Heading>
                         </td>
                         <td style={{width: '50%', verticalAlign: 'bottom'}}>
-                            <Heading variant="caps" size="xsmall" marginBottom={0}>
-                                Artworks
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Monthly Cloud Credits
                             </Heading>
                         </td>
                     </tr>
                 </thead>
                 <tbody>
                     {linkedRecords.map(linkedRecord => {
-                        // Render a check or an x depending on if the artist is on display or not.
-                        const isArtistOnDisplay = linkedRecord.getCellValue('On Display?');
                         return (
                             <tr key={linkedRecord.id} style={{borderTop: '2px solid #ddd'}}>
-                                <td style={{textAlign: 'center', whiteSpace: 'nowrap'}}>
-                                    <Box
-                                        display="inline-flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                        width="16px"
-                                        height="16px"
-                                        marginRight={3}
-                                        borderRadius="100%"
-                                        backgroundColor={isArtistOnDisplay ? 'green' : 'red'}
-                                        textColor="white"
-                                    >
-                                        <Icon name={isArtistOnDisplay ? 'check' : 'x'} size={12} />
-                                    </Box>
+                                <td style={{width: '33%'}}>
+                                    <Text marginRight={3}>{linkedRecord.name || "Unnamed Record"}</Text>
+                                </td>
+                                <td style={{width: '33%'}}>
+                                    <Text marginRight={3}>{linkedRecord.getCellValueAsString('Description') ||"No Description"}</Text>
                                 </td>
                                 <td style={{width: '50%'}}>
-                                    <Text marginRight={3}>{linkedRecord.name}</Text>
-                                </td>
-                                <td style={{width: '50%'}}>
-                                    <CellRenderer
-                                        record={linkedRecord}
-                                        field={linkedTable.getFieldByName('Attachments')}
-                                    />
+                                    <Text marginRight={3}>{linkedRecord.getCellValueAsString('Monthly Credit Cost') ||"No Cost"}</Text>
                                 </td>
                             </tr>
                         );

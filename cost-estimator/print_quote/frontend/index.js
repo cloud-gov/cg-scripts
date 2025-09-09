@@ -3,33 +3,24 @@ import {
     Button,
     useBase,
     useRecords,
-    useGlobalConfig,
     Box,
     CellRenderer,
     Heading,
     Icon,
     Text,
-    ViewPickerSynced,
 } from '@airtable/blocks/ui';
 import React from 'react';
 import printWithoutElementsWithClass from './print_without_elements_with_class';
 
-const GlobalConfigKeys = {
-    VIEW_ID: 'viewId',
-};
-
 function PrintInvoice() {
     const base = useBase();
-    const globalConfig = useGlobalConfig();
 
     // We want to render the list of records in this table.
     const table = base.getTableByName('Quotes');
 
-    // The view will "Recent Quotes" (last 30 days), then
-    const view = table.getViewByNameIfExists('Recent Quotes');
-
-    // User will pick single record, which won't be stored
-    // in config since it won't need to persist
+    // At this time, will only work with the 'Current Quote' view
+    // of a single quote
+    const view = table.getViewByNameIfExists('Current Quote');
 
     return (
         <div>
@@ -45,7 +36,6 @@ function PrintInvoice() {
 function Toolbar({table}) {
     return (
         <Box className="print-hide" padding={2} borderBottom="thick" display="flex">
-            <ViewPickerSynced table={table} globalConfigKey={GlobalConfigKeys.VIEW_ID} />
             <Button
                 onClick={() => {
                     // Inject CSS to hide elements with the "print-hide" class name

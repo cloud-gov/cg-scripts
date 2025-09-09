@@ -18,20 +18,18 @@ const GlobalConfigKeys = {
     VIEW_ID: 'viewId',
 };
 
-function PrintRecordsApp() {
+function PrintInvoice() {
     const base = useBase();
     const globalConfig = useGlobalConfig();
 
     // We want to render the list of records in this table.
     const table = base.getTableByName('Quotes');
 
-    // The view ID is stored in globalConfig using ViewPickerSynced.
-    const viewId = globalConfig.get(GlobalConfigKeys.VIEW_ID);
+    // The view will "Recent Quotes" (last 30 days), then
+    const view = table.getViewByNameIfExists('Recent Quotes');
 
-    // The view may have been deleted, so we use getViewByIdIfExists
-    // instead of getViewById. getViewByIdIfExists will return null
-    // if the view doesn't exist.
-    const view = table.getViewByIdIfExists(viewId);
+    // User will pick single record, which won't be stored
+    // in config since it won't need to persist
 
     return (
         <div>
@@ -140,4 +138,4 @@ function Record({record}) {
     );
 }
 
-initializeBlock(() => <PrintRecordsApp />);
+initializeBlock(() => <PrintInvoice />);

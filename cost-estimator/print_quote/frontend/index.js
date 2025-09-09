@@ -62,14 +62,34 @@ function Report({view}) {
     return (
         <div>
             {records.map(record => {
-                return <Record key={record.id} record={record} />;
+                return( 
+            <Box>
+                <Heading>Quote ID: {record.name}</Heading>
+                <Heading size="small">Date: {record.getCellValueAsString('Date')}</Heading>
+                <Heading size="small">For: {record.getCellValueAsString('Agency / Office')}</Heading>
+                <CustomerNote record={record}/>
+                <CloudLineItems key={record.id} record={record} />
+            </Box>
+                )
             })}
         </div>
     );
 }
 
-// Renders a single record from the Quotes table 
-function Record({record}) {
+function CustomerNote({record}) {
+    // This rendering of long text does NOT preserve newlines, s
+    return (
+        <Box>
+            <Text>Note to Customer</Text>
+            <Box border="default" backgroundColor="white" padding={2} overflow="hidden" >
+                <Text marginRight={3}>{record.getCellValueAsString('Note to Customer') ||""}</Text>
+            </Box>
+        </Box>
+    );
+}
+
+// Renders a CloudLineItems for the record from the Quotes table 
+function CloudLineItems({record}) {
     const base = useBase();
 
     // Each record in the "Quotes" table will have linked
@@ -83,17 +103,8 @@ function Record({record}) {
         }),
     );
 
-
     return (
         <Box marginY={3}>
-            <Heading>Quote ID: {record.name}</Heading>
-            <Heading size="small">Date: {record.getCellValueAsString('Date')}</Heading>
-            <Heading size="small">For: {record.getCellValueAsString('Agency / Office')}</Heading>
-            <Text>Note to Customer</Text>
-            <Box border="default" backgroundColor="white" padding={2} overflow="hidden" >
-                <Text marginRight={3}>{record.getCellValueAsString('Note to Customer') ||""}</Text>
-            </Box>
-
             <table style={{borderCollapse: 'collapse', width: '100%'}}>
                 <thead>
                     <tr>

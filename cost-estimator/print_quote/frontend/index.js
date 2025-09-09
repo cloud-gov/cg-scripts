@@ -83,17 +83,20 @@ function Record({record}) {
         }),
     );
 
+
     return (
         <Box marginY={3}>
-            <Heading>{record.name}</Heading>
+            <Heading>Quote ID: {record.name}</Heading>
+            <Heading size="small">Date: {record.getCellValueAsString('Date')}</Heading>
+            <Heading size="small">For: {record.getCellValueAsString('Agency / Office')}</Heading>
+            <Text>Note to Customer</Text>
+            <Box border="default" backgroundColor="white" padding={2} overflow="hidden" >
+                <Text marginRight={3}>{record.getCellValueAsString('Note to Customer') ||""}</Text>
+            </Box>
+
             <table style={{borderCollapse: 'collapse', width: '100%'}}>
                 <thead>
                     <tr>
-                        <td style={{ whiteSpace: 'nowrap', verticalAlign: 'bottom', }} >
-                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
-                                Named
-                            </Heading>
-                        </td>
                         <td style={{width: '50%', verticalAlign: 'bottom'}}>
                             <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
                                 Description
@@ -110,9 +113,6 @@ function Record({record}) {
                     {linkedRecords.map(linkedRecord => {
                         return (
                             <tr key={linkedRecord.id} style={{borderTop: '2px solid #ddd'}}>
-                                <td style={{width: '33%'}}>
-                                    <Text marginRight={3}>{linkedRecord.name || "Unnamed Record"}</Text>
-                                </td>
                                 <td style={{width: '33%'}}>
                                     <Text marginRight={3}>{linkedRecord.getCellValueAsString('Description') ||"No Description"}</Text>
                                 </td>

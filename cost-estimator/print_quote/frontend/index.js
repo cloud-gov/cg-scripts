@@ -69,6 +69,8 @@ function Report({view}) {
                 <Heading size="small">For: {record.getCellValueAsString('Agency / Office')}</Heading>
                 <CustomerNote record={record}/>
                 <CloudLineItems key={record.id} record={record} />
+                <CloudSummary record={record} />
+                <LaborLineItems key={record.id} record={record} />
             </Box>
                 )
             })}
@@ -81,7 +83,7 @@ function CustomerNote({record}) {
     return (
         <Box>
             <Text>Note to Customer</Text>
-            <Box border="default" backgroundColor="white" padding={2} overflow="hidden" >
+            <Box style={{whiteSpace: 'pre-wrap'}} border="default" backgroundColor="white" padding={2} overflow="hidden" >
                 <Text marginRight={3}>{record.getCellValueAsString('Note to Customer') ||""}</Text>
             </Box>
         </Box>
@@ -105,6 +107,7 @@ function CloudLineItems({record}) {
 
     return (
         <Box marginY={3}>
+            <Heading>Cloud.gov Resource Line Items</Heading>
             <table style={{borderCollapse: 'collapse', width: '100%'}}>
                 <thead>
                     <tr>
@@ -138,5 +141,119 @@ function CloudLineItems({record}) {
         </Box>
     );
 }
+function CloudSummary({record}) {
+    return (
+        <Box marginY={3}>
+            <table style={{borderCollapse: 'collapse', width: '100%'}}>
+                <thead>
+                    <tr>
+                        <td style={{width: '33%', verticalAlign: 'bottom'}}>
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Monthly Credit Total
+                            </Heading>
+                        </td>
+                        <td style={{width: '33%', verticalAlign: 'bottom'}}>
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Credit Tier
+                            </Heading>
+                        </td>
+                        <td style={{width: '33%', verticalAlign: 'bottom'}}>
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Credits Left in Tier
+                            </Heading>
+                        </td>
+                        <td style={{width: '33%', verticalAlign: 'bottom'}}>
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Tier Price (Monthly)
+                            </Heading>
+                        </td>
+                    </tr>
+                </thead> 
+                <tbody>
+                    <tr>
+                        <td style={{width: '33%', verticalAlign: 'bottom'}}>
+                            <Text>144</Text>
+                        </td>
+                        <td style={{width: '33%', verticalAlign: 'bottom'}}>
+                            <Text>Nano</Text>
+                        </td>
+                        <td style={{width: '33%', verticalAlign: 'bottom'}}>
+                            <Text>6</Text>
+                        </td>
+                        <td style={{width: '33%', verticalAlign: 'bottom'}}>
+                            <Text>$7500</Text>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </Box>
+    );
+}
 
+function LaborLineItems({record}) {
+    const base = useBase();
+
+    // Each record in the "Quotes" table will have linked
+    // Resource Summaries for which we'll want the Description 
+    // and Monthly Credit Cost
+    const linkedTable = base.getTableByName('Labor Entries');
+    const linkedRecords = useRecords(
+        record.selectLinkedRecordsFromCell('Labor', {
+            // Keep the linked records sorted by their primary field.
+            sorts: [{field: linkedTable.primaryField, direction: 'asc'}],
+        }),
+    );
+
+    return (
+        <Box marginY={3}>
+            <Heading>Cloud.gov Labor Line Items</Heading>
+            <table style={{borderCollapse: 'collapse', width: '100%'}}>
+                <thead>
+                    <tr>
+                        <td style={{verticalAlign: 'bottom'}}>
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Name
+                            </Heading>
+                        </td>
+                        <td style={{verticalAlign: 'bottom'}}>
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Description
+                            </Heading>
+                        </td>
+                        <td style={{verticalAlign: 'bottom'}}>
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Hours
+                            </Heading>
+                        </td>
+                        <td style={{verticalAlign: 'bottom'}}>
+                            <Heading variant="caps" size="xsmall" marginRight={3} marginBottom={0}>
+                                Labor<br></br>Subtotal
+                            </Heading>
+                        </td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {linkedRecords.map(linkedRecord => {
+                        return (
+                            <tr key={linkedRecord.id} style={{borderTop: '2px solid #ddd'}}>
+                                <td style={{width: '33%'}}>
+                                    <Text marginRight={3}>{linkedRecord.getCellValueAsString('Name') ||""}</Text>
+                                </td>
+                                <td style={{width: '50%'}}>
+                                    <Text marginRight={3}>{linkedRecord.getCellValueAsString('Description') ||""}</Text>
+                                </td>
+                                <td>
+                                    <Text marginRight={3}>{linkedRecord.getCellValueAsString('Yearly Hours') ||"0"}</Text>
+                                </td>
+                                <td>
+                                    <Text marginRight={3}>{linkedRecord.getCellValueAsString('Labor Subtotal') ||"0"}</Text>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </Box>
+    );
+}
 initializeBlock(() => <PrintInvoice />);

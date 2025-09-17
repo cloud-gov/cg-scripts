@@ -594,7 +594,7 @@ class Account:
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)
-        worksheet = workbook.active
+        worksheet = workbook.worksheets[0]
 
         headline = f"Cost estimate for org: {self.org_names}"
         if len(self.space_names) > 0:

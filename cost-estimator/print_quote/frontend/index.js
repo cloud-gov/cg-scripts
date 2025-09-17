@@ -68,8 +68,8 @@ function Report({view}) {
                 <Heading size="small">Date: {record.getCellValueAsString('Date')}</Heading>
                 <Heading size="small">For: {record.getCellValueAsString('Agency / Office')}</Heading>
                 <CustomerNote record={record}/>
-                <CloudLineItems key={record.id} record={record} />
-                <CloudSummary record={record} />
+                <CloudResourceLineItems key={record.id} record={record} />
+                <CloudResourceSummary record={record} />
                 <LaborLineItems key={record.id} record={record} />
             </Box>
                 )
@@ -91,7 +91,7 @@ function CustomerNote({record}) {
 }
 
 // Renders a CloudLineItems for the record from the Quotes table 
-function CloudLineItems({record}) {
+function CloudResourceLineItems({record}) {
     const base = useBase();
 
     // Each record in the "Quotes" table will have linked
@@ -141,7 +141,7 @@ function CloudLineItems({record}) {
         </Box>
     );
 }
-function CloudSummary({record}) {
+function CloudResourceSummary({record}) {
     return (
         <Box marginY={3}>
             <table style={{borderCollapse: 'collapse', width: '100%'}}>

@@ -172,7 +172,7 @@ function CloudResourceSummary({record}) {
                 <tbody>
                     <tr>
                         <td style={{width: '33%', verticalAlign: 'bottom'}}>
-                            <Text>{record.getCellValueAsString('Monthly Credit Cost') ||"No Cost"}
+                            <Text>{record.getCellValueAsString('Monthly Credit Total') ||"No Cost"}
                                 </Text>
                         </td>
                         <td style={{width: '33%', verticalAlign: 'bottom'}}>

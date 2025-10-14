@@ -1,134 +1,134 @@
 #!/bin/bash
+set -e -o pipefail
 
-#set -e
-set -x
+# import common functions
+. "$(dirname "$0")/../lib/common.sh"
 
-if [ "$#" -lt 5 ]; then
-  printf "Usage:\n\n\t\$./cf-create-org.sh <AGENCY_NAME> <IAA_NUMBER> <SYSTEM_NAME> <POP_START> <POP_END> <MANAGER> <MEMORY> <MANAGER_ORIGIN>\n\n"
-  exit 1
-fi
+function usage {
 
-AGENCY_NAME=$1
-IAA_NUMBER=$2
-SYSTEM_NAME=$3
-POP_START=$4
-POP_END=$5
-MANAGER=$6
-MEMORY=$7
-MANAGER_ORIGIN=$8
+cat >&2 <<EOM
+usage: $(basename "$0") -i iaa -o org_name -m manager[,origin] -m manager[,origin] -q quota_in_GB(8)
 
-ORIGIN_FLAG=""
+examples:
+  $0 -i CFXXX250001-0002 -o dept-office-system -m pickle@gsa.gov,gsa.gov -m gherkin@dept.gov -q 8
+  $0 -i CFXXX250001-0001 -o dept-office-another -m okra@dept.gov -q 16
+EOM
+}
 
-# Checks to see if an origin was set for the manager; if so, this will be used
-# for setting the roles later on.
-if [[ "${MANAGER_ORIGIN}" ]]; then
-  ORIGIN_FLAG="--origin ${MANAGER_ORIGIN}"
-fi
+function check_auth {
+  CI_URL="${CI_URL:-"https://ci.fr.cloud.gov"}"
+  FLY_TARGET=$(fly targets | grep "${CI_URL}" | head -n 1 | awk '{print $1}')
 
-if ! [[ $AGENCY_NAME =~ ^[a-zA-Z0-9]+$ ]]; then
-  echo "AGENCY_NAME must contain only letters and numbers."
-  exit 1
-fi
+  if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
+    raise "Not logged in to Concourse: $CI_URL"
+  fi
 
-if ! [[ $IAA_NUMBER =~ ^[a-zA-Z0-9_\.-]+$ ]]; then
-  echo "IAA_NUMBER must contain only letters, numbers, underscores, periods, and hyphens."
-  exit 1
-fi
+  cf oauth-token 1>/dev/null || raise "Not logged in to Cloud.gov's Cloud Foundry"
+}
 
-if ! [[ $SYSTEM_NAME =~ ^[a-zA-Z0-9-]+$ ]]; then
-  echo "SYSTEM_NAME must contain only letters, numbers, and hyphens."
-  exit 1
-fi
+MEMORY_QUOTA=8
 
-if ! [[ $POP_START =~ ^[0-9]{8}$ ]]; then
-  echo "POP_START should be of the format YYYYMMDD."
-  exit 1
-fi
-
-if ! [[ $POP_END =~ ^[0-9]{8}$ ]]; then
-  echo "POP_END should be of the format YYYYMMDD."
-  exit 1
-fi
-
-QUOTA_NAME_BASE="${AGENCY_NAME}_${IAA_NUMBER}_${POP_START}-${POP_END}"
-# uppercase
-QUOTA_NAME_BASE=$(echo "$QUOTA_NAME_BASE" | awk '{print toupper($0)}')
-ORG_NAME="${AGENCY_NAME}-${SYSTEM_NAME}"
-# lowercase
-ORG_NAME=$(echo "$ORG_NAME" | awk '{print tolower($0)}')
-NUMBER_OF_ROUTES=20
-NUMBER_OF_SERVICES=20
-
-# Add the date down to the second in order to avoid collisions for identical inputs
-QUOTA_NAME="${QUOTA_NAME_BASE}-$(date '+%Y%m%d-%H:%M:%S')"
-
-# Hash the name to obfuscate the origin of the quota from snooping users
-HASHED_QUOTA_NAME=$(md5 -qs $QUOTA_NAME)
-
-# Step 0: Confirm the inputs.
-# http://stackoverflow.com/a/226724/358804
-cat << EOF
-Create the following?
-
-Quota: $HASHED_QUOTA_NAME
-Org: $ORG_NAME
-
-Enter 1 for "Yes" and 2 for "No"
-
-EOF
-select yn in "Yes" "No"; do
-  case $yn in
-    Yes ) break;;
-    No ) exit 1;;
+while getopts ":hi:m:o:q:" opt; do
+  case ${opt} in
+    h )
+      usage
+      exit 0 
+      ;;
+    i )
+      IAA=$OPTARG;;
+    m )
+      MANAGERS+=("$OPTARG");;
+    o )
+      ORG_NAME=$OPTARG;;
+    q )
+      MEMORY_QUOTA=$OPTARG;;
+    \? ) 
+      raise "Invalid option: $OPTARG";;
+    : )
+      raise "Invalid option: $OPTARG requires an argument"
+      ;;
   esac
 done
+shift $((OPTIND-1))
 
-# Step 1: Check that we're logged into Concourse
-CI_URL="${CI_URL:-"https://ci.fr.cloud.gov"}"
-FLY_TARGET=$(fly targets | grep "${CI_URL}" | head -n 1 | awk '{print $1}')
+# Make sure we're logged in
+check_auth 
 
-if ! fly --target "${FLY_TARGET}" workers > /dev/null; then
-  echo "Not logged in to concourse"
-  exit 1
+[[ -z $IAA ]] && ( usage ; raise "'-i iaa' is REQUIRED" )
+[[ -z $ORG_NAME  ]] && ( usage ; raise "'-o org_name' is REQUIRED" )
+[[ -z "${MANAGERS[0]}" ]] && ( usage ; raise "'-m manager_email' is REQUIRED at least once" )
+
+set -u # exit on unbound variables
+
+if ! [[ $ORG_NAME =~ ^[a-zA-Z0-9-]+$ ]]; then
+  raise "ORG_NAME must contain only letters, numbers, and hypens."
+fi
+if ! [[ $IAA =~ ^[a-zA-Z0-9_\.-]+$ ]]; then
+  raise "IAA must contain only letters, numbers, underscores, periods, and hyphens."
 fi
 
-# Step 2: Create the quota
-cf create-quota "$HASHED_QUOTA_NAME" -m "$MEMORY" -r "$NUMBER_OF_ROUTES" -s "$NUMBER_OF_SERVICES" --allow-paid-service-plans
+# Add epoch time to avoid naming collisions
+NOW=$(date '+%s')
+# Hash the name to obfuscate the origin of the quota from snooping users
+QUOTA_NAME=$( echo "${ORG_NAME}_${IAA}_${NOW}" | tr '[:lower:]' '[:upper:]' | md5 -q )
+# Add the "customer-" prefex
+QUOTA_NAME="customer-${QUOTA_NAME}"
+# lowercase the org_name
+ORG_NAME=$(echo "$ORG_NAME" | tr '[:upper:]' '[:lower:]')
 
-ADMIN=$(cf target | grep -i user | awk '{print $2}')
+# Step 2: Create the quota
+NUMBER_OF_ROUTES=20
+NUMBER_OF_SERVICES=20
+cf create-quota "$QUOTA_NAME" -m "$MEMORY_QUOTA"G -r "$NUMBER_OF_ROUTES" -s "$NUMBER_OF_SERVICES" --allow-paid-service-plans
 
 # Step 3: Create the org
-cf create-org "$ORG_NAME" -q "$HASHED_QUOTA_NAME"
-cf set-label org "$ORG_NAME" org-type=customer
-
-# creator added by default, which is usually not desirable
-cf unset-org-role "$ADMIN" "$ORG_NAME" OrgManager
-cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager ${ORIGIN_FLAG:+"$ORIGIN_FLAG"}
+cf org "$ORG_NAME" 1>/dev/null && \
+  ( printf "\nFound org, undoing\n\n" && cf delete-quota "$QUOTA_NAME" -f && raise "Org $ORG_NAME already exists" )
+cf create-org "$ORG_NAME" -q "$QUOTA_NAME" 
+cf set-label org "$ORG_NAME" org-type=customer 
 
 # Step 4: Create the spaces
+# We use `cf curl` so we don't get added as SpaceManagers
+ORG_GUID=$(cf org --guid "$ORG_NAME")
+
 declare -a spaces=("dev" "staging" "prod")
 for SPACE in "${spaces[@]}"
 do
-  cf create-space -o "$ORG_NAME" "$SPACE"
-
-  # creator added by default - undo
-  cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE" SpaceManager
-  cf unset-space-role "$ADMIN" "$ORG_NAME" "$SPACE" SpaceDeveloper
-
-  cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper ${ORIGIN_FLAG:+"$ORIGIN_FLAG"}
+  data=$(cat<<EOM
+  { "name": "$SPACE", "relationships": { "organization": { "data": { "guid": "$ORG_GUID" } } } }
+EOM
+)
+  echo Creating space: "$SPACE"
+  eval cf curl "/v3/spaces" -X POST -d \'"$data"\'
 done
 
-
-# deleting admin user from newly created org.
-# https://github.com/cloudfoundry/cli/issues/781
-USER_GUID=$(cf curl "/v3/users?usernames=${ADMIN}"| jq -r '.resources[] | .guid')
-ORG_GUID=$(cf org "${ORG_NAME}" --guid)
-ROLE_TO_DELETE_GUID=$(cf curl "/v3/roles?types=organization_user&organization_guids="${ORG_GUID}"&user_guids=${USER_GUID}" | jq -r '.resources[] | .guid')
-# deleting role organization_user
-cf curl -X DELETE "/v3/roles/${ROLE_TO_DELETE_GUID}"
+# Step: Add the managers
+for manager_info in "${MANAGERS[@]}"; do
+  IFS=\,; read -ra fields <<< "$manager_info"
+  if [ ${#fields[@]} = 2 ]; then 
+    MANAGER=${fields[0]}
+    ORIGIN=${fields[1]}
+    echo Setting up manager "$MANAGER" with origin "$ORIGIN"
+      cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager --origin "$ORIGIN"
+    for SPACE in "${spaces[@]}"; do
+      cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper --origin "$ORIGIN"
+    done
+   else 
+    MANAGER=${fields[0]}
+    echo Setting up manager "$MANAGER" with no origin
+      cf set-org-role "$MANAGER" "$ORG_NAME" OrgManager 
+    for SPACE in "${spaces[@]}"; do
+      cf set-space-role "$MANAGER" "$ORG_NAME" "$SPACE" SpaceDeveloper 
+    done
+  fi
+done
 
 # Hack: Trigger deployer account broker deploy to update organization whitelist
-fly --target "${FLY_TARGET}" trigger-job --job deploy-uaa-credentials-broker/push-broker-${CF_INSTALL:=production}
-fly --target "${FLY_TARGET}" trigger-job --job deploy-go-s3-broker/push-s3-broker-${CF_INSTALL}
+echo fly --target "${FLY_TARGET}" trigger-job --job deploy-uaa-credentials-broker/push-broker-"${CF_INSTALL:=production}"
+echo fly --target "${FLY_TARGET}" trigger-job --job deploy-go-s3-broker/push-s3-broker-"${CF_INSTALL}"
 
-printf "Org created successfully. Target with\n\n\t\$ cf target -o $ORG_NAME\n\n"
+printf 'Org created successfully. Target with\n\n\t\$ cf target -o %s\n\n' "$ORG_NAME"
+
+echo "To undo this work run: "
+echo "  cf delete-org -f $ORG_NAME"
+echo "  cf delete-quota -f $QUOTA_NAME"

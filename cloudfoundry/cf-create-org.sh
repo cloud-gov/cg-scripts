@@ -31,10 +31,9 @@ function check_auth {
 
 while getopts ":hi:m:o:q:" opt; do
   case ${opt} in
-    h )
+    h ) 
       usage
-      exit 0 
-      ;;
+      exit 0 ;;
     i )
       IAA=$OPTARG;;
     m )
@@ -46,8 +45,7 @@ while getopts ":hi:m:o:q:" opt; do
     \? ) 
       raise "Invalid option: $OPTARG";;
     : )
-      raise "Invalid option: $OPTARG requires an argument"
-      ;;
+      raise "Invalid option: $OPTARG requires an argument" ;;
   esac
 done
 shift $((OPTIND-1))
@@ -116,7 +114,7 @@ for manager_info in "${MANAGERS[@]}"; do
   fi
 done
 
-# Hack: Trigger deployer account broker deploy to update organization whitelist
+# Trigger deployer account broker deploy to update organization whitelist
 fly --target "${FLY_TARGET}" trigger-job --job deploy-uaa-credentials-broker/push-broker-"${CF_INSTALL:=production}"
 fly --target "${FLY_TARGET}" trigger-job --job deploy-go-s3-broker/push-s3-broker-"${CF_INSTALL}"
 

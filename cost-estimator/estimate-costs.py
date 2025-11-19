@@ -539,7 +539,7 @@ class Account:
     def generate_cost_estimate(self, reporter):
         estimate_map = {
             # Usage
-            "memory_quota": "B10",
+            "memory_usage": "B10",
             "rds_total_allocation": "J10",
             "s3_total_storage": "R10",
             "es_total_volume_storage": "R15",
@@ -623,13 +623,13 @@ class Account:
         if len(self.space_names) == 0:
             # If no space names were specified, then the memory usage is just the quota for the
             # organization
-            worksheet[estimate_map["memory_quota"]] = self.memory_quota / 1024
+            worksheet[estimate_map["memory_usage"]] = self.memory_usage / 1024
         else:
             # If we are producing an estimate for a set of space(s), then the memory usage is
             # whatever memory is used by those spaces. Round up the memory usage to the nearest
             # integer because we charge for memory on a per GB basis, so any partial use of a GB
             # should be treated as a whole GB for accounting purposes
-            worksheet[estimate_map["memory_quota"]] = math.ceil(
+            worksheet[estimate_map["memory_usage"]] = math.ceil(
                 self.memory_usage / 1024
             )
         worksheet[estimate_map["rds_total_allocation"]] = self.rds_total_allocation

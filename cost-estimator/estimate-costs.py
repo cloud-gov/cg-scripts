@@ -674,22 +674,7 @@ def download_file(url, output_filename):
     """
     Download a file from a URL and save it to the specified filename
     """
-    print(f"Downloading from {url}...")
 
-    # Make a GET request to the URL
-    response = requests.get(url, stream=True)
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Write the content to a file
-        with open(output_filename, "wb") as file:
-            for chunk in response.iter_content(chunk_size=8192):
-                file.write(chunk)
-        print(f"Successfully downloaded and saved to {output_filename}")
-        return True
-    else:
-        print(f"Failed to download. Status code: {response.status_code}")
-        return False
 
 
 """
@@ -717,7 +702,6 @@ Example:
 
 Notes:
   - Assumes the input file, {cost_estimate_file}, is in current directory
-  - Downloads cost estimator, {cost_estimate_file}, if missing
   - Uses --account_name for output file name, if provided, otherwise
     uses name of the last provided organization name
   - At least one organization name is required
@@ -749,11 +733,12 @@ Notes:
         output_file = org_names[-1] + ".xlsx"
 
     if not os.path.exists(cost_estimate_file):
-        print(
-            f'Info: Missing input file, "{cost_estimate_file}", downloading...',
-            file=sys.stderr,
-        )
-        download_file(cost_estimate_url, cost_estimate_file)
+        print(f'Info: Missing input file, "{cost_estimate_file}"')
+        print(f'''
+        Manually download the template (TEMPLATE MAKE A COPY 005 Cloud.gov Cost Estimate...)
+        as an .xlsx file from Drive and rename to "{cost_estimate_file}"
+        ''')
+        exit(1)
 
     print(f'Info: Using output file, "{output_file}"', file=sys.stderr)
 

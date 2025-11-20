@@ -601,41 +601,45 @@ class Account:
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)
-        worksheet = workbook.worksheets[1]
+        platform_estimate_sheet = workbook.worksheets[1]
 
         today = datetime.datetime.today().strftime("%Y-%m-%d")
         headline = f"Cloud.gov cost estimate generated {today} for the following list of orgs: {self.org_names}"
         if len(self.space_names) > 0:
             headline += f", spaces: {self.space_names}"
-        worksheet["A1"] = headline
-        reporter.report(worksheet, "A", 60)
+        platform_estimate_sheet["A1"] = headline
+        reporter.report(platform_estimate_sheet, "A", 60)
         # Usage
         if len(self.space_names) == 0:
             # If no space names were specified, then the memory usage is just the quota for the
             # organization
-            worksheet[estimate_map["memory_usage"]] = self.memory_usage / 1024
+            platform_estimate_sheet[estimate_map["memory_usage"]] = (
+                self.memory_usage / 1024
+            )
         else:
             # If we are producing an estimate for a set of space(s), then the memory usage is
             # whatever memory is used by those spaces. Round up the memory usage to the nearest
             # integer because we charge for memory on a per GB basis, so any partial use of a GB
             # should be treated as a whole GB for accounting purposes
-            worksheet[estimate_map["memory_usage"]] = math.ceil(
+            platform_estimate_sheet[estimate_map["memory_usage"]] = math.ceil(
                 self.memory_usage / 1024
             )
-        worksheet[estimate_map["rds_total_allocation"]] = self.rds_total_allocation
-        worksheet[estimate_map["s3_total_storage"]] = self.s3_total_storage / (
-            1024 * 1024 * 1024
+        platform_estimate_sheet[estimate_map["rds_total_allocation"]] = (
+            self.rds_total_allocation
         )
-        worksheet[estimate_map["es_total_volume_storage"]] = (
+        platform_estimate_sheet[estimate_map["s3_total_storage"]] = (
+            self.s3_total_storage / (1024 * 1024 * 1024)
+        )
+        platform_estimate_sheet[estimate_map["es_total_volume_storage"]] = (
             self.es_total_volume_storage
         )
         # Plans
         for key, value in sorted(self.rds_total_instance_plans.items()):
-            worksheet[estimate_map[key]] = value
+            platform_estimate_sheet[estimate_map[key]] = value
         for key, value in sorted(self.redis_total_instance_plans.items()):
-            worksheet[estimate_map[key]] = value
+            platform_estimate_sheet[estimate_map[key]] = value
         for key, value in sorted(self.es_total_instance_plans.items()):
-            worksheet[estimate_map[key]] = value
+            platform_estimate_sheet[estimate_map[key]] = value
         workbook.save(filename=self.output_workbook_file)
         print(f"Saved cost estimate to: {self.output_workbook_file}")
 

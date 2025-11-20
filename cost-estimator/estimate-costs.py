@@ -3,7 +3,6 @@
 import subprocess
 import sys
 import os.path
-import requests
 import json
 import boto3
 import datetime
@@ -68,16 +67,6 @@ class AWSNotS3(AWSResource):
             self.space_name = self.get_cf_entity_name("spaces", self.space_guid)
 
         self.service_plan_name = super().get_service_plan_name(self.instance_guid)
-
-        # NOTE: 'instance_name' could change with `cf rename-service`
-        try:
-            self.instance_name = [
-                tag["Value"] for tag in tags if tag["Key"] == "Instance name"
-            ][0]
-        except:
-            self.instance_name = "Not_Found"
-            print(f"WARN: Instance {self.instance_guid} Not Found")
-            print(f" ARN: {self.arn}")
 
     @functools.cache
     def get_cf_entity_name(self, entity, guid):
@@ -468,7 +457,7 @@ def test_authenticated(service):
 
 
 class Account:
-    def __init__(self, orgs, space_names):
+    def __init__(self, orgs, space_names, input_workbook_file, output_workbook_file):
         self.org_names = orgs
         self.space_names = space_names if space_names else []
 
@@ -483,8 +472,8 @@ class Account:
         self.rds_total_instance_plans = Counter()
         self.redis_total_instance_plans = Counter()
         self.es_total_instance_plans = Counter()
-        self.input_workbook_file = None
-        self.output_workbook_file = None
+        self.input_workbook_file = input_workbook_file
+        self.output_workbook_file = output_workbook_file
         self.reporter = Reporter()
 
     def report_orgs(self):
@@ -612,41 +601,45 @@ class Account:
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)
-        worksheet = workbook.worksheets[1]
+        platform_estimate_sheet = workbook.worksheets[1]
 
-        today = datetime.datetime.today().strftime('%Y-%m-%d')
+        today = datetime.datetime.today().strftime("%Y-%m-%d")
         headline = f"Cloud.gov cost estimate generated {today} for the following list of orgs: {self.org_names}"
         if len(self.space_names) > 0:
             headline += f", spaces: {self.space_names}"
-        worksheet["A1"] = headline
-        reporter.report(worksheet, "A", 60)
+        platform_estimate_sheet["A1"] = headline
+        reporter.report(platform_estimate_sheet, "A", 60)
         # Usage
         if len(self.space_names) == 0:
             # If no space names were specified, then the memory usage is just the quota for the
             # organization
-            worksheet[estimate_map["memory_usage"]] = self.memory_usage / 1024
+            platform_estimate_sheet[estimate_map["memory_usage"]] = (
+                self.memory_usage / 1024
+            )
         else:
             # If we are producing an estimate for a set of space(s), then the memory usage is
             # whatever memory is used by those spaces. Round up the memory usage to the nearest
             # integer because we charge for memory on a per GB basis, so any partial use of a GB
             # should be treated as a whole GB for accounting purposes
-            worksheet[estimate_map["memory_usage"]] = math.ceil(
+            platform_estimate_sheet[estimate_map["memory_usage"]] = math.ceil(
                 self.memory_usage / 1024
             )
-        worksheet[estimate_map["rds_total_allocation"]] = self.rds_total_allocation
-        worksheet[estimate_map["s3_total_storage"]] = self.s3_total_storage / (
-            1024 * 1024 * 1024
+        platform_estimate_sheet[estimate_map["rds_total_allocation"]] = (
+            self.rds_total_allocation
         )
-        worksheet[estimate_map["es_total_volume_storage"]] = (
+        platform_estimate_sheet[estimate_map["s3_total_storage"]] = (
+            self.s3_total_storage / (1024 * 1024 * 1024)
+        )
+        platform_estimate_sheet[estimate_map["es_total_volume_storage"]] = (
             self.es_total_volume_storage
         )
         # Plans
         for key, value in sorted(self.rds_total_instance_plans.items()):
-            worksheet[estimate_map[key]] = value
+            platform_estimate_sheet[estimate_map[key]] = value
         for key, value in sorted(self.redis_total_instance_plans.items()):
-            worksheet[estimate_map[key]] = value
+            platform_estimate_sheet[estimate_map[key]] = value
         for key, value in sorted(self.es_total_instance_plans.items()):
-            worksheet[estimate_map[key]] = value
+            platform_estimate_sheet[estimate_map[key]] = value
         workbook.save(filename=self.output_workbook_file)
         print(f"Saved cost estimate to: {self.output_workbook_file}")
 
@@ -675,7 +668,6 @@ def download_file(url, output_filename):
     """
     Download a file from a URL and save it to the specified filename
     """
-
 
 
 """
@@ -735,10 +727,12 @@ Notes:
 
     if not os.path.exists(cost_estimate_file):
         print(f'Info: Missing input file, "{cost_estimate_file}"')
-        print(f'''
+        print(
+            f"""
         Manually download the template (TEMPLATE MAKE A COPY 005 Cloud.gov Cost Estimate...)
         as an .xlsx file from Drive and rename to "{cost_estimate_file}"
-        ''')
+        """
+        )
         exit(1)
 
     print(f'Info: Using output file, "{output_file}"', file=sys.stderr)
@@ -748,7 +742,12 @@ Notes:
 
     print(f"Info: Authenticated, starting...", file=sys.stderr)
 
-    acct = Account(orgs=org_names, space_names=space_names)
+    acct = Account(
+        orgs=org_names,
+        space_names=space_names,
+        input_workbook_file=cost_estimate_file,
+        output_workbook_file=output_file,
+    )
     acct.report_orgs()
     if len(org_names) > 1:
         acct.report_summary(acct.reporter)

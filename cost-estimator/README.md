@@ -28,4 +28,3 @@ Then update your `~/.aws/config` to comment out the line:
 #[default]
 #use_fips_endpoint=true
 ```
-

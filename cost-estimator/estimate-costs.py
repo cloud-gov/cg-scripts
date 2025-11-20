@@ -543,37 +543,52 @@ class Account:
             "rds_total_allocation": "J10",
             "s3_total_storage": "R10",
             "es_total_volume_storage": "R15",
-            # Plans
+            # RDS Plans
             "micro-psql": "J14",
             "micro-psql-redundant": "J15",
-            "small-psql": "J16",
-            "small-psql-redundant": "J17",
-            "medium-psql": "J18",
-            "medium-psql-redundant": "J19",
-            "medium-gp-psql": "J20",
-            "medium-gp-psql-redundant": "J21",
-            "large-gp-psql": "J22",
-            "large-gp-psql-redundant": "J23",
-            "xlarge-gp-psql": "J24",
-            "xlarge-gp-psql-redundant": "J25",
-            "2xlarge-gp-psql": "J26",
-            "2xlarge-gp-psql-redundant": "J27",
-            "xlarge-gp-psql-m6": "J28",
-            "xlarge-gp-psql-m6-redundant": "J29",
-            "micro-mysql": "J30",
-            "micro-mysql-redundant": "J31",
-            "small-mysql": "J32",
-            "small-mysql-redundant": "J33",
-            "medium-mysql": "J34",
-            "medium-mysql-redundant": "J35",
-            "medium-gp-mysql": "J36",
-            "medium-gp-mysql-redundant": "J37",
-            "large-gp-mysql": "J38",
-            "large-gp-mysql-redundant": "J39",
-            "xlarge-gp-mysql": "J40",
-            "xlarge-gp-mysql-redundant": "J41",
-            "medium-oracle-se2": "J42",
-            "large-gp-sqlserver-se": "J43",
+            "micro-psql-replica": "J16",
+            "small-psql": "J17",
+            "small-psql-redundant": "J18",
+            "small-psql-replica": "J19",
+            "medium-psql": "J20",
+            "medium-psql-redundant": "J21",
+            "medium-psql-replica": "J22",
+            "medium-gp-psql": "J23",
+            "medium-gp-psql-redundant": "J24",
+            "medium-gp-psql-replica": "J25",
+            "large-gp-psql": "J26",
+            "large-gp-psql-redundant": "J27",
+            "large-gp-psql-replica": "J28",
+            "xlarge-gp-psql": "J29",
+            "xlarge-gp-psql-redundant": "J30",
+            "xlarge-gp-psql-replica": "J31",
+            "2xlarge-gp-psql": "J32",
+            "2xlarge-gp-psql-redundant": "J33",
+            "2xlarge-gp-psql-replica": "J34",
+            "xlarge-gp-psql-m6": "J35",
+            "xlarge-gp-psql-m6-redundant": "J36",
+            "xlarge-gp-psql-m6-replica": "J37",
+            "micro-mysql": "J38",
+            "micro-mysql-redundant": "J39",
+            "micro-mysql-replica": "J40",
+            "small-mysql": "J41",
+            "small-mysql-redundant": "J42",
+            "small-mysql-replica": "J43",
+            "medium-mysql": "J44",
+            "medium-mysql-redundant": "J45",
+            "medium-mysql-replica": "J46",
+            "medium-gp-mysql": "J47",
+            "medium-gp-mysql-redundant": "J48",
+            "medium-gp-mysql-replica": "J49",
+            "large-gp-mysql": "J50",
+            "large-gp-mysql-redundant": "J51",
+            "large-gp-mysql-replica": "J52",
+            "xlarge-gp-mysql": "J53",
+            "xlarge-gp-mysql-redundant": "J54",
+            "xlarge-gp-mysql-replica": "J55",
+            "medium-oracle-se2": "J56",
+            "large-gp-sqlserver-se": "J57",
+            # ES Plans
             "es-dev": "R19",
             "es-medium": "R20",
             "es-medium-ha": "R21",
@@ -585,22 +600,26 @@ class Account:
             "es-2xlarge-gp-ha": "R27",
             "es-4xlarge-gp": "R28",
             "es-4xlarge-gp-ha": "R29",
-            "redis-dev": "R33",
-            "redis-3node": "R34",
-            "redis-5node": "R35",
-            "redis-3node-large": "R36",
-            "redis-5node-large": "R37",
-            "Not_Found": "C50",
+            "es-12xlarge-gp": "R30",
+            "es-12xlarge-gp-ha": "R31",
+            # Redis
+            "redis-dev": "R35",
+            "redis-3node": "R36",
+            "redis-5node": "R37",
+            "redis-3node-large": "R38",
+            "redis-5node-large": "R39",
+            "Not_Found": "C11",
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)
-        worksheet = workbook.worksheets[0]
+        worksheet = workbook.worksheets[1]
 
-        headline = f"Cost estimate for org: {self.org_names}"
+        today = datetime.datetime.today().strftime('%Y-%m-%d')
+        headline = f"Cloud.gov cost estimate generated {today} for the following list of orgs: {self.org_names}"
         if len(self.space_names) > 0:
             headline += f", spaces: {self.space_names}"
         worksheet["A1"] = headline
-        reporter.report(worksheet, "A", 50)
+        reporter.report(worksheet, "A", 60)
         # Usage
         if len(self.space_names) == 0:
             # If no space names were specified, then the memory usage is just the quota for the
@@ -656,22 +675,7 @@ def download_file(url, output_filename):
     """
     Download a file from a URL and save it to the specified filename
     """
-    print(f"Downloading from {url}...")
 
-    # Make a GET request to the URL
-    response = requests.get(url, stream=True)
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Write the content to a file
-        with open(output_filename, "wb") as file:
-            for chunk in response.iter_content(chunk_size=8192):
-                file.write(chunk)
-        print(f"Successfully downloaded and saved to {output_filename}")
-        return True
-    else:
-        print(f"Failed to download. Status code: {response.status_code}")
-        return False
 
 
 """
@@ -699,7 +703,6 @@ Example:
 
 Notes:
   - Assumes the input file, {cost_estimate_file}, is in current directory
-  - Downloads cost estimator, {cost_estimate_file}, if missing
   - Uses --account_name for output file name, if provided, otherwise
     uses name of the last provided organization name
   - At least one organization name is required
@@ -731,11 +734,12 @@ Notes:
         output_file = org_names[-1] + ".xlsx"
 
     if not os.path.exists(cost_estimate_file):
-        print(
-            f'Info: Missing input file, "{cost_estimate_file}", downloading...',
-            file=sys.stderr,
-        )
-        download_file(cost_estimate_url, cost_estimate_file)
+        print(f'Info: Missing input file, "{cost_estimate_file}"')
+        print(f'''
+        Manually download the template (TEMPLATE MAKE A COPY 005 Cloud.gov Cost Estimate...)
+        as an .xlsx file from Drive and rename to "{cost_estimate_file}"
+        ''')
+        exit(1)
 
     print(f'Info: Using output file, "{output_file}"', file=sys.stderr)
 

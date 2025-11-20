@@ -612,13 +612,14 @@ class Account:
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)
-        worksheet = workbook.worksheets[0]
+        worksheet = workbook.worksheets[1]
 
-        headline = f"Cost estimate for org: {self.org_names}"
+        today = datetime.datetime.today().strftime('%Y-%m-%d')
+        headline = f"Cloud.gov cost estimate generated {today} for the following list of orgs: {self.org_names}"
         if len(self.space_names) > 0:
             headline += f", spaces: {self.space_names}"
         worksheet["A1"] = headline
-        reporter.report(worksheet, "A", 50)
+        reporter.report(worksheet, "A", 60)
         # Usage
         if len(self.space_names) == 0:
             # If no space names were specified, then the memory usage is just the quota for the

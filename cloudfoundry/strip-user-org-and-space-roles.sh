@@ -14,7 +14,7 @@ main() {
   echo "Org users:"
   cf org-users "$org"
 
-  for space in $(cf curl "/v3/spaces?organization_guids=$(cf org ustda-website --guid)" | jq -r '.resources[].name'); do
+  for space in $(cf curl "/v3/spaces?organization_guids=$(cf org $org --guid)" | jq -r '.resources[].name'); do
     for space_role in SpaceManager SpaceDeveloper SpaceAuditor; do
       cf unset-space-role "$user" "$org" "$space" "$space_role"
     done

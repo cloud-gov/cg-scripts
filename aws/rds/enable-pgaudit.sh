@@ -1,24 +1,29 @@
 #!/bin/bash
 
+
 set -eu -o pipefail
+
+#org=cloud-gov-operators
+#space=peter.burkholder
+#service_instance=mia-django-db-x-psql15
+
+echo "Service Instance: $service_instance in Org: $org, Space: $space"
+
 
 function reboot_instance() {
   [ $# -ne 2 ] && echo "Function: reboot_instance <db_instance> <attempt>" && exit 1
   local db_instance=$1
   local attempt=$2
 
+  set +e
   aws rds reboot-db-instance \
     --db-instance-identifier "$db_instance"
-  
   status=$?
+  set -e
 
   if [ $status -eq 254 ]; then
     echo "Failed to reboot instance $db_instance status code 254"
-    if [ -z "${attempt+x}" ]; then
-      attempt=1
-    else
-      attempt=$((attempt + 1))
-    fi
+    attempt=$((attempt + 1))
     if [ $attempt -gt 5 ]; then
       echo "Exceeded maximum reboot attempts. Exiting."
       exit 1
@@ -84,15 +89,6 @@ function pgaudit_is_enabled() {
   fi
 }
 
-#org=epa-spds
-#space=test
-#service_instance=spds-db
-
-org=cloud-gov-operators
-space=peter.burkholder
-service_instance=mia-django-db-x-psql15
-
-echo "Service Instance: $service_instance in Org: $org, Space: $space"
 
 cf target -o $org -s $space > /dev/null
 service_instance_guid=$(cf service $service_instance --guid)

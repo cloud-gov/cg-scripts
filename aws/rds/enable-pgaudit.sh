@@ -3,11 +3,33 @@
 set -eu -o pipefail
 
 function reboot_instance() {
-  [ $# -ne 1 ] && echo "Function: reboot_instance <db_instance>" && exit 1
+  [ $# -ne 2 ] && echo "Function: reboot_instance <db_instance> <attempt>" && exit 1
   local db_instance=$1
+  local attempt=$2
 
-  echo aws rds reboot-db-instance \
+  aws rds reboot-db-instance \
     --db-instance-identifier "$db_instance"
+  
+  status=$?
+
+  if [ $status -eq 254 ]; then
+    echo "Failed to reboot instance $db_instance status code 254"
+    if [ -z "${attempt+x}" ]; then
+      attempt=1
+    else
+      attempt=$((attempt + 1))
+    fi
+    if [ $attempt -gt 5 ]; then
+      echo "Exceeded maximum reboot attempts. Exiting."
+      exit 1
+    fi
+    echo "Sleeping 30 seconds and trying again..."
+    sleep 30
+    reboot_instance "$db_instance" $attempt
+  elif [ $status -ne 0 ]; then
+    echo "Failed to reboot instance $db_instance with status code $status. Exiting." 
+    exit 1
+  fi
 }
 
 function create_and_associate_parameter_group() {
@@ -17,16 +39,16 @@ function create_and_associate_parameter_group() {
 
   family=$(echo "${current_parameter_group}" | awk -F. '{print $NF}')
 
-  # create new parameter group
-  echo aws rds create-db-parameter-group \
+  echo ============ create new parameter group ===========
+  aws rds create-db-parameter-group \
     --db-parameter-group-name "$db_instance" \
     --db-parameter-group-family "$family" \
     --description "Parameter group with pgaudit enabled"
 
   setup_pgaudit_parameter "$db_instance"
 
-  # associate new parameter group with instance
-  echo aws rds modify-db-instance \
+  echo =========== associate new parameter group with instance ===========
+  aws rds modify-db-instance \
     --db-instance-identifier "$db_instance" \
     --db-parameter-group-name "$db_instance" \
     --apply-immediately
@@ -37,8 +59,8 @@ function setup_pgaudit_parameter() {
   [ $# -ne 1 ] && echo "Function: setup_pgaudit <parameter_group>" && exit 1
   local parameter_group=$1
 
-  # modify pgaudit settings
-  echo aws rds modify-db-parameter-group \
+  echo =========== modify pgaudit settings in parameter group ===========
+  aws rds modify-db-parameter-group \
     --db-parameter-group-name "$parameter_group" \
     --parameters "ParameterName=shared_preload_libraries,ParameterValue=pgaudit,ApplyMethod=pending-reboot" 
 }
@@ -54,8 +76,10 @@ function pgaudit_is_enabled() {
     --output text)
 
   if [[ "$pgaudit_value" == *pgaudit* ]]; then
+    echo "pgaudit_value: >$pgaudit_value< indicates pgaudit is enabled"
     return 0
   else
+    echo "pgaudit_value: >$pgaudit_value< indicates pgaudit is NOT enabled"
     return 1
   fi
 }
@@ -102,17 +126,17 @@ case $current_parameter_group in
     echo "Uses default parameter group $current_parameter_group."
     echo "Creating new parameter group $db_instance and associating it with instance."
     create_and_associate_parameter_group "$current_parameter_group" "$db_instance"
-    reboot_instance "$db_instance"
+    reboot_instance "$db_instance" 0
     ;;
-  *$service_instance* )
-    echo "Parameter group already set to $service_instance_guid."
+  *$db_instance* )
+    echo "Parameter group already set to $db_instance."
     if pgaudit_is_enabled "$current_parameter_group"; then
       echo "pgaudit is already enabled in parameter group $current_parameter_group. Exiting."
       exit 0
     else
       echo "Enabling pgaudit in parameter group $current_parameter_group."
       setup_pgaudit_parameter "$current_parameter_group"
-      reboot_instance "$db_instance"
+      reboot_instance "$db_instance" 0
     fi
     exit 0
     ;;

@@ -2,6 +2,64 @@
 
 set -eu -o pipefail
 
+function reboot_instance() {
+  [ $# -ne 1 ] && echo "Function: reboot_instance <db_instance>" && exit 1
+  local db_instance=$1
+
+  echo aws rds reboot-db-instance \
+    --db-instance-identifier "$db_instance"
+}
+
+function create_and_associate_parameter_group() {
+  [ $# -ne 2 ] && echo "Function: create_parameter_group <current_parameter_group> <db_instance>" && exit 1
+  local current_parameter_group=$1
+  local db_instance=$2
+
+  family=$(echo "${current_parameter_group}" | awk -F. '{print $NF}')
+
+  # create new parameter group
+  echo aws rds create-db-parameter-group \
+    --db-parameter-group-name "$db_instance" \
+    --db-parameter-group-family "$family" \
+    --description "Parameter group with pgaudit enabled"
+
+  setup_pgaudit_parameter "$db_instance"
+
+  # associate new parameter group with instance
+  echo aws rds modify-db-instance \
+    --db-instance-identifier "$db_instance" \
+    --db-parameter-group-name "$db_instance" \
+    --apply-immediately
+}
+
+
+function setup_pgaudit_parameter() {
+  [ $# -ne 1 ] && echo "Function: setup_pgaudit <parameter_group>" && exit 1
+  local parameter_group=$1
+
+  # modify pgaudit settings
+  echo aws rds modify-db-parameter-group \
+    --db-parameter-group-name "$parameter_group" \
+    --parameters "ParameterName=shared_preload_libraries,ParameterValue=pgaudit,ApplyMethod=pending-reboot" 
+}
+
+# check if parameter group already has pgaudit enabled
+function pgaudit_is_enabled() {
+  [ $# -ne 1 ] && echo "Function: check_pgaudit_enabled <parameter_group>" && exit 1
+  local parameter_group=$1
+
+  pgaudit_value=$(aws rds describe-db-parameters \
+    --db-parameter-group-name "$parameter_group" \
+    --query "Parameters[?ParameterName=='shared_preload_libraries'].ParameterValue" \
+    --output text)
+
+  if [[ "$pgaudit_value" == *pgaudit* ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 #org=epa-spds
 #space=test
 #service_instance=spds-db
@@ -23,12 +81,12 @@ arn=$(aws resourcegroupstaggingapi get-resources \
   | jq -r '.ResourceTagMappingList[].ResourceARN' | grep -v replica  )
 
 # get AWS instancea name from ARN
-instance=$(echo $arn | awk -F: '{print $NF}')
-echo "RDS Instance: $instance"
+db_instance=$(echo $arn | awk -F: '{print $NF}')
+echo "RDS Instance: $db_instance"
 
 # determine current parameter group
 current_parameter_group=$(aws rds describe-db-instances \
-  --db-instance-identifier $instance \
+  --db-instance-identifier "$db_instance" \
   --query 'DBInstances[0].DBParameterGroups[?DBParameterGroupName!=`default`].DBParameterGroupName' \
   --output text)
 
@@ -37,25 +95,32 @@ echo "Current parameter group: $current_parameter_group"
 # Determine whether we need to create a new parameter group or modify existing one
 case $current_parameter_group in
   "" )
-    echo "No custom parameter group associated with instance. Exiting."
-    exit 0
+    echo "No custom parameter group associated with instance. Failing..."
+    exit 1
     ;;
   *default* )
-    echo "Using default parameter group $current_parameter_group. Exiting."
-    exit 0
+    echo "Uses default parameter group $current_parameter_group."
+    echo "Creating new parameter group $db_instance and associating it with instance."
+    create_and_associate_parameter_group "$current_parameter_group" "$db_instance"
+    reboot_instance "$db_instance"
     ;;
   *$service_instance* )
-    echo "Parameter group already set to $service_instance_guid. Exiting."
+    echo "Parameter group already set to $service_instance_guid."
+    if pgaudit_is_enabled "$current_parameter_group"; then
+      echo "pgaudit is already enabled in parameter group $current_parameter_group. Exiting."
+      exit 0
+    else
+      echo "Enabling pgaudit in parameter group $current_parameter_group."
+      setup_pgaudit_parameter "$current_parameter_group"
+      reboot_instance "$db_instance"
+    fi
     exit 0
     ;;
   * )
-    echo "Unknown parameter group $current_parameter_group. Exiting."
-    exit 0
+    echo "Unknown parameter group $current_parameter_group. Failing..."
+    exit 1
     ;;
 esac    
 
-
-#    aws rds modify-db-instance \
-#      --db-instance-identifier $instance \
-#      --db-parameter-group-name $service_instance_guid \
-#      --apply-immediately
+echo "Well, how did we get here?"
+exit 0

@@ -15,6 +15,8 @@ import requests, warnings
 import subprocess
 from requests.structures import CaseInsensitiveDict
 from datetime import datetime, timezone
+POSTGRESQL_MINVERSION="14" # https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-release-calendar.html
+MYSQL_MINVERSION="8.4" # https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MySQL.Concepts.VersionMgmt.html#MySQL.Concepts.VersionMgmt.ReleaseCalendar
 
 
 # Function to retrieve org and space name for an app
@@ -71,14 +73,15 @@ def determine_action(db_engine, db_engine_version, family_name, db_instance_name
 
     if family_name == "db.t2" or family_name == "db.m4":
         family_ok = False
-
+    
     if (
         db_engine == "postgres"
-        and version.parse(db_engine_version) < version.parse("12")
+        and version.parse(db_engine_version) < version.parse(POSTGRESQL_MINVERSION)
     ) or (
-        db_engine == "mysql" and version.parse(db_engine_version) < version.parse("8")
+        db_engine == "mysql" and version.parse(db_engine_version) < version.parse(MYSQL_MINVERSION)
     ):
         engine_ok = False
+        print(f"current db engine version is: {db_engine_version}, and the current db engine is: {db_engine}")
 
     if family_ok == False and engine_ok == False:
         # Needs instance and engine upgrade
@@ -252,7 +255,7 @@ def export_dbs():
                     db_tag_list,
                 )
                 obj.writerow(output)
-
+            print(f"output written to: {csv_file_name}")
 
 def main():
     export_dbs()

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script to copy Cloud Foundry user roles from source to target user
-set -e
+set -e -u -o pipefail
 
 # Function to display usage
 usage() {
@@ -208,8 +208,11 @@ EOF
         echo "cf curl -X POST '/v3/roles' -d '$payload'"
     else
         echo "Adding organization_user role for $TARGET_USER_ID in org $org_name..."
-        local response=$(cf curl -X POST "/v3/roles" -d "$payload")
-        local status_code=$(echo "$response" | jq -r '.errors[0].code // empty')
+        local response=""
+        local status_code=""
+        
+        response=$(cf curl -X POST "/v3/roles" -d "$payload")
+        status_code=$(echo "$response" | jq -r '.errors[0].code // empty')
         
         if [[ -n "$status_code" ]]; then
             # Check if it's a duplicate role error (10008)
@@ -347,8 +350,9 @@ while IFS='|' read -r role_type org_guid space_guid; do
             cli_role="SpaceSupporter"
             ;;
         *)
+            echo "Error: Unknown role type detected: $role_type" >&2
             log "Unknown role type: $role_type"
-            continue
+            exit 1
             ;;
     esac
     

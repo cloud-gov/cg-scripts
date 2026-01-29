@@ -546,7 +546,7 @@ if [[ "$SUCCESS" == true || "$DRY_RUN" == true ]]; then
     if [[ "$DEACTIVATE" == true ]]; then
         echo "Deactivating user $SOURCE_USER_ID..."
         DEACTIVATE_CMD="uaac user deactivate \"$SOURCE_USER_ID\" --origin \"$SOURCE_ORIGIN\""
-        #execute_command "$DEACTIVATE_CMD"
+        execute_command "$DEACTIVATE_CMD"
     fi
 else
     echo "Skipping post-transfer actions due to role assignment failures"

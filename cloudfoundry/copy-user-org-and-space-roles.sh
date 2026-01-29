@@ -184,7 +184,8 @@ add_organization_user_role() {
     local org_guid="$2"
     local org_name="$3"
     
-    local payload=$(cat <<EOF
+    local payload=""
+    payload=$(cat <<EOF
 {
   "type": "organization_user",
   "relationships": {

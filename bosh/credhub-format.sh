@@ -9,12 +9,10 @@ if [ "$#" -ne 2 ]; then
 Usage: ./credhub-format.sh <vars-file> <deployment-name>
 Example: ./credhub-format.sh vars.yml deployment > output.yml
 
-./credhub-format.sh credentials.yml deploy-something > output.yml
-
-Read from a credential file and reformat the contents to a JSON format that CredHub
+Read from a BOSH variables file and reformat the contents to a JSON format that CredHub
 can import, excluding any keys that do not appear in the manifests
 
-Run this script from the root of the repository so it can find the pipeline configuration
+Run this script from the root of the repository so it can find the manifest
 file. The output file is written to stdout. Additional output, such as the keys that were
 excluded, is written to stderr." >&2
   exit 1

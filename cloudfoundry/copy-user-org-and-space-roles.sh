@@ -131,7 +131,6 @@ execute_command() {
 get_user_guid() {
     local user_id="$1"
     local origin="$2"
-    
     cf curl "/v3/users?origins=${origin}&usernames=${user_id}" | jq -r '.resources[0].guid // empty'
 }
 
@@ -140,7 +139,6 @@ check_user_exists() {
     local user_id="$1"
     local origin="$2"
     local user_guid
-    
     user_guid=$(get_user_guid "$user_id" "$origin")
     if [[ -z "$user_guid" || "$user_guid" == "null" ]]; then
         return 1
@@ -153,10 +151,8 @@ check_user_exists() {
 get_org_name_from_space() {
     local space_guid="$1"
     local space_info org_guid
-    
     space_info=$(cf curl "/v3/spaces/$space_guid")
     org_guid=$(echo "$space_info" | jq -r '.relationships.organization.data.guid // empty')
-    
     if [[ -n "$org_guid" ]]; then
         query_org_name "$org_guid"
     fi
@@ -183,8 +179,8 @@ add_organization_user_role() {
     local user_guid="$1"
     local org_guid="$2"
     local org_name="$3"
-    
     local payload=""
+    
     payload=$(cat <<EOF
 {
   "type": "organization_user",
@@ -210,7 +206,6 @@ EOF
         echo "Adding organization_user role for $TARGET_USER_ID in org $org_name..."
         local response=""
         local status_code=""
-        
         response=$(cf curl -X POST "/v3/roles" -d "$payload")
         status_code=$(echo "$response" | jq -r '.errors[0].code // empty')
         
@@ -231,7 +226,6 @@ EOF
 # Function to get all user roles via API
 get_user_roles_via_api() {
     local user_guid="$1"
-    
     # Get all roles with increased page size to avoid pagination
     cf curl "/v3/roles?user_guids=${user_guid}&per_page=5000" | jq -r '
         .resources[] |
@@ -258,12 +252,12 @@ fi
 log "Starting role discovery process"
 
 # Arrays to store roles and role information
-declare -a ORG_ROLES
-declare -a SPACE_ROLES
-declare -a ORG_USER_ROLES
-declare -a SOURCE_ORG_ROLES
-declare -a SOURCE_SPACE_ROLES
-declare -a SOURCE_ORG_USER_ROLES
+declare -a ORG_ROLES=()
+declare -a SPACE_ROLES=()
+declare -a ORG_USER_ROLES=()
+declare -a SOURCE_ORG_ROLES=()
+declare -a SOURCE_SPACE_ROLES=()
+declare -a SOURCE_ORG_USER_ROLES=()
 
 # Verify users exist
 log "Verifying source user exists"
@@ -274,6 +268,9 @@ fi
 
 SOURCE_USER_GUID=$(get_user_guid "$SOURCE_USER_ID" "$SOURCE_ORIGIN")
 log "Source user GUID: $SOURCE_USER_GUID"
+
+# Initialize TARGET_USER_GUID with empty string
+TARGET_USER_GUID=""
 
 # Verify target user exists (skip for dry-run-source)
 if [[ "$DRY_RUN_SOURCE" == false ]]; then
@@ -305,13 +302,11 @@ while IFS='|' read -r role_type org_guid space_guid; do
         # For space roles, get org name via the space
         org_name=$(get_org_name_from_space "$space_guid")
     fi
-
-
+    
     # Get space name if space_guid exists
     space_name=""
     if [[ -n "$space_guid" ]]; then
         space_name=$(query_space_name "$space_guid")
-        
         # For space roles, if we don't have org_name yet, get it from the space
         if [[ -z "$org_name" ]]; then
             # Get the organization info from the space
@@ -412,7 +407,6 @@ if [[ "$DRY_RUN_SOURCE" == true ]]; then
     else
         echo "No space roles found"
     fi
-    
     exit 0
 fi
 
@@ -434,7 +428,6 @@ if [[ "$DRY_RUN_TARGET" == true ]]; then
     fi
     
     echo ""
-    
     if [[ ${#ORG_USER_ROLES[@]} -gt 0 ]]; then
         echo "# Organization user role commands (via API):"
         for role_info in "${ORG_USER_ROLES[@]}"; do
@@ -444,7 +437,6 @@ if [[ "$DRY_RUN_TARGET" == true ]]; then
     fi
     
     echo ""
-    
     if [[ ${#SPACE_ROLES[@]} -gt 0 ]]; then
         echo "# Space role commands:"
         for cmd in "${SPACE_ROLES[@]}"; do
@@ -462,7 +454,6 @@ if [[ "$DRY_RUN_TARGET" == true ]]; then
     elif [[ "$DEACTIVATE" == true ]]; then
         echo "uaac user deactivate \"$SOURCE_USER_ID\" --origin \"$SOURCE_ORIGIN\""
     fi
-    
     exit 0
 fi
 
@@ -499,7 +490,6 @@ if [[ ${#ORG_USER_ROLES[@]} -gt 0 ]]; then
     echo "Organization User Roles:"
     for role_info in "${ORG_USER_ROLES[@]}"; do
         IFS=':' read -r org_guid org_name <<< "$role_info"
-        
         # Add organization_user role
         if ! add_organization_user_role "$TARGET_USER_GUID" "$org_guid" "$org_name"; then
             SUCCESS=false
@@ -565,6 +555,7 @@ if [[ "$DRY_RUN" == false && "$DRY_RUN_SOURCE" == false && "$DRY_RUN_TARGET" == 
     echo "- Organization roles assigned: ${#ORG_ROLES[@]}"
     echo "- Organization user roles assigned: ${#ORG_USER_ROLES[@]}"
     echo "- Space roles assigned: ${#SPACE_ROLES[@]}"
+    
     if [[ "$DELETE" == true ]]; then
         echo "- Source user deleted: $SOURCE_USER_ID"
     elif [[ "$DEACTIVATE" == true ]]; then

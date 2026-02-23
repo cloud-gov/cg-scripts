@@ -357,8 +357,6 @@ class Organization:
         self.get_rds_instances(tags_client)
         for rds in self.rds_instances:
             rds.get_db_instance(rds_client)
-            if "replica" in rds.service_plan_name:
-                print(rds.instance_guid)
             self.rds_instance_plans[rds.service_plan_name] += 1
             self.rds_allocation += rds.allocated_storage
 

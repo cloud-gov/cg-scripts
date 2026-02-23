@@ -36,17 +36,11 @@ class AWSResource:
         return cf_data.get("included", "N/A")["service_plans"][0]["name"]
 
     def get_service_plan_name(self, instance_guid):
-        # FIXME: Maybe we shouldn't trust the plan name in the tag, but it's faster
         service_plan_name = "Not_Found"
         try:
-            service_plan_name = [
-                tag["Value"] for tag in self.tags if tag["Key"] == "Service plan name"
-            ][0]
+            service_plan_name = self.get_instance_plan_name(instance_guid)
         except:
-            try:
-                service_plan_name = self.get_instance_plan_name(instance_guid)
-            except:
-                service_plan_name = "Not_Found"
+            service_plan_name = "Not_Found"
         return service_plan_name
 
 
@@ -292,9 +286,15 @@ class Organization:
 
     def get_rds_instances(self, client):
         response = self.get_aws_instances(client, "rds")
+        rds_instance_guids = []
         for resource in response["ResourceTagMappingList"]:
             rds = Rds(resource["ResourceARN"], resource["Tags"])
-            self.rds_instances.append(rds)
+            # replica databases will appear twice in the list of
+            # tagged resources, but they should only be tracked once
+            # for cost purposes
+            if rds.instance_guid not in rds_instance_guids:
+                self.rds_instances.append(rds)
+                rds_instance_guids.append(rds.instance_guid)
 
     def get_redis_instances(self, client):
         response = self.get_aws_instances(client, "redis")
@@ -357,6 +357,8 @@ class Organization:
         self.get_rds_instances(tags_client)
         for rds in self.rds_instances:
             rds.get_db_instance(rds_client)
+            if "replica" in rds.service_plan_name:
+                print(rds.instance_guid)
             self.rds_instance_plans[rds.service_plan_name] += 1
             self.rds_allocation += rds.allocated_storage
 

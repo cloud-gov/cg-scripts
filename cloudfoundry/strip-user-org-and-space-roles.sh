@@ -9,18 +9,18 @@ main() {
   local user="$1"
   local org="$2"
 
-  cf unset-org-role "$user" "$org" OrgManager
+  USER_GUID=$(cf curl "/v3/users?usernames=$user" | jq -r '.resources[0].guid // ""')
 
-  echo "Org users:"
-  cf org-users "$org"
+  if [[ -z "$USER_GUID" ]]; then
+    echo "no user found for $user"
+    exit 1
+  fi
 
-  for space in $(cf curl "/v3/spaces?organization_guids=$(cf org $org --guid)" | jq -r '.resources[].name'); do
-    for space_role in SpaceManager SpaceDeveloper SpaceAuditor; do
-      cf unset-space-role "$user" "$org" "$space" "$space_role"
-    done
+  ORGANIZATION_GUID=$(cf org "$org" --guid)
 
-    echo "Space users:"
-    cf space-users "$org" "$space"
+  # get all user roles for the org, including organization_user
+  for role_guid in $(cf curl "/v3/roles?user_guids=$USER_GUID&organization_guids=$ORGANIZATION_GUID&per_page=5000" | jq -r '.resources[].guid'); do
+    cf curl -X DELETE "/v3/roles/$role_guid"
   done
 }
 

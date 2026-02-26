@@ -17,6 +17,7 @@ my*.yml
 *.xlsx
 .vscode
 venv
+.venv
 **/__pycache__
 *.txt
 
@@ -30,3 +31,4 @@ certbot/work/**
 !certbot/work/.gitkeep
 
 concourse/*.yml
+__pycache__

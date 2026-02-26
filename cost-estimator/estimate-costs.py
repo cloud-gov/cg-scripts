@@ -10,10 +10,10 @@ import functools
 import urllib.parse
 from collections import Counter
 from openpyxl import load_workbook
+from openpyxl.drawing.image import Image
 import argparse
 import math
 import re
-
 
 class AWSResource:
     def __init__(self, arn, tags):
@@ -528,86 +528,84 @@ class Account:
     def generate_cost_estimate(self, reporter):
         estimate_map = {
             # Usage
-            "memory_usage": "B10",
-            "rds_total_allocation": "J10",
-            "s3_total_storage": "R10",
-            "es_total_volume_storage": "R15",
+            "memory_usage": "B7",
+            "rds_total_allocation": "J7",
+            "s3_total_storage": "R7",
+            "es_total_volume_storage": "R12",
             # RDS Plans
-            "micro-psql": "J14",
-            "micro-psql-redundant": "J15",
-            "micro-psql-replica": "J16",
-            "small-psql": "J17",
-            "small-psql-redundant": "J18",
-            "small-psql-replica": "J19",
-            "medium-psql": "J20",
-            "medium-psql-redundant": "J21",
-            "medium-psql-replica": "J22",
-            "medium-gp-psql": "J23",
-            "medium-gp-psql-redundant": "J24",
-            "medium-gp-psql-replica": "J25",
-            "large-gp-psql": "J26",
-            "large-gp-psql-redundant": "J27",
-            "large-gp-psql-replica": "J28",
-            "xlarge-gp-psql": "J29",
-            "xlarge-gp-psql-redundant": "J30",
-            "xlarge-gp-psql-replica": "J31",
-            "2xlarge-gp-psql": "J32",
-            "2xlarge-gp-psql-redundant": "J33",
-            "2xlarge-gp-psql-replica": "J34",
-            "xlarge-gp-psql-m6": "J35",
-            "xlarge-gp-psql-m6-redundant": "J36",
-            "xlarge-gp-psql-m6-replica": "J37",
-            "micro-mysql": "J38",
-            "micro-mysql-redundant": "J39",
-            "micro-mysql-replica": "J40",
-            "small-mysql": "J41",
-            "small-mysql-redundant": "J42",
-            "small-mysql-replica": "J43",
-            "medium-mysql": "J44",
-            "medium-mysql-redundant": "J45",
-            "medium-mysql-replica": "J46",
-            "medium-gp-mysql": "J47",
-            "medium-gp-mysql-redundant": "J48",
-            "medium-gp-mysql-replica": "J49",
-            "large-gp-mysql": "J50",
-            "large-gp-mysql-redundant": "J51",
-            "large-gp-mysql-replica": "J52",
-            "xlarge-gp-mysql": "J53",
-            "xlarge-gp-mysql-redundant": "J54",
-            "xlarge-gp-mysql-replica": "J55",
-            "medium-oracle-se2": "J56",
-            "large-gp-sqlserver-se": "J57",
+            "micro-psql": "J11",
+            "micro-psql-redundant": "J12",
+            "micro-psql-replica": "J13",
+            "small-psql": "J14",
+            "small-psql-redundant": "J15",
+            "small-psql-replica": "J16",
+            "medium-psql": "J17",
+            "medium-psql-redundant": "J18",
+            "medium-psql-replica": "J19",
+            "medium-gp-psql": "J20",
+            "medium-gp-psql-redundant": "J21",
+            "medium-gp-psql-replica": "J22",
+            "large-gp-psql": "J23",
+            "large-gp-psql-redundant": "J24",
+            "large-gp-psql-replica": "J25",
+            "xlarge-gp-psql": "J26",
+            "xlarge-gp-psql-redundant": "J27",
+            "xlarge-gp-psql-replica": "J28",
+            "2xlarge-gp-psql": "J29",
+            "2xlarge-gp-psql-redundant": "J30",
+            "2xlarge-gp-psql-replica": "J31",
+            "xlarge-gp-psql-m6": "J32",
+            "xlarge-gp-psql-m6-redundant": "J33",
+            "xlarge-gp-psql-m6-replica": "J34",
+            "micro-mysql": "J35",
+            "micro-mysql-redundant": "J36",
+            "micro-mysql-replica": "J37",
+            "small-mysql": "J38",
+            "small-mysql-redundant": "J39",
+            "small-mysql-replica": "J40",
+            "medium-mysql": "J41",
+            "medium-mysql-redundant": "J42",
+            "medium-mysql-replica": "J43",
+            "medium-gp-mysql": "J44",
+            "medium-gp-mysql-redundant": "J45",
+            "medium-gp-mysql-replica": "J46",
+            "large-gp-mysql": "J47",
+            "large-gp-mysql-redundant": "J48",
+            "large-gp-mysql-replica": "J49",
+            "xlarge-gp-mysql": "J50",
+            "xlarge-gp-mysql-redundant": "J51",
+            "xlarge-gp-mysql-replica": "J52",
             # ES Plans
-            "es-dev": "R19",
-            "es-medium": "R20",
-            "es-medium-ha": "R21",
-            "es-large": "R22",
-            "es-large-ha": "R23",
-            "es-xlarge": "R24",
-            "es-xlarge-ha": "R25",
-            "es-2xlarge-gp": "R26",
-            "es-2xlarge-gp-ha": "R27",
-            "es-4xlarge-gp": "R28",
-            "es-4xlarge-gp-ha": "R29",
-            "es-12xlarge-gp": "R30",
-            "es-12xlarge-gp-ha": "R31",
+            "es-dev": "R16",
+            "es-medium": "R17",
+            "es-medium-ha": "R18",
+            "es-large": "R19",
+            "es-large-ha": "R20",
+            "es-xlarge": "R21",
+            "es-xlarge-ha": "R22",
+            "es-2xlarge-gp": "R23",
+            "es-2xlarge-gp-ha": "R24",
+            "es-4xlarge-gp": "R25",
+            "es-4xlarge-gp-ha": "R26",
+            "es-12xlarge-gp": "R27",
+            "es-12xlarge-gp-ha": "R28",
             # Redis
-            "redis-dev": "R35",
-            "redis-3node": "R36",
-            "redis-5node": "R37",
-            "redis-3node-large": "R38",
-            "redis-5node-large": "R39",
-            "Not_Found": "C11",
+            "redis-dev": "R32",
+            "redis-3node": "R33",
+            "redis-5node": "R34",
+            "redis-3node-large": "R35",
+            "redis-5node-large": "R36",
+            "Not_Found": "A32",
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)
         platform_estimate_sheet = workbook.worksheets[1]
 
         today = datetime.datetime.today().strftime("%Y-%m-%d")
-        headline = f"Cloud.gov cost estimate generated {today} for the following list of orgs: {self.org_names}"
+        headline = f"Cloud.gov cost estimate generated {today} for Platform orgs: {', '.join(self.org_names)}"
         if len(self.space_names) > 0:
             headline += f", spaces: {self.space_names}"
-        platform_estimate_sheet["A1"] = headline
+        platform_estimate_sheet["A3"] = headline
         reporter.report(platform_estimate_sheet, "A", 60)
         # Usage
         if len(self.space_names) == 0:

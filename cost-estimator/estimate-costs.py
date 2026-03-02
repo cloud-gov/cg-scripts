@@ -10,7 +10,6 @@ import functools
 import urllib.parse
 from collections import Counter
 from openpyxl import load_workbook
-from openpyxl.drawing.image import Image
 import argparse
 import math
 import re

@@ -2,4 +2,6 @@
 requests
 boto3
 datetime
-openpyxl 
+openpyxl
+Pillow
+

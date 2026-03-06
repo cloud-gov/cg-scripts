@@ -59,6 +59,9 @@ case ${RESOURCE_TYPE} in
   redis | elasticache )
     RESOURCE_TYPE_FILTER="elasticache:replicationgroup"
     ;;
+  ses )
+    RESOURCE_TYPE_FILTER="ses:identity"
+    ;;
   * )
     echo "Invalid option: $RESOURCE_TYPE" >&2
     usage

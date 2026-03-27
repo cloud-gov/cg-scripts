@@ -32,7 +32,7 @@ function mirror() {
 
 which wget || fail "Need to install wget, e.g., 'brew install wget'"
 
-TARGET="$HOME/Google Drive/Shared drives/Cloud.gov Public/IDCDB-archive"
+TARGET="$HOME/Google Drive/Shared drives/Cloud.gov GSA-wide/IDCDB-archive"
 
 [ -d "$TARGET" ] || fail "Cannot access Google Drive target $TARGET"
 
@@ -41,16 +41,11 @@ TIMESTAMP=$(date "+%Y%m%d")
 PREFIX="$TARGET/$TIMESTAMP" 
 mkdir -p "$PREFIX" || fail "Unable to create the target directory $PREFIX"
 
-for S in ussm.gov \
-    cdo.gov \
+for S in cdo.gov \
     cfo.gov \
-    paymentaccuracy.gov \
-    cio.gov \
     coffa.gov \
     evaluation.gov \
-    fpc.gov \
-    statspolicy.gov \
-    fcsm.gov; do 
+    fpc.gov; do 
   echo "=============="
   echo "STARTING SITE: $S"
   echo "=============="

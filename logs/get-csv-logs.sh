@@ -7,6 +7,8 @@ function usage {
   Use the Elasticsearch/Opensearch scroll API to query logs for bulk export
   See full docs at: https://github.com/cloud-gov/internal-docs/blob/main/docs/runbooks/Logging/bulk-data-export.md
 
+  2026-04-06: Updated to use TLS key and cert for authentication
+
   Examples:
     ./$( basename "$0" ) 127.0.0.1 search.json '."@timestamp",.rtr.path,.rtr.status'
   "
@@ -45,9 +47,19 @@ write_csv_output() {
   echo "$1" | jq ".hits.hits[]._source | [$csv_fields] | @csv" > "results-$2.csv"
 }
 
-response=$(curl -s -X POST "$es_url/_search?scroll=1m" \
+set -x
+
+CURL='curl --key /var/vcap/jobs/opensearch/config/ssl/opensearch-admin.key \
+      --cert /var/vcap/jobs/opensearch/config/ssl/opensearch-admin.crt  \
+      --cacert /var/vcap/jobs/opensearch/config/ssl/opensearch.ca'
+
+CMD="$CURL -s -X POST \"$es_url/_search?scroll=1m\" \
   -H 'content-type: application/json' \
-  -d "@$search_json_file")
+  -d \"@${search_json_file}\""
+
+echo $CMD
+
+response=$($CMD)
 
 hits_count=$(get_hits_count "$response")
 hits_total=$(echo "$response" | jq -r '.hits.total.value')
@@ -57,13 +69,15 @@ counter=1
 
 echo "Got initial response with $hits_count hits out of $hits_total"
 
+exit 0
+
 write_csv_output "$response" $counter
 
 while [ "$hits_count" != "0" ]; do
   counter=$((counter + 1))
 
-  response=$(curl -X POST -s -H 'content-type: application/json' "$es_url/_search/scroll" -d "{ \"scroll\": \"1m\", \"scroll_id\": \"$scroll_id\" }")
-  
+  response=$(eval "$CURL" -s -X POST "$es_url/_search/scroll" -d "{ \"scroll\": \"1m\", \"scroll_id\": \"$scroll_id\" }")
+
   scroll_id=$(get_scroll_id "$response")
   hits_count=$(get_hits_count "$response")
   hits_so_far=$((hits_so_far + hits_count))

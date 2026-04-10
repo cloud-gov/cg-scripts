@@ -56,6 +56,7 @@ write_csv_output() {
 }
 
 ## ------ ## Main script starts here ## ------ ##
+mkdir -p $OUTPUT_DIR
 
 # Write CSV header
 echo $CSV_FIELDS > $OUTPUT_FILE

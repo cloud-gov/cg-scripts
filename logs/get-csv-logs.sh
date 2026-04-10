@@ -26,7 +26,8 @@ ES_URL="localhost:9200"
 CERT_PATH="${JOB_DIR}/config/ssl/opensearch-admin.crt"
 KEY_PATH="${JOB_DIR}/config/ssl/opensearch-admin.key"
 CA_PATH="${JOB_DIR}/config/ssl/opensearch.ca"
-OUTPUT_FILE="/var/vcap/store/logs_export.csv"
+OUTPUT_DIR="/var/vcap/store/export"
+OUTPUT_FILE="$OUTPUT_DIR/logs_export.csv"
 SCROLL_TIMEOUT="15m"
 BATCH_SIZE=10000
 

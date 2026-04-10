@@ -19,12 +19,14 @@ function usage {
   exit
 }
 
+JOB_NAME=opensearch
+JOB_DIR=/var/vcap/jobs/$JOB_NAME
 CSV_FIELDS='."@timestamp",."@raw"'
 ES_URL="localhost:9200"
-CERT_PATH="/var/vcap/jobs/opensearch/config/ssl/opensearch-admin.crt"
-KEY_PATH="/var/vcap/jobs/opensearch/config/ssl/opensearch-admin.key"
-CA_PATH="/var/vcap/jobs/opensearch/config/ssl/opensearch.ca"
-OUTPUT_FILE="logs_export.csv"
+CERT_PATH="${JOB_DIR}/config/ssl/opensearch-admin.crt"
+KEY_PATH="${JOB_DIR}/config/ssl/opensearch-admin.key"
+CA_PATH="${JOB_DIR}/config/ssl/opensearch.ca"
+OUTPUT_FILE="/var/vcap/store/logs_export.csv"
 SCROLL_TIMEOUT="15m"
 BATCH_SIZE=10000
 

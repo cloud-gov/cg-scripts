@@ -14,6 +14,7 @@ import argparse
 import math
 import re
 
+
 class AWSResource:
     def __init__(self, arn, tags):
         self.arn = arn
@@ -428,6 +429,29 @@ class Organization:
             for key, value in sorted(self.es_instance_plans.items()):
                 reporter.log(f"  {key}: {value}")
 
+    def report_domain_services(self, reporter):
+        self.domain_instance_plans = Counter()
+
+        reporter.log("Domain services")
+
+        plans = ["domain-with-cdn-dedicated-waf"]
+
+        for plan in plans:
+            instances_json = subprocess.check_output(
+                f'cf curl "/v3/service_instances?organization_guids={self.guid}&service_plan_names={plan}"',
+                universal_newlines=True,
+                shell=True,
+            )
+            instances_data = json.loads(instances_json)
+            self.domain_instance_plans[plan] += instances_data["pagination"][
+                "total_results"
+            ]
+
+        if self.domain_instance_plans.total() > 0:
+            reporter.log(f" Domain Plans")
+            for key, value in sorted(self.domain_instance_plans.items()):
+                reporter.log(f"  {plan}: {value}")
+
 
 def test_authenticated(service):
     """
@@ -471,6 +495,7 @@ class Account:
         self.rds_total_instance_plans = Counter()
         self.redis_total_instance_plans = Counter()
         self.es_total_instance_plans = Counter()
+        self.domain_total_instance_plans = Counter()
         self.input_workbook_file = input_workbook_file
         self.output_workbook_file = output_workbook_file
         self.reporter = Reporter()
@@ -506,6 +531,10 @@ class Account:
                 self.es_total_instance_plans[key] += value
             self.es_total_volume_storage += org.es_volume_storage
 
+            org.report_domain_services(self.reporter)
+            for key, value in org.domain_instance_plans.items():
+                self.domain_total_instance_plans[key] += value
+
     def report_summary(self, reporter):
         reporter.log("-===========================-")
         reporter.log(f"Account Total Mem Quota (GB): {self.memory_quota/1024:.0f}")
@@ -522,6 +551,9 @@ class Account:
             reporter.log(f"  {key}: {value}")
         reporter.log(f"Account ES Plans")
         for key, value in sorted(self.es_total_instance_plans.items()):
+            reporter.log(f"  {key}: {value}")
+        reporter.log(f"Account ES Plans")
+        for key, value in sorted(self.domain_total_instance_plans.items()):
             reporter.log(f"  {key}: {value}")
 
     def generate_cost_estimate(self, reporter):
@@ -595,6 +627,8 @@ class Account:
             "redis-3node-large": "R35",
             "redis-5node-large": "R36",
             "Not_Found": "A32",
+            # Domains
+            "domain-with-cdn-dedicated-waf": "R45",
         }
 
         workbook = load_workbook(filename=self.input_workbook_file)
@@ -636,6 +670,8 @@ class Account:
         for key, value in sorted(self.redis_total_instance_plans.items()):
             platform_estimate_sheet[estimate_map[key]] = value
         for key, value in sorted(self.es_total_instance_plans.items()):
+            platform_estimate_sheet[estimate_map[key]] = value
+        for key, value in sorted(self.domain_total_instance_plans.items()):
             platform_estimate_sheet[estimate_map[key]] = value
         workbook.save(filename=self.output_workbook_file)
         print(f"Saved cost estimate to: {self.output_workbook_file}")
@@ -724,12 +760,10 @@ Notes:
 
     if not os.path.exists(cost_estimate_file):
         print(f'Info: Missing input file, "{cost_estimate_file}"')
-        print(
-            f"""
+        print(f"""
         Manually download the template (TEMPLATE MAKE A COPY 005 Cloud.gov Cost Estimate...)
         as an .xlsx file from Drive and rename to "{cost_estimate_file}"
-        """
-        )
+        """)
         exit(1)
 
     print(f'Info: Using output file, "{output_file}"', file=sys.stderr)

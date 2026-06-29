@@ -43,13 +43,13 @@ main() {
 usage() {
   [[ $# -gt 0 ]] && echo "ERROR: $*"
   cat <<EOF
-  USAGE: $(basename "$0") USER ORG SPACE
+  USAGE: $(basename "$0") USER ORG
 
   Removes org and space roles for user.
 
   Examples:
 
-    $(basename "$0") bob accounting dev
+    $(basename "$0") bob@cfo.gov accounting
 EOF
   exit 1
 }

@@ -13,6 +13,10 @@ from openpyxl import load_workbook
 import argparse
 import math
 import re
+import logging
+
+# Configures the root logger to output to stderr by default
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 class AWSResource:
@@ -47,9 +51,13 @@ class AWSResource:
 class AWSNotS3(AWSResource):
     def __init__(self, arn, tags):
         super().__init__(arn, tags)
-        self.instance_guid = [
+        instance_guid_tags = [
             tag["Value"] for tag in tags if tag["Key"] == "Instance GUID"
-        ][0]
+        ]
+        if len(instance_guid_tags) == 0:
+            logging.error(f"could not find instance guid tag for {arn}")
+            return
+        self.instance_guid = instance_guid_tags[0]
         self.space_guid = [tag["Value"] for tag in tags if tag["Key"] == "Space GUID"][
             0
         ]
@@ -289,10 +297,16 @@ class Organization:
         rds_instance_guids = []
         for resource in response["ResourceTagMappingList"]:
             rds = Rds(resource["ResourceARN"], resource["Tags"])
+            # skip resources without instance GUIDs and instance
+            # GUIDs that we already have seen
+            #
             # replica databases will appear twice in the list of
             # tagged resources, but they should only be tracked once
             # for cost purposes
-            if rds.instance_guid not in rds_instance_guids:
+            if (
+                hasattr(rds, "instance_guid")
+                and rds.instance_guid not in rds_instance_guids
+            ):
                 self.rds_instances.append(rds)
                 rds_instance_guids.append(rds.instance_guid)
 

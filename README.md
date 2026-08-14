@@ -103,13 +103,3 @@ These steps correspond to the [steps for creating admins](http://docs.cloudfound
     <https://login.fr.cloud.gov/passcode> to get your one-time passcode.
 
 1. `python cf-get-recent-users.py YYYY-MM-DD`
-
-## Creating CSV for counting sandboxes logs over the last three months
-
-1. `apt update`
-1. `apt install python3`
-1. `pip install -U requests`
-1. `pip install -U dateutil`
-1. `export ES_HOST="${IP_ADDRESS_LOGSEARCH_MASTER_NODE}"`
-1. `python3 count-sandbox-logs.py`
-1. `ls -l summary.csv`

@@ -6,8 +6,8 @@ function usage {
   ./$( basename "$0" ) -p VENDORED_PACKAGE_DIR -P VENDORED_PACKAGE -r BOSH_RELEASE_DIR -R BOSH_RELEASE_NAME [-b BOSH_DIRS_BUCKET]
 
   Update vendored package in bosh release. (You probably want to run this with aws-vault)
-  e.g, 
-  ./$( basename "$0" ) -p ./rel/or/abs/path/to/python3-boshrelease -P python3 -r /abs/or/rel/path/to/logsearch-boshrelease -R logsearch
+  e.g,
+  ./$( basename "$0" ) -p ./rel/or/abs/path/to/python3-boshrelease -P python3 -r /abs/or/rel/path/to/opensearch-boshrelease -R opensearch
   "
   exit
 }

@@ -100,7 +100,7 @@ def print_db_instances_csv_lines(instances):
             org_name=org_name,
             space_name=space_name,
             instance_name=instance_name,
-            instance_create_time=db_instance["InstanceCreateTime"],
+            instance_create_time=db_instance["InstanceCreateTime"] or "None",
             preferred_maintenance_window=db_instance["PreferredMaintenanceWindow"],
             auto_minor_version_upgrade=db_instance["AutoMinorVersionUpgrade"],
         )

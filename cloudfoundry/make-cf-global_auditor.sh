@@ -9,7 +9,7 @@ if [ "$#" -lt 1 ]; then
   echo
   echo "  Options:"
   echo "     -r    :    Remove the user instead of add"
-  echo 
+  echo
   echo "  Be sure to run ./cg-scripts/uaa/login.sh prior to executing this script"
   echo
   exit 1;
@@ -33,7 +33,7 @@ if ! hash uaac 2>/dev/null; then
   gem install cf-uaac
 fi
 
-declare -a groups=("cloud_controller.global_auditor" "scim.read" "admin_ui.user")
+declare -a groups=("cloud_controller.global_auditor" "scim.read")
 if $REMOVE; then
   for group in ${groups[@]}
   do

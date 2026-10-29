@@ -19,6 +19,9 @@ my*.yml
 venv
 **/__pycache__
 *.txt
+!cloudfoundry/requirements.txt
+cloudfoundry/all-sandboxes-*.png
+cloudfoundry/non-gsa-sandboxes-*.png
 
 # don't keep certbot stuff
 certbot/config/**

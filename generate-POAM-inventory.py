@@ -3,13 +3,11 @@ import logging
 import subprocess
 import os
 
-#
-# 
 
 # For the tooling and production jumpboxes:
 #   Login to each jumpbox and take note of the container number.
-#   Run: 
-#     python3 cg-scripts/generate-POAM-inventory.py > inv.csv 
+#   Run:
+#     python3 cg-scripts/generate-POAM-inventory.py > inv.csv
 #   then exit.
 #   Copy the CSV to your local clipboard by running :
 #     fly -t ci i -j "jumpbox/container-bosh-{environment}" -s jumpbox -b "{container-number}" -- cat inv.csv | pbcopy
@@ -61,12 +59,12 @@ def get_os_version_from_stemcell(stemcell):
     stemcell_name = stemcell["name"].lower()
     version = None
     # TODO: validate minor version, as it may change in the future
-    if "bionic" in stemcell_name:
-        version = "18.04.1"
-    elif "xenial" in stemcell_name:
-        version = "16.04.5"
-    elif "trusty" in stemcell_name:
-        version = "14.04.1"
+    if "noble" in stemcell_name:
+        version = "24.04"
+    elif "jammy" in stemcell_name:
+        version = "22.04"
+    elif "bionic" in stemcell_name:
+        version = "18.04"
     return version
 
 
@@ -97,8 +95,9 @@ def get_inventory(deployment_to_os_version):
         ).decode()
         vms = json.loads(response)
         for vm in vms:
-            hostname = (deployment + "-" + vm["job"] + "-" + str(vm["index"]) + 
-                "-cf-" + os.environ["BOSH_DIRECTOR_NAME"].lower() + "/" + vm["id"])
+            hostname = (deployment + "-" + vm["job"] + "-" + str(vm["index"]) +
+                        "-cf-" + os.environ["BOSH_DIRECTOR_NAME"].lower() + "/"
+                        + vm["id"])
             inventory.append(
                 [
                     hostname,
